@@ -1239,6 +1239,11 @@ SCADTREEDIR=${SCADTREEDIR:-"$SCADTREEDIR"}
 AC_SUBST(SCADTREEDIR)
 #CPPFLAGS="$CPPFLAGS -DSCADTREEDIR=\\\"$SCADTREEDIR\\\""
 
+# directory for breadboard model library
+BBOARDTREEDIR=${datadir}/pcb/models/bboard
+BBOARDTREEDIR=${BBOARDTREEDIR:-"$BBOARDTREEDIR"}
+AC_SUBST(BBOARDTREEDIR)
+
 # Figure out relative paths
 AC_MSG_CHECKING([for the bindir to pcblibdir relative path])
 adl_COMPUTE_RELATIVE_PATHS([bindir:PCBLIBDIR:bindir_to_pcblibdir])
@@ -1257,6 +1262,12 @@ adl_COMPUTE_RELATIVE_PATHS([bindir:SCADTREEDIR:bindir_to_scadtreedir])
 adl_NORMALIZE_PATH([bindir_to_scadtreedir], [$PCB_DIR_SEPARATOR_S])
 AC_MSG_RESULT([$bindir_to_scadtreedir])
 AC_DEFINE_UNQUOTED(BINDIR_TO_SCADTREEDIR, "$bindir_to_scadtreedir", [Relative path from bindir to scadtreedir])
+
+AC_MSG_CHECKING([for the bindir to bboardtreedir relative path])
+adl_COMPUTE_RELATIVE_PATHS([bindir:BBOARDTREEDIR:bindir_to_bboardtreedir])
+adl_NORMALIZE_PATH([bindir_to_bboardtreedir], [$PCB_DIR_SEPARATOR_S])
+AC_MSG_RESULT([$bindir_to_bboardtreedir])
+AC_DEFINE_UNQUOTED(BINDIR_TO_BBOARDTREEDIR, "$bindir_to_bboardtreedir", [Relative path from bindir to bboardtreedir])
 
 AC_MSG_CHECKING([for the bindir to exec_prefix relative path])
 adl_COMPUTE_RELATIVE_PATHS([bindir:exec_prefix:bindir_to_execprefix])
@@ -1316,6 +1327,9 @@ fi
 if test -d $srcdir/models-scad; then
   AC_CONFIG_FILES(models-scad/Makefile)
   AC_CONFIG_FILES(models-scad/proto/Makefile)
+fi
+if test -d $srcdir/models-bboard; then
+  AC_CONFIG_FILES(models-bboard/Makefile)
 fi
 AC_CONFIG_FILES(src/Makefile)
 AC_CONFIG_FILES(src/icons/Makefile)
