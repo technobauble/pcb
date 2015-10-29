@@ -371,10 +371,14 @@ CheckShorts (LibraryMenuType *theNet)
    * the menu is always non-null
    */
   void **menu = GetPointerMemory (generic);
+  char *s;
 
   *menu = theNet;
   ALLPIN_LOOP (PCB->Data);
   {
+    s = AttributeGetFromList (&(element->Attributes), "ERC::IgnoreShorts");
+    if (s && s[0]=='1')
+      continue;
     if (TEST_FLAG (DRCFLAG, pin))
       {
 	warn = true;
@@ -411,6 +415,9 @@ CheckShorts (LibraryMenuType *theNet)
   ENDALL_LOOP;
   ALLPAD_LOOP (PCB->Data);
   {
+    s = AttributeGetFromList (&(element->Attributes), "ERC::IgnoreShorts");
+    if (s && s[0]=='1')
+      continue;
     if (TEST_FLAG (DRCFLAG, pad))
       {
 	warn = true;
