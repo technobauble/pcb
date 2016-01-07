@@ -1335,6 +1335,7 @@ gcode_make_gc (void)
   gcodeGC gcode_gc = (gcodeGC)gc;
 
   gc->hid = &gcode_hid;
+  gc->hid_draw = &gcode_graphics;
 
   gcode_gc->cap = Trace_Cap;
   gcode_gc->width = 1;
