@@ -2352,9 +2352,11 @@ lesstif_parse_arguments (int *argc, char ***argv)
 
 /*!
  * \brief Draw the grid on the lesstif canvas
+ *
+ * We have gc in the arguments for consistency, but it's not presently used.
  */
 void
-lesstif_draw_grid (BoxType * region)
+lesstif_draw_grid (hidGC gc, BoxType * region)
 {
   static XPoint *points = 0;
   static int npoints = 0;

@@ -114,7 +114,7 @@ typedef struct hid_draw_class_st
   void (*fill_rect)    (hidGC gc, Coord x1, Coord y1, Coord x2, Coord y2);
 
   /* draw the grid in the specified region */
-  void (*draw_grid)    (BoxType * box);
+  void (*draw_grid)    (hidGC gc, BoxType * box);
   
   /* The following APIs render using PCB data-structures, not immediate parameters */
 
