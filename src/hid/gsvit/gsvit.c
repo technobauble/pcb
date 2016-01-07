@@ -2061,6 +2061,7 @@ hid_gsvit_init ()
 
   gsvit_hid.graphics            = &gsvit_graphics;
 
+  common_nogui_graphics_class_init(&gsvit_graphics_class);
   gsvit_graphics_class.set_layer      = gsvit_set_layer;
   gsvit_graphics_class.make_gc        = gsvit_make_gc;
   gsvit_graphics_class.destroy_gc     = gsvit_destroy_gc;
@@ -2088,6 +2089,7 @@ hid_gsvit_init ()
   gsvit_graphics_class.fill_pcb_pad = gsvit_fill_pcb_pad;
   gsvit_graphics_class.fill_pcb_pv = gsvit_fill_pcb_pv;
 
+  common_nogui_graphics_init(&gsvit_graphics);
   gsvit_graphics.klass = &gsvit_graphics_class;
   gsvit_graphics.poly_before         = 1;
 
