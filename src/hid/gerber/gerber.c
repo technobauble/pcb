@@ -1443,7 +1443,6 @@ hid_gerber_init ()
   gerber_hid.get_export_options  = gerber_get_export_options;
   gerber_hid.do_export           = gerber_do_export;
   gerber_hid.parse_arguments     = gerber_parse_arguments;
-  gerber_hid.set_layer           = gerber_set_layer;
   gerber_hid.calibrate           = gerber_calibrate;
   gerber_hid.set_crosshair       = gerber_set_crosshair;
 
@@ -1451,6 +1450,7 @@ hid_gerber_init ()
 
   common_draw_helpers_class_init (&gerber_graphics_class);
 
+  gerber_graphics_class.set_layer      = gerber_set_layer;
   gerber_graphics_class.make_gc        = gerber_make_gc;
   gerber_graphics_class.destroy_gc     = gerber_destroy_gc;
   gerber_graphics_class.use_mask       = gerber_use_mask;

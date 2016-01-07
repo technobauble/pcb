@@ -2052,17 +2052,16 @@ hid_gsvit_init ()
   gsvit_hid.name                = "gsvit";
   gsvit_hid.description         = "Numerical analysis package export";
   gsvit_hid.exporter            = 1;
-  gsvit_hid.poly_before         = 1;
 
   gsvit_hid.get_export_options  = gsvit_get_export_options;
   gsvit_hid.do_export           = gsvit_do_export;
   gsvit_hid.parse_arguments     = gsvit_parse_arguments;
-  gsvit_hid.set_layer           = gsvit_set_layer;
   gsvit_hid.calibrate           = gsvit_calibrate;
   gsvit_hid.set_crosshair       = gsvit_set_crosshair;
 
   gsvit_hid.graphics            = &gsvit_graphics;
 
+  gsvit_graphics_class.set_layer      = gsvit_set_layer;
   gsvit_graphics_class.make_gc        = gsvit_make_gc;
   gsvit_graphics_class.destroy_gc     = gsvit_destroy_gc;
   gsvit_graphics_class.use_mask       = gsvit_use_mask;
@@ -2090,6 +2089,7 @@ hid_gsvit_init ()
   gsvit_graphics_class.fill_pcb_pv = gsvit_fill_pcb_pv;
 
   gsvit_graphics.klass = &gsvit_graphics_class;
+  gsvit_graphics.poly_before         = 1;
 
   hid_register_hid (&gsvit_hid);
 
