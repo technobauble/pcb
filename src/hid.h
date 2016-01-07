@@ -446,8 +446,6 @@ typedef enum
 
     void (*notify_mark_change) (bool changes_complete);
 
-    HID_DRAW *graphics;
-
     void (*calibrate) (double xval_, double yval_);
       /*!< This is for the printer.
        *

@@ -2059,8 +2059,6 @@ hid_gsvit_init ()
   gsvit_hid.calibrate           = gsvit_calibrate;
   gsvit_hid.set_crosshair       = gsvit_set_crosshair;
 
-  gsvit_hid.graphics            = &gsvit_graphics;
-
   common_nogui_graphics_class_init(&gsvit_graphics_class);
   gsvit_graphics_class.set_layer      = gsvit_set_layer;
   gsvit_graphics_class.make_gc        = gsvit_make_gc;
