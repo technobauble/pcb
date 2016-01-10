@@ -624,7 +624,9 @@ ghid_close_confirm_dialog ()
         if (hid_actionl ("Save", NULL))
           { /* Save failed */
             return 0; /* Cancel */
-          } else {
+          }
+	else
+	  {
             return 1; /* Close */
           }
       }
@@ -1343,6 +1345,7 @@ Save (int argc, char **argv, Coord x, Coord y)
   char *function;
   char *name;
   char *prompt;
+  gchar *current_format;
 
   static gchar *current_dir = NULL;
 
@@ -1353,15 +1356,16 @@ Save (int argc, char **argv, Coord x, Coord y)
 
   if (strcasecmp (function, "Layout") == 0)
     if (PCB->Filename)
-      return hid_actionl ("SaveTo", "Layout", PCB->Filename, NULL);
+      return hid_actionl ("SaveTo", "Layout", PCB->Filename, PCB->Fileformat, NULL);
 
   if (strcasecmp (function, "PasteBuffer") == 0)
     prompt = _("Save element as");
   else
     prompt = _("Save layout as");
-  
+
+  current_format = PCB->Fileformat;
   name = ghid_dialog_file_select_save (prompt,
-				       &current_dir,
+				       &current_dir, &current_format,
 				       PCB->Filename, Settings.FilePath);
   
   if (name)
@@ -1381,9 +1385,9 @@ Save (int argc, char **argv, Coord x, Coord y)
 	   * just obtained.
 	   */
 	  if (strcasecmp (function, "Layout") == 0)
-	    hid_actionl ("SaveTo", "LayoutAs", name, NULL);
+	    hid_actionl ("SaveTo", "LayoutAs", name, hid_get_format_id_by_desc(current_format), NULL);
 	  else
-	    hid_actionl ("SaveTo", function, name, NULL);
+	    hid_actionl ("SaveTo", function, name, hid_get_format_id_by_desc(current_format), NULL);
 	}
       g_free (name);
     }
