@@ -148,6 +148,7 @@ PCB_SRCS = \
 	vector.h \
 	vendor.c \
 	vendor.h \
+	ypcb_file_format_plugin.c \
 	hid/common/actions.c \
 	hid/common/actions.h \
 	hid/common/flags.c \

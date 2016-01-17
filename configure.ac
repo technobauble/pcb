@@ -1043,6 +1043,10 @@ fi
 	DMALLOC_LIBS=""
 ])
 
+# FIXME: this is a still-hackish way to get libyaml linked in, it probably
+# wants a feature request option at least
+AC_CHECK_LIB(yaml,yaml_parser_initialize,,AC_MSG_ERROR([problem with libyaml]))
+
 # ------------- ElectricFence -------------------
 dnl ElectricFence checks
 with_efence=no
