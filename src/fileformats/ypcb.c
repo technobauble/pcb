@@ -477,7 +477,7 @@ SaveYPCB(PCBType *pcb, char *filename)
   int return_code;
   FILE *filename_fp;
   int yaml_emission_error = 0;
-  int result;
+  int result = 0;
   
   /* Open output file.  */
   filename_fp = fopen (filename, "w");
