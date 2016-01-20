@@ -123,7 +123,7 @@
 // Identifying name for this format (this ID must be unique accross formats)
 #define FORMAT_ID "ypcb"
 
-#define DEMO_FILE_VERSION_IMPLEMENTED 20160115
+#define YPCB_FILE_VERSION_IMPLEMENTED 20160115
 
 /*
 *  Function to check file format
@@ -146,7 +146,7 @@ CheckYPCBFile(char *filename)
 int
 CheckYPCBVersion(unsigned long current, unsigned long minimal)
 {
-    return (DEMO_FILE_VERSION_IMPLEMENTED >= minimal)?0:1;
+    return (YPCB_FILE_VERSION_IMPLEMENTED >= minimal)?0:1;
 }
 
 static int
@@ -232,15 +232,35 @@ emit_string (yaml_emitter_t *emitter, yaml_event_t *event, char const *string)
   return ! yaml_emitter_emit (emitter, event);
 }
 
+#define MAX_NUMBER_STRING_SIZE 42
+
 static int
 emit_integer (yaml_emitter_t *emitter, yaml_event_t *event, int64_t integer)
 {
-#define MAX_STRING_REPRESENTATION_SIZE 42
-  char sr[MAX_STRING_REPRESENTATION_SIZE + 1];   // String Representation
+  char sr[MAX_NUMBER_STRING_SIZE + 1];   // String Representation
   int chars_printed
-    = snprintf (sr, MAX_STRING_REPRESENTATION_SIZE + 1, "%" PRIi64, integer);
+    = snprintf (sr, MAX_NUMBER_STRING_SIZE + 1, "%" PRIi64, integer);
  
-  if ( chars_printed >= MAX_STRING_REPRESENTATION_SIZE + 1 ) {
+  if ( chars_printed >= MAX_NUMBER_STRING_SIZE + 1 ) {
+    // This really shouldn't happen but just in case we give it it's own
+    // integer value which isn't 1 or 2 (they are already used :)
+    return 3;
+  }
+
+  return emit_string (emitter, event, sr);
+}
+
+static int
+emit_double (
+    yaml_emitter_t *emitter,
+    yaml_event_t *event,
+    double double_value )
+{
+  char sr[MAX_NUMBER_STRING_SIZE + 1];   // String Representation
+  int chars_printed
+    = snprintf (sr, MAX_NUMBER_STRING_SIZE + 1, "%f", double_value);
+
+  if ( chars_printed >= MAX_NUMBER_STRING_SIZE + 1 ) {
     // This really shouldn't happen but just in case we give it it's own
     // integer value which isn't 1 or 2 (they are already used :)
     return 3;
@@ -320,29 +340,145 @@ emit_mapping_end (yaml_emitter_t *emitter, yaml_event_t *event)
 
 }
 
+static int
+emit_pcb_flag_strings (
+    yaml_emitter_t *emitter,
+    yaml_event_t *event,
+    FlagType flags )
+{
+  // Emit strings for the individual pcb flags in flags that don't get
+  // specially ignored (see below).  Note that pcb flags are not the same
+  // as per-object flags (which require a different conversion function to
+  // get the string equivalents).
+
+  // We call this function because it has some funny stuff that filters
+  // out certain flags that get forced on at load anyway, and we want to do
+  // exactly whatever insane stuff the existing pcb format does for now.
+  // This result of pcbflags_to_string() must not be free()'ed.
+  char *flags_string = pcbflags_to_string (flags);
+
+  // pcbflags_to_string() double-quotes the result for us, we don't want that
+  assert (flags_string[0] == '"');
+  char *fsndq = strdup (flags_string + 1);   // Flags String No Double Quotes
+  assert (fsndq[strlen (fsndq) - 1] == '"');
+  fsndq[strlen (fsndq) - 1] = '\0';
+
+  // Break the flags string up at ',' chars and emit the individual flags
+  gint const max_flag_count = 424242;   // Arbitrary large value
+  char **flag_strings = g_strsplit (fsndq, ",", max_flag_count);
+  free (fsndq);
+  char **cfsp;   // Current Flag String Pointer
+  int return_code = 0;
+  for ( cfsp = flag_strings ; *cfsp != NULL ; cfsp++ ) {
+    return_code = emit_string (emitter, event, *cfsp);
+    if ( return_code != 0 ) {
+      break;
+    }
+  }
+  g_strfreev (flag_strings);
+
+  return return_code;
+}
+
+static int
+emit_style_mappings (
+    yaml_emitter_t *emitter,
+    yaml_event_t *event,
+    Cardinal style_count,
+    RouteStyleType *styles )
+{
+  int return_code = 0;
+
+  Cardinal csi;   // Current Style Index
+   
+  // FIXME: it's clunky not to have macrose that we can use for emissions
+  // when we want to return.  Or we could use set/longjump.  Or emit with
+  // macro and an unclea index variable.
+
+  return_code = emit_mapping_start (emitter, event, YAML_BLOCK_MAPPING_STYLE);
+  if ( return_code != 0 ) {
+    return return_code;
+  }
+  {
+    for ( csi = 0 ; csi < style_count ; csi++ ) {
+
+      return_code = emit_string (emitter, event, styles[csi].Name);
+      if ( return_code != 0 ) { return return_code; }
+
+      return_code
+        = emit_mapping_start (emitter, event, YAML_BLOCK_MAPPING_STYLE);
+      if ( return_code != 0 ) {
+        return return_code;
+      }
+      {
+        return_code = emit_string (emitter, event, "Thick");
+        if ( return_code != 0 ) { return return_code; }
+        return_code = emit_integer (emitter, event, styles[csi].Thick);
+        if ( return_code != 0 ) { return return_code; }
+
+        return_code = emit_string (emitter, event, "Diameter");
+        if ( return_code != 0 ) { return return_code; }
+        return_code = emit_integer (emitter, event, styles[csi].Diameter);
+        if ( return_code != 0 ) { return return_code; }
+
+        return_code = emit_string (emitter, event, "Hole");
+        if ( return_code != 0 ) { return return_code; }
+        return_code = emit_integer (emitter, event, styles[csi].Hole);
+        if ( return_code != 0 ) { return return_code; }
+
+        return_code = emit_string (emitter, event, "Keepaway");
+        if ( return_code != 0 ) { return return_code; }
+        return_code = emit_integer (emitter, event, styles[csi].Keepaway);
+        if ( return_code != 0 ) { return return_code; }
+      }
+      return_code = emit_mapping_end (emitter, event);
+      if ( return_code != 0 ) { return return_code; }
+    }
+  }
+  return_code = emit_mapping_end (emitter, event);
+  if ( return_code != 0 ) { return return_code; }
+
+  return return_code;
+}
+
 // FIXME: this comma-swallowing __VA_ARGS__ needs a GCC extension, could
 // make a EMIT_EVENT_WITH_ARG() macro if people care and we actually want
 // style args.s
 
-#define EMIT_EVENT(event_type, ...)                                \
-  do {                                                             \
-    if ( emit_ ## event_type (&emitter, &event, ##__VA_ARGS__) ) { \
-      goto handle_yaml_emission_error;                             \
-    }                                                              \
+// Call emit_thing_to_emit (a constructed function name), and go to the
+// emission failure handler if emission fails.
+#define EMIT(thing_to_emit, ...)                                      \
+  do {                                                                \
+    if ( emit_ ## thing_to_emit (&emitter, &event, ##__VA_ARGS__) ) { \
+      goto handle_yaml_emission_error;                                \
+    }                                                                 \
   } while ( 0 )
+
+// By convention we use this when emitting a single YAML event (as opposed
+// to a construct).
+#define EMIT_EVENT EMIT
 
 // FIXME: these wrappers should maybe get shorter like ESS ESE etc., at
 // least for the ones that get used a lot
+
+// These emit individual YAML events.
 #define EMIT_STREAM_START()        EMIT_EVENT (stream_start)
 #define EMIT_STREAM_END()          EMIT_EVENT (stream_end)
 #define EMIT_DOCUMENT_START()      EMIT_EVENT (document_start)
 #define EMIT_DOCUMENT_END()        EMIT_EVENT (document_end)
 #define EMIT_STRING(arg)           EMIT_EVENT (string, arg)
 #define EMIT_INTEGER(arg)          EMIT_EVENT (integer, arg)
+#define EMIT_DOUBLE(double_value)  EMIT_EVENT (double, double_value)
 #define EMIT_SEQUENCE_START(style) EMIT_EVENT (sequence_start, style)
 #define EMIT_SEQUENCE_END()        EMIT_EVENT (sequence_end)
 #define EMIT_MAPPING_START(style)  EMIT_EVENT (mapping_start, style);
 #define EMIT_MAPPING_END()         EMIT_EVENT (mapping_end);
+
+// These emit constructs of multiple YAML events.
+#define EMIT_PCB_FLAG_STRINGS(pcb_flags) \
+  EMIT (pcb_flag_strings, pcb_flags)
+#define EMIT_STYLE_MAPPINGS(style_count, styles) \
+  EMIT (style_mappings, style_count, styles)
 
 // Emit a pair of integers as a sequence  // FIXME: we might not use this
 #define EMIT_INTEGER_PAIR_SEQUENCE(int1, int2)      \
@@ -364,11 +500,18 @@ emit_mapping_end (yaml_emitter_t *emitter, yaml_event_t *event)
     EMIT_MAPPING_END ();                          \
   } while ( 0 )
 
-// FIXME: this shows why we want a style argument for string maybe
-#define EMIT_NAMED_STRING(name, string)           \
+#define EMIT_NAMED_STRING(name, string) \
+  do {                                  \
+    EMIT_STRING (name);                 \
+    EMIT_STRING (string);               \
+  } while ( 0 )
+
+#define EMIT_NAMED_STRING_MAPPING(name, string)   \
   do {                                            \
+    EMIT_MAPPING_START (YAML_FLOW_MAPPING_STYLE); \
     EMIT_STRING (name);                           \
     EMIT_STRING (string);                         \
+    EMIT_MAPPING_END ();                          \
   } while ( 0 )
 
 #define EMIT_NAMED_INTEGER(name, integer)         \
@@ -376,6 +519,23 @@ emit_mapping_end (yaml_emitter_t *emitter, yaml_event_t *event)
     EMIT_STRING (name);                           \
     EMIT_INTEGER (integer);                       \
   } while ( 0 )
+
+#define EMIT_NAMED_DOUBLE(name, double_value) \
+  do {                                        \
+    EMIT_STRING (name);                       \
+    EMIT_DOUBLE (double_value);               \
+  } while ( 0 )
+
+// To save typing: short aliases with stringification
+#define ENS(name, string)       EMIT_NAMED_STRING (#name, string)
+#define ENI(name, integer)      EMIT_NAMED_INTEGER (#name, integer)
+#define END(name, double_value) EMIT_NAMED_DOUBLE (#name, double_value)
+
+// Even easier and less redundant for emmiting things on level 1 from PCB
+// that use the same names as are used in the structure.
+#define ENS1(name) ENS (name, PCB->name)
+#define ENI1(name) ENI (name, PCB->name)
+#define END1(name) END (name, PCB->name)
 
 int
 output_pcb_yaml (PCBType *pcb, FILE *output_file)
@@ -397,60 +557,100 @@ output_pcb_yaml (PCBType *pcb, FILE *output_file)
 
   EMIT_STREAM_START ();
   EMIT_DOCUMENT_START ();
+
+  // Whole format is a mapping
   EMIT_MAPPING_START (YAML_BLOCK_MAPPING_STYLE);
 
+  // FIXME: remove some of the below whole-doc delimiting whitespace and
+  // maybe block the whole thing for clarity
 
-  if ( PCB->Name ) {
-    printf ("%s:%i:%s: FIXME: what am i for\n", __FILE__, __LINE__, __func__); 
-  }
 
-  // PCB->File name is skipped, old PCB doesn't put it inside file either
- 
-  // FIXME: WORK POINT: we now need to do mostly whatever file.c:WritePCB()
-  // does, except outputing yaml.  There are probably some exception like
-  // the special handling of Fileformat below (related question is what the
-  // policy is for updating that field, though only-after-successful-save
-  // makes sense I think).  Here is an example start, though it looks like
-  // WritePCB doesn't bother to actually save the ID.  I still think it would
-  // be somewhat nice to have a live object with fields that corresponded
-  // 1-to-1 with what we're going to save, but maybe it isn't quite worth it.
-  EMIT_NAMED_INTEGER ("ID", PCB->ID);
 
-  // If we're here, the Fileformat is FORMAT_ID, regardless of what's
-  // in PCB->Fileformat (which won't get reset until the current save is
-  // successful).
-  EMIT_NAMED_STRING ("Fileformat", FORMAT_ID);
- 
-  EMIT_STRING ("bogus_mapping");
-  EMIT_MAPPING_START (YAML_ANY_MAPPING_STYLE);
+
+  // Instead of the top-line comment in the original pcb format
+  ENS (Program, Progname);
+  // This doesn't have an analog in the original pcb format
+  ENS (Fileformat, FORMAT_ID);
+  // Instead of the top-line comment in the original pcb format
+  ENI (YPCB_FILE_VERSION_IMPLEMENTED, YPCB_FILE_VERSION_IMPLEMENTED);
+
+  // FIXME: bad name, but we're mostly following old pcb format for now.
+  // The function that gets this value is badly named also.  Should be
+  // pcb_version_required assuming the explanatory commentis correct.
+  ENI (FileVersion, PCBFileVersionNeeded ());
+
+  EMIT_STRING ("PCB");
+  EMIT_MAPPING_START (YAML_BLOCK_MAPPING_STYLE);
   {
-    EMIT_STRING ("foo");
-
-    EMIT_SEQUENCE_START (YAML_ANY_SEQUENCE_STYLE);
-    {
-      EMIT_COORDINATE_PAIR_MAPPING (45, 46);
-      EMIT_MAPPING_START (YAML_ANY_MAPPING_STYLE);
-      {
-        EMIT_STRING ("bar");
-        EMIT_INTEGER_PAIR_SEQUENCE (42, 43);
-        EMIT_STRING ("booger");
-        EMIT_SEQUENCE_START (YAML_ANY_SEQUENCE_STYLE);
-        {
-          EMIT_INTEGER (1);
-          EMIT_INTEGER (2);
-          EMIT_INTEGER (3);
-        }
-        EMIT_SEQUENCE_END ();
-      }
-      EMIT_MAPPING_END ();
-
-      EMIT_STRING ("baz");
-    }
-    EMIT_SEQUENCE_END ();
+    ENS (Name, EMPTY (PCB->Name));
+    // FIXME: we actually need to do number output as string and use the
+    // already-made pcb_fprintf() or one of its siblings, its worth having
+    // string in the scripting languages if it gets you units, provided the
+    // unit extensions work in some sane way...
+    ENI1 (MaxWidth);
+    ENI1 (MaxHeight);
   }
   EMIT_MAPPING_END ();
 
+  EMIT_STRING ("Grid");
+  EMIT_MAPPING_START (YAML_BLOCK_MAPPING_STYLE);
+  {
+    // FIXME: Struct member same name as the name of this block.  How ugly
+    // that turns out to be.  No great way to fix either without datastructure
+    // rename or abandoning the name convention we're trying for
+    ENI1 (Grid);
+    ENI1 (GridOffsetX);
+    ENI1 (GridOffsetY);
+    // FIXME: its bad that we need stuff from Settings here
+    ENS (DrawGrid, Settings.DrawGrid ? "true" : "false");
+  }
   EMIT_MAPPING_END ();
+
+  // FIXME: whyyyyy do we have these weird conversions here
+  END (PolyArea, COORD_TO_MIL (COORD_TO_MIL (PCB->IsleArea) * 100) * 100);
+
+  END (ThermScale, PCB->ThermScale);
+
+  EMIT_STRING ("DRC");
+  EMIT_MAPPING_START (YAML_BLOCK_MAPPING_STYLE);
+  {
+    ENI1 (Bloat);
+    ENI1 (Shrink);
+    ENI1 (minWid);
+    ENI1 (minSlk);
+    ENI1 (minDrill);
+    ENI1 (minRing);
+  }
+  EMIT_MAPPING_END ();
+
+  EMIT_STRING ("Flags");
+  EMIT_SEQUENCE_START (YAML_FLOW_SEQUENCE_STYLE);
+  {
+    EMIT_PCB_FLAG_STRINGS (PCB->Flags);
+  }
+  EMIT_SEQUENCE_END ();
+
+  // FIXME: these should be broken down, not left as a complex string
+  ENS (Groups, LayerGroupsToString (&(PCB->LayerGroups)));
+  
+  // FIXME: WORK POINT: Before adding in this style stuff (which compiles) we
+  // eventually got a glibc detected "smallbin double linked list corrupted"
+  // due to repeated autosaves so perhaps the flag string stuff needs an
+  // audit/valgrind, did it it was flags_to_string being all wack and using
+  // its own heap, fixed now I think but needs confirmed by letting run for
+  // many backups after saving as ypcb under valgrind
+
+  // then check this
+  EMIT_STRING ("Styles");
+  EMIT_STYLE_MAPPINGS (NUM_STYLES, PCB->RouteStyle);
+
+
+  // FIXME: remove some of the above whole-doc delimiting whitespace and
+  // maybe block the whole thing for clarity
+
+  // End of mapping corresponding to whole data file
+  EMIT_MAPPING_END ();
+
   EMIT_DOCUMENT_END ();
   EMIT_STREAM_END ();
 
@@ -524,7 +724,7 @@ SaveYPCB(PCBType *pcb, char *filename)
 *  Returns 0, if succeeded, other value indicates error.
 *  No user interactions are necessary.
 */
-int
+static int
 ParseYPCB(PCBType *pcb, char *filename)
 {
   /* Follofing function call is placeholder, which creates empty board */
