@@ -138,10 +138,9 @@ static FlagBitsType pcb_flagbits[] = {
 #undef N
 
 /*
- * This helper function maintains a small list of buffers which are
- * used by flags_to_string().  Each buffer is allocated from the heap,
- * but the caller must not free them (they get realloced when they're
- * reused, but never completely freed).
+ * This helper function maintains a small list of buffers.  Each buffer is
+ * allocated from the heap, but the caller must not free them (they get
+ * realloced when they're reused, but never completely freed).
  */
 
 static struct
