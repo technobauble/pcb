@@ -210,8 +210,13 @@ emit_document_end (yaml_emitter_t *emitter, yaml_event_t *event)
   return ! yaml_emitter_emit (emitter, event);
 }
 
+
 static int
-emit_string (yaml_emitter_t *emitter, yaml_event_t *event, char const *string)
+emit_string_common (
+    yaml_emitter_t *emitter,
+    yaml_event_t *event,
+    char const *string,
+    yaml_scalar_style_t style )
 {
   int return_code
     = yaml_scalar_event_initialize (
@@ -222,7 +227,7 @@ emit_string (yaml_emitter_t *emitter, yaml_event_t *event, char const *string)
         strlen (string),
         true,
         true,
-        YAML_ANY_SCALAR_STYLE );   // FIXME: probably want to set style
+        style );   // FIXME: probably want to set style
 
   if ( ! return_code ) {
     // Unlikely.  2 to be different from a yaml_emitter_emit() fail
@@ -230,6 +235,24 @@ emit_string (yaml_emitter_t *emitter, yaml_event_t *event, char const *string)
   }
 
   return ! yaml_emitter_emit (emitter, event);
+}
+
+static int
+emit_string (yaml_emitter_t *emitter, yaml_event_t *event, char const *string)
+{
+  // FIXME: Probably want to set style to something consistant always
+  return emit_string_common (emitter, event, string, YAML_ANY_SCALAR_STYLE);
+}
+
+static int
+emit_single_quoted_string (
+    yaml_emitter_t *emitter,
+    yaml_event_t *event,
+    char const *string )
+{
+  return
+    emit_string_common (
+        emitter, event, string, YAML_SINGLE_QUOTED_SCALAR_STYLE );
 }
 
 #define MAX_NUMBER_STRING_SIZE 42
@@ -441,6 +464,119 @@ emit_style_mappings (
   return return_code;
 }
 
+// These macros all require context, and Return On Fail the return_code.
+
+// Emit Mapping Start
+#define EMSROF(style)                                         \
+  do {                                                        \
+    return_code = emit_mapping_start (emitter, event, style); \
+    if ( return_code != 0 ) { return return_code; }           \
+  } while ( 0 )
+// Emit Mapping End
+#define EMEROF()                                     \
+  do {                                               \
+    return_code = emit_mapping_end (emitter, event); \
+    if ( return_code != 0 ) { return return_code; }  \
+  } while ( 0 )
+// Emit Sequence Start
+#define ESSROF(style)                                          \
+  do {                                                         \
+    return_code = emit_sequence_start (emitter, event, style); \
+    if ( return_code != 0 ) { return return_code; }            \
+  } while ( 0 )
+// Emit Sequence End
+#define ESEROF()                                      \
+  do {                                                \
+    return_code = emit_sequence_end (emitter, event); \
+    if ( return_code != 0 ) { return return_code; }   \
+  } while ( 0 )
+// Emit String
+#define ESROF(string)                                   \
+  do {                                                  \
+    return_code = emit_string (emitter, event, string); \
+    if ( return_code != 0 ) { return return_code; }     \
+  } while ( 0 )
+// Emit Single-Quoted String
+#define ESQSROF(string)                                               \
+  do {                                                                \
+    return_code = emit_single_quoted_string (emitter, event, string); \
+    if ( return_code != 0 ) { return return_code; }                   \
+  } while ( 0 )
+// Emit Integer
+#define EIROF(integer)                                    \
+  do {                                                    \
+    return_code = emit_integer (emitter, event, integer); \
+    if ( return_code != 0 ) { return return_code; }       \
+  } while ( 0 )
+
+static int
+emit_font (
+    yaml_emitter_t *emitter,
+    yaml_event_t *event,
+    Cardinal max_symbol_count,
+    FontType *font )
+{
+  int return_code = 0;
+  Cardinal ii;
+
+  EMSROF (YAML_BLOCK_MAPPING_STYLE);
+  {
+    for ( ii = 0 ; ii <= max_symbol_count ; ii++ ) {
+      // The key is the character (possibly non-printing, in which case integer
+      // value is used), and the value is a hash describing how it's rendered.
+      if ( ! font->Symbol[ii].Valid ) {
+        continue;
+      }
+      if ( isprint (ii) ) {
+        char as_string[2] = "";
+        as_string[0] = ii;
+        as_string[1] = '\0';
+        ESQSROF (as_string);
+      }
+      else {
+        EIROF (ii);
+      }
+
+      EMSROF (YAML_BLOCK_MAPPING_STYLE);
+      {
+        ESROF ("Lines");
+        ESSROF (YAML_FLOW_SEQUENCE_STYLE);
+        {
+          int jj = font->Symbol[ii].LineN;
+          LineType *line = font->Symbol[ii].Line;
+          for ( jj = 0 ; jj < font->Symbol[ii].LineN ; jj++, line++ ) {
+            EMSROF (YAML_FLOW_MAPPING_STYLE);
+            {
+              ESROF ("Point1");
+              ESSROF (YAML_FLOW_SEQUENCE_STYLE);
+              {
+                EIROF (line->Point1.X);
+                EIROF (line->Point1.Y);
+              }
+              ESEROF ();
+              ESROF ("Point2");
+              ESSROF (YAML_FLOW_SEQUENCE_STYLE);
+              {
+                EIROF (line->Point2.X);
+                EIROF (line->Point2.Y);
+              }
+              ESEROF ();
+              ESROF ("Thickness");
+              EIROF (line->Thickness);
+            }
+            EMEROF ();
+          }
+        }
+        ESEROF ();
+      }
+      EMEROF ();
+    }
+  }
+  EMEROF ();
+
+  return return_code;
+}
+
 // FIXME: this comma-swallowing __VA_ARGS__ needs a GCC extension, could
 // make a EMIT_EVENT_WITH_ARG() macro if people care and we actually want
 // style args.s
@@ -471,14 +607,16 @@ emit_style_mappings (
 #define EMIT_DOUBLE(double_value)  EMIT_EVENT (double, double_value)
 #define EMIT_SEQUENCE_START(style) EMIT_EVENT (sequence_start, style)
 #define EMIT_SEQUENCE_END()        EMIT_EVENT (sequence_end)
-#define EMIT_MAPPING_START(style)  EMIT_EVENT (mapping_start, style);
-#define EMIT_MAPPING_END()         EMIT_EVENT (mapping_end);
+#define EMIT_MAPPING_START(style)  EMIT_EVENT (mapping_start, style)
+#define EMIT_MAPPING_END()         EMIT_EVENT (mapping_end)
 
 // These emit constructs of multiple YAML events.
 #define EMIT_PCB_FLAG_STRINGS(pcb_flags) \
   EMIT (pcb_flag_strings, pcb_flags)
 #define EMIT_STYLE_MAPPINGS(style_count, styles) \
   EMIT (style_mappings, style_count, styles)
+#define EMIT_FONT(max_symbol_count, font_pointer) \
+  EMIT (font, max_symbol_count, font_pointer)
 
 // Emit a pair of integers as a sequence  // FIXME: we might not use this
 #define EMIT_INTEGER_PAIR_SEQUENCE(int1, int2)      \
@@ -633,16 +771,13 @@ output_pcb_yaml (PCBType *pcb, FILE *output_file)
   // FIXME: these should be broken down, not left as a complex string
   ENS (Groups, LayerGroupsToString (&(PCB->LayerGroups)));
   
-  // FIXME: WORK POINT: Before adding in this style stuff (which compiles) we
-  // eventually got a glibc detected "smallbin double linked list corrupted"
-  // due to repeated autosaves so perhaps the flag string stuff needs an
-  // audit/valgrind, did it it was flags_to_string being all wack and using
-  // its own heap, fixed now I think but needs confirmed by letting run for
-  // many backups after saving as ypcb under valgrind
-
-  // then check this
   EMIT_STRING ("Styles");
   EMIT_STYLE_MAPPINGS (NUM_STYLES, PCB->RouteStyle);
+
+  EMIT_STRING ("Font");
+  EMIT_FONT (MAX_FONTPOSITION, &(PCB->Font));
+
+  
 
 
   // FIXME: remove some of the above whole-doc delimiting whitespace and
