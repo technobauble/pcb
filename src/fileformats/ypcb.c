@@ -80,6 +80,8 @@
 #include <netdb.h>
 #endif
 
+#include <setjmp.h>
+
 #include <stdio.h>
 
 #ifdef HAVE_STDLIB_H
@@ -147,6 +149,157 @@ int
 CheckYPCBVersion(unsigned long current, unsigned long minimal)
 {
     return (YPCB_FILE_VERSION_IMPLEMENTED >= minimal)?0:1;
+}
+
+// This type lets us dinstinguish between event initialization failures
+// (e.g. yamle_stream_start_event_initialize() failure) and actual
+// emissions failures (e.g. yaml_emitter_emit() failing).  Note that in
+// the latter case more details are available in the .problem file of the
+// yaml_emitter_t object.
+typedef enum {
+  EMIT_ERROR_NONE = 0,
+  EMIT_ERROR_EVENT_INITIALIZE_FAILED,
+  EMIT_ERROR_EMITTER_EMIT_FAILED,
+  EMIT_ERROR_OTHER_ERROR
+} emit_error_t;
+
+int yaml_return_code;      // Hold yaml_* return codes (to keep macros hygenic)
+yaml_emitter_t emitter;    // The YAML emitter object  
+yaml_event_t event;        // The YAML event object
+emit_error_t emit_error;   // The most recent emit_error_t (maybe NONE)
+jmp_buf env;
+
+// Try to emit YAML event name-EVENT with appropriate arguments __VA_ARGS__,
+// and longjmp to location in env on error.
+#define EMIT_EVENT_NEW(name, ...)                                    \
+  do {                                                               \
+    emit_error = EMIT_ERROR_NONE;                                    \
+                                                                     \
+    yaml_return_code                                                 \
+      = yaml_ ## name ## _event_initialize (&event, ## __VA_ARGS__); \
+                                                                     \
+    if ( ! yaml_return_code ) {                                      \
+      emit_error = EMIT_ERROR_EVENT_INITIALIZE_FAILED;               \
+    }                                                                \
+                                                                     \
+    yaml_return_code = yaml_emitter_emit (&emitter, &event);         \
+                                                                     \
+    if ( ! yaml_return_code ) {                                      \
+      emit_error = EMIT_ERROR_EMITTER_EMIT_FAILED;                   \
+    }                                                                \
+                                                                     \
+    if ( emit_error != EMIT_ERROR_NONE ) {                           \
+      longjmp (env, emit_error);                                     \
+    }                                                                \
+  } while ( 0 )
+
+// Shorthand
+#define EE EMIT_EVENT_NEW
+
+// Shorthand for common events
+#define E_MS(style) EE (mapping_start, NULL, NULL, true, style)
+#define E_ME()      EE (mapping_end)
+#define E_SS(style) EE (sequence_start, NULL, NULL, true, style)
+#define E_SE()      EE (sequence_end)
+
+// We define a construct as a YAML event serializing a particular type
+// (e.g. string, integer via SCALAR-EVENT, or a sequence of YAML events
+// that do so for more complicated types.  Each of these get their own
+// function anway but we call them via this macro to clarify and enforce
+// our function naming scheme.  The should be functions returning void that
+// longjmp() on error (either direction or via emission macros or other
+// construct functions).
+#define EMIT_CONSTRUCT(construct, ...) emit_ ## construct (__VA_ARGS__)
+
+// Shorthand
+#define EC EMIT_CONSTRUCT
+
+// Shorthand for common series and constructs
+
+// Emit String
+#define E_S(string_value)  EC (string_new, string_value)
+
+// Emit Integer
+#define E_I(integer_value) EC (integer_new, integer_value)
+
+// Emit Named String (key and value, presumably of a mapping)
+#define E_NS(name, value) \
+  do {                    \
+    E_S (name);           \
+    E_S (value);          \
+  } while ( 0 );
+
+// Emit Named Integer (key and value of a mapping).  value is cast to int64_t.
+#define E_NI(name, value) \
+  do {                    \
+    E_S (name);           \
+    E_I (value);          \
+  } while ( 0 );
+
+// Emit Named String/Integer Element.  The name is used both in stringified
+// form for the YAML element name, and as a field of CURRENT_STRUCT_POINTER
+// (which clients should ensure is correctly #define'ed at the use point).
+#define E_NSE(name) E_NS(#name, CURRENT_STRUCT_POINTER -> name)
+#define E_NIE(name) E_NI(#name, CURRENT_STRUCT_POINTER -> name)
+
+// Functions implementing construct emmission
+
+static void
+emit_string_new (char const *string)
+{
+  EMIT_EVENT_NEW (
+      scalar,
+      NULL,
+      NULL,
+      (yaml_char_t *) string,
+      strlen (string),
+      true,
+      true,
+      YAML_ANY_SCALAR_STYLE );
+}
+
+#define MAX_NUMBER_STRING_SIZE 42
+
+static void
+emit_integer_new (int64_t integer)
+{
+  char sr[MAX_NUMBER_STRING_SIZE + 1];   // String Representation
+  int chars_printed
+    = snprintf (sr, MAX_NUMBER_STRING_SIZE + 1, "%" PRIi64, integer);
+ 
+  if ( chars_printed >= MAX_NUMBER_STRING_SIZE + 1 ) {
+    assert (false);   // This really shouldn't happen
+    longjmp (env, EMIT_ERROR_OTHER_ERROR);
+  }
+
+  E_S (sr);
+}
+
+static void
+emit_entire_yaml_file (PCBType *pcb)
+{
+  EMIT_EVENT_NEW (stream_start, YAML_UTF8_ENCODING);
+  // FIXME: perl round-tripping does not use implicit doc start I think
+  EMIT_EVENT_NEW (document_start, NULL, NULL, NULL, true);
+
+  // FIXME: verify that this undef/redef is sane when used at multiple point.
+  // It should also be possible to re-order places that set it differently
+  // without breaking either half, though I think if it works at all this
+  // should be possible.
+#undef  CURRENT_STRUCT_POINTER
+#define CURRENT_STRUCT_POINTER pcb
+  E_MS (YAML_BLOCK_MAPPING_STYLE);
+  {
+    E_NIE (MaxWidth);
+    E_S ("foo");
+    E_S ("bar");
+    E_S ("baz");
+    E_I (42);
+  }
+  E_ME ();
+
+  EMIT_EVENT_NEW (document_end, true);
+  EMIT_EVENT_NEW (stream_end);
 }
 
 static int
@@ -254,8 +407,6 @@ emit_single_quoted_string (
     emit_string_common (
         emitter, event, string, YAML_SINGLE_QUOTED_SCALAR_STYLE );
 }
-
-#define MAX_NUMBER_STRING_SIZE 42
 
 static int
 emit_integer (yaml_emitter_t *emitter, yaml_event_t *event, int64_t integer)
@@ -680,6 +831,40 @@ output_pcb_yaml (PCBType *pcb, FILE *output_file)
 {
   // Output YAML form of pcb into already open output_file.  Return 0 on
   // success, non-zero otherwise.
+ 
+  int setjmp_result;
+
+  // Create the emitter object
+  if ( ! yaml_emitter_initialize (&emitter) ) {
+    return 1;
+  }
+  
+  yaml_emitter_set_output_file (&emitter, output_file);
+
+  setjmp_result = setjmp (env);
+  if ( setjmp_result == 0 ) {
+    emit_entire_yaml_file (pcb);
+  }
+  else {
+    switch ( setjmp_result ) {
+      case EMIT_ERROR_EVENT_INITIALIZE_FAILED:
+        fprintf (stderr, "YAML event initialization failed\n");
+        yaml_emitter_delete (&emitter);
+        return 1;
+        break;
+      case EMIT_ERROR_EMITTER_EMIT_FAILED:
+        fprintf (stderr, "YAML emission failed: %s\n",  emitter.problem);
+        yaml_emitter_delete (&emitter);
+        return 1;
+        break;
+      default:
+        assert (false);   // Shouldn't be here
+        break;
+    }
+  }
+        
+  yaml_emitter_delete (&emitter);
+  return 0;
 
   int return_code;
   yaml_emitter_t emitter;
