@@ -170,7 +170,7 @@ jmp_buf env;
 
 // Try to emit YAML event name-EVENT with appropriate arguments __VA_ARGS__,
 // and longjmp to location in env on error.
-#define EMIT_EVENT_NEW(name, ...)                                    \
+#define EMIT_EVENT(name, ...)                                    \
   do {                                                               \
     yaml_return_code                                                 \
       = yaml_ ## name ## _event_initialize (&event, ## __VA_ARGS__); \
@@ -187,7 +187,7 @@ jmp_buf env;
   } while ( 0 )
 
 // Shorthand
-#define EE EMIT_EVENT_NEW
+#define EE EMIT_EVENT
 
 // Shorthand for common events
 #define E_MS(style) EE (mapping_start, NULL, NULL, true, style)
@@ -283,7 +283,7 @@ emit_string_full (char const *string, yaml_scalar_style_t style)
 static void
 emit_string (char const *string)
 {
-  EMIT_EVENT_NEW (
+  EMIT_EVENT (
       scalar,
       NULL,
       NULL,
@@ -451,9 +451,9 @@ emit_font (Cardinal max_symbol_count, FontType *font)
 static void
 emit_entire_yaml_file (PCBType *pcb)
 {
-  EMIT_EVENT_NEW (stream_start, YAML_UTF8_ENCODING);
+  EMIT_EVENT (stream_start, YAML_UTF8_ENCODING);
   // FIXME: perl round-tripping does not use implicit doc start I think
-  EMIT_EVENT_NEW (document_start, NULL, NULL, NULL, true);
+  EMIT_EVENT (document_start, NULL, NULL, NULL, true);
   E_MS (YAML_BLOCK_MAPPING_STYLE);   // Entire document mapping
 
   // FIXME: verify that this undef/redef is sane when used at multiple point.
@@ -515,13 +515,15 @@ emit_entire_yaml_file (PCBType *pcb)
   // FIXME: these should be broken down, not left as a complex string
   E_NS (Groups, LayerGroupsToString (&(pcb->LayerGroups)));
 
+  // FIXME: should EC alias exist?  should it be named E_C instead?
+
   EC (styles, NUM_STYLES, pcb->RouteStyle);
 
-  EC (font, MAX_FONTPOSITION, (&(PCB->Font)));
+  EC (font, MAX_FONTPOSITION, (&(pcb->Font)));
 
   E_ME ();   // End of entire document mapping
-  EMIT_EVENT_NEW (document_end, true);
-  EMIT_EVENT_NEW (stream_end);
+  EMIT_EVENT (document_end, true);
+  EMIT_EVENT (stream_end);
 }
 
 int
