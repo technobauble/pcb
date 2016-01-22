@@ -170,7 +170,7 @@ jmp_buf env;
 
 // Try to emit YAML event name-EVENT with appropriate arguments __VA_ARGS__,
 // and longjmp to location in env on error.
-#define EMIT_EVENT(name, ...)                                    \
+#define EMIT_EVENT(name, ...)                                        \
   do {                                                               \
     yaml_return_code                                                 \
       = yaml_ ## name ## _event_initialize (&event, ## __VA_ARGS__); \
