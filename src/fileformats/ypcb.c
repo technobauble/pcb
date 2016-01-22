@@ -166,30 +166,23 @@ typedef enum {
 int yaml_return_code;      // Hold yaml_* return codes (to keep macros hygenic)
 yaml_emitter_t emitter;    // The YAML emitter object  
 yaml_event_t event;        // The YAML event object
-emit_error_t emit_error;   // The most recent emit_error_t (maybe NONE)
 jmp_buf env;
 
 // Try to emit YAML event name-EVENT with appropriate arguments __VA_ARGS__,
 // and longjmp to location in env on error.
 #define EMIT_EVENT_NEW(name, ...)                                    \
   do {                                                               \
-    emit_error = EMIT_ERROR_NONE;                                    \
-                                                                     \
     yaml_return_code                                                 \
       = yaml_ ## name ## _event_initialize (&event, ## __VA_ARGS__); \
                                                                      \
     if ( ! yaml_return_code ) {                                      \
-      emit_error = EMIT_ERROR_EVENT_INITIALIZE_FAILED;               \
+      longjmp (env, EMIT_ERROR_EVENT_INITIALIZE_FAILED);             \
     }                                                                \
                                                                      \
     yaml_return_code = yaml_emitter_emit (&emitter, &event);         \
                                                                      \
     if ( ! yaml_return_code ) {                                      \
-      emit_error = EMIT_ERROR_EMITTER_EMIT_FAILED;                   \
-    }                                                                \
-                                                                     \
-    if ( emit_error != EMIT_ERROR_NONE ) {                           \
-      longjmp (env, emit_error);                                     \
+      longjmp (env, EMIT_ERROR_EMITTER_EMIT_FAILED);                 \
     }                                                                \
   } while ( 0 )
 
@@ -222,25 +215,71 @@ jmp_buf env;
 // Emit Integer
 #define E_I(integer_value) EC (integer_new, integer_value)
 
+// Emit Double
+#define E_D(double_value)  EC (double_new, double_value)
+
 // Emit Named String (key and value, presumably of a mapping)
 #define E_NS(name, value) \
   do {                    \
-    E_S (name);           \
+    E_S (#name);          \
     E_S (value);          \
-  } while ( 0 );
+  } while ( 0 )
 
-// Emit Named Integer (key and value of a mapping).  value is cast to int64_t.
+// Emit Named Integer (key and value of a mapping).
 #define E_NI(name, value) \
   do {                    \
-    E_S (name);           \
+    E_S (#name);          \
     E_I (value);          \
-  } while ( 0 );
+  } while ( 0 )
 
-// Emit Named String/Integer Element.  The name is used both in stringified
-// form for the YAML element name, and as a field of CURRENT_STRUCT_POINTER
-// (which clients should ensure is correctly #define'ed at the use point).
-#define E_NSE(name) E_NS(#name, CURRENT_STRUCT_POINTER -> name)
-#define E_NIE(name) E_NI(#name, CURRENT_STRUCT_POINTER -> name)
+// Emit Named Double (key and value of a mapping).
+#define E_ND(name, value) \
+  do {                    \
+    E_S (#name);          \
+    E_D (value);          \
+  } while ( 0 )
+
+// Emit Named String/Integer Element.  This is shorthand to avoid repeating
+// the element name as both the name and the associated structure field.
+// The name is used both in stringified form for the YAML element name,
+// and as a field of CURRENT_STRUCT_POINTER (which clients should ensure
+// is correctly #define'ed at the use point).
+#define E_NSE(name) E_NS (name, CURRENT_STRUCT_POINTER -> name)
+#define E_NIE(name) E_NI (name, CURRENT_STRUCT_POINTER -> name)
+#define E_NDE(name) E_ND (name, CURRENT_STRUCT_POINTER -> name)
+
+
+// These functions take more arguments than their corresponding non-_full
+// counterparts and return error codes.  They're mainly for use inside
+// construct implementation in those cases where we have some cleanup to
+// do after a failure, but sometimes also when a little more control over
+// emitter behavior is desirable (FIXME: if it ever turns out to be).
+
+static emit_error_t
+emit_string_full (char const *string, yaml_scalar_style_t style)
+{
+  int return_code
+    = yaml_scalar_event_initialize (
+        &event,
+        NULL,
+        NULL,
+        (yaml_char_t *) string,
+        strlen (string),
+        true,
+        true,
+        style );
+
+  if ( ! return_code ) {
+    return EMIT_ERROR_EVENT_INITIALIZE_FAILED; 
+  }
+
+  if ( ! yaml_emitter_emit (&emitter, &event) ) {
+    return EMIT_ERROR_EMITTER_EMIT_FAILED;
+  }
+
+  return EMIT_ERROR_NONE;
+}
+
 
 // Functions implementing construct emmission
 
@@ -261,11 +300,11 @@ emit_string_new (char const *string)
 #define MAX_NUMBER_STRING_SIZE 42
 
 static void
-emit_integer_new (int64_t integer)
+emit_integer_new (int64_t value)
 {
   char sr[MAX_NUMBER_STRING_SIZE + 1];   // String Representation
   int chars_printed
-    = snprintf (sr, MAX_NUMBER_STRING_SIZE + 1, "%" PRIi64, integer);
+    = snprintf (sr, MAX_NUMBER_STRING_SIZE + 1, "%" PRIi64, value);
  
   if ( chars_printed >= MAX_NUMBER_STRING_SIZE + 1 ) {
     assert (false);   // This really shouldn't happen
@@ -276,11 +315,98 @@ emit_integer_new (int64_t integer)
 }
 
 static void
+emit_double_new (double value)
+{
+  char sr[MAX_NUMBER_STRING_SIZE + 1];   // String Representation
+  int chars_printed
+    = snprintf (sr, MAX_NUMBER_STRING_SIZE + 1, "%f", value);
+
+  if ( chars_printed >= MAX_NUMBER_STRING_SIZE + 1 ) {
+    assert (false);   // This really shouldn't happen
+    longjmp (env, EMIT_ERROR_OTHER_ERROR);
+  }
+
+  E_S (sr);
+}
+
+static void
+emit_pcb_flags (FlagType flags)
+{
+  // Emit the pcb flags named block, including strings for the individual pcb
+  // flags in flags that don't get specially ignored (see below).  Note that
+  // pcb flags are not the same as per-object flags (which require a different
+  // conversion function to get the string equivalents).
+
+  E_S ("Flags");
+  E_SS (YAML_FLOW_MAPPING_STYLE);
+  {
+    // We call this function because it has some funny stuff that filters
+    // out certain flags that get forced on at load anyway, and we want to
+    // do exactly whatever insane stuff the existing pcb format does for now.
+    // This result of pcbflags_to_string() must not be free()'ed.
+    char *flags_string = pcbflags_to_string (flags);
+  
+    // pcbflags_to_string() double-quotes the result for us, we don't want that
+    assert (flags_string[0] == '"');
+    char *fsndq = strdup (flags_string + 1);   // Flags String No Double Quotes
+    assert (fsndq[strlen (fsndq) - 1] == '"');
+    fsndq[strlen (fsndq) - 1] = '\0';
+  
+    // Break the flags string up at ',' chars and emit the individual flags
+    gint const max_flag_count = 424242;   // Arbitrary large value
+    char **flag_strings = g_strsplit (fsndq, ",", max_flag_count);
+    free (fsndq);
+    char **cfsp;   // Current Flag String Pointer
+    emit_error_t emit_error = EMIT_ERROR_NONE;
+    for ( cfsp = flag_strings ; *cfsp != NULL ; cfsp++ ) {
+      emit_error = emit_string_full (*cfsp, YAML_PLAIN_SCALAR_STYLE);
+      if ( emit_error != EMIT_ERROR_NONE ) {
+        break;
+      }
+    }
+    g_strfreev (flag_strings);
+  
+    if ( emit_error != EMIT_ERROR_NONE ) {
+      longjmp (env, emit_error);
+    }
+  }
+  E_SE ();
+}
+
+static void
+emit_styles (Cardinal style_count, RouteStyleType *styles)
+{
+  // Emit the given styles block.  Note that we have both pcb styles and
+  // YAML styles going on in the function, and they are totally different.
+  
+  E_S ("Styles");
+  E_MS (YAML_BLOCK_MAPPING_STYLE);
+  {
+    Cardinal csi;   // Current Style Index
+    for ( csi = 0 ; csi < style_count ; csi++ ) {
+      E_S (styles[csi].Name);
+      E_MS (YAML_BLOCK_MAPPING_STYLE);
+      {
+#undef  CURRENT_STRUCT_POINTER
+#define CURRENT_STRUCT_POINTER (&(styles[csi]))
+        E_NIE (Thick);
+        E_NIE (Diameter);
+        E_NIE (Hole);
+        E_NIE (Keepaway);
+      }
+      E_ME ();
+    }
+  }
+  E_ME ();
+}
+
+static void
 emit_entire_yaml_file (PCBType *pcb)
 {
   EMIT_EVENT_NEW (stream_start, YAML_UTF8_ENCODING);
   // FIXME: perl round-tripping does not use implicit doc start I think
   EMIT_EVENT_NEW (document_start, NULL, NULL, NULL, true);
+  E_MS (YAML_BLOCK_MAPPING_STYLE);   // Entire document mapping
 
   // FIXME: verify that this undef/redef is sane when used at multiple point.
   // It should also be possible to re-order places that set it differently
@@ -288,16 +414,62 @@ emit_entire_yaml_file (PCBType *pcb)
   // should be possible.
 #undef  CURRENT_STRUCT_POINTER
 #define CURRENT_STRUCT_POINTER pcb
+
+  // Instead of the top-line comment in the original pcb format
+  E_NS (Program, Progname);
+  // This doesn't have an analog in the original pcb format
+  E_NS (Fileformat, FORMAT_ID);
+  // Instead of the top-line comment in the original pcb format
+  E_NI (YPCB_FILE_VERSION_IMPLEMENTED, YPCB_FILE_VERSION_IMPLEMENTED);
+
+  E_S ("PCB");
   E_MS (YAML_BLOCK_MAPPING_STYLE);
   {
+    E_NS (Name, EMPTY (CURRENT_STRUCT_POINTER -> Name));
     E_NIE (MaxWidth);
-    E_S ("foo");
-    E_S ("bar");
-    E_S ("baz");
-    E_I (42);
+    E_NIE (MaxHeight);
   }
   E_ME ();
 
+  E_S ("Grid");
+  E_MS (YAML_BLOCK_MAPPING_STYLE);
+  {
+    // FIXME: Struct member same name as the name of this block.  How ugly
+    // that turns out to be.  No great way to fix either without datastructure
+    // rename or abandoning the name convention we're trying for
+    E_NIE (Grid);
+    E_NIE (GridOffsetX);
+    E_NIE (GridOffsetY);
+    // FIXME: its bad that we need stuff from Settings here
+    E_NS (DrawGrid, Settings.DrawGrid ? "true" : "false");
+  }
+  E_ME ();
+
+  // FIXME: whyyyyyy are we doing all these wack conversions here
+  E_ND (PolyArea, COORD_TO_MIL (COORD_TO_MIL (PCB->IsleArea) * 100) * 100); 
+
+  E_NDE (ThermScale);
+
+  E_S ("DRC");
+  E_MS (YAML_BLOCK_MAPPING_STYLE);
+  {
+    E_NIE (Bloat);
+    E_NIE (Shrink);
+    E_NIE (minWid);
+    E_NIE (minSlk);
+    E_NIE (minDrill);
+    E_NIE (minRing);
+  }
+  E_ME ();
+
+  EC (pcb_flags, pcb->Flags);
+
+  // FIXME: these should be broken down, not left as a complex string
+  E_NS (Groups, LayerGroupsToString (&(pcb->LayerGroups)));
+
+  EC (styles, NUM_STYLES, pcb->RouteStyle);
+
+  E_ME ();   // End of entire document mapping
   EMIT_EVENT_NEW (document_end, true);
   EMIT_EVENT_NEW (stream_end);
 }
@@ -841,7 +1013,12 @@ output_pcb_yaml (PCBType *pcb, FILE *output_file)
   
   yaml_emitter_set_output_file (&emitter, output_file);
 
+  // This is where we come if there are emission errors, otherwise we should
+  // never jump here.  Note that it's a big error to try to jump here with
+  // EMIT_ERROR_NONE as the value, since that should never be necessary and
+  // longjmp will rewrite the value for us causing massive confusion.
   setjmp_result = setjmp (env);
+
   if ( setjmp_result == 0 ) {
     emit_entire_yaml_file (pcb);
   }
