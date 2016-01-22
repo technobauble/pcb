@@ -207,7 +207,7 @@ jmp_buf env;
 // Shorthand
 #define EC EMIT_CONSTRUCT
 
-// Shorthand for common series and constructs
+// Shorthand for commonly emitted things
 
 // Emit String
 #define E_S(string_value)  EC (string_new, string_value)
@@ -218,26 +218,22 @@ jmp_buf env;
 // Emit Double
 #define E_D(double_value)  EC (double_new, double_value)
 
-// Emit Named String (key and value, presumably of a mapping)
-#define E_NS(name, value) \
-  do {                    \
-    E_S (#name);          \
-    E_S (value);          \
+// Emit Point (expressed as a sequence)
+#define E_P(point_value)             \
+  do {                               \
+    E_SS (YAML_FLOW_SEQUENCE_STYLE); \
+    {                                \
+      E_I ((point_value).X);         \
+      E_I ((point_value).Y);         \
+    }                                \
+    E_SE ();                         \
   } while ( 0 )
 
-// Emit Named Integer (key and value of a mapping).
-#define E_NI(name, value) \
-  do {                    \
-    E_S (#name);          \
-    E_I (value);          \
-  } while ( 0 )
-
-// Emit Named Double (key and value of a mapping).
-#define E_ND(name, value) \
-  do {                    \
-    E_S (#name);          \
-    E_D (value);          \
-  } while ( 0 )
+// Emit Named String/Int/Double/Point (key and value, presumably of a mapping)
+#define E_NS(name, value) do { E_S (#name); E_S (value); } while ( 0 )
+#define E_NI(name, value) do { E_S (#name); E_I (value); } while ( 0 )
+#define E_ND(name, value) do { E_S (#name); E_D (value); } while ( 0 )
+#define E_NP(name, value) do { E_S (#name); E_P (value); } while ( 0 )
 
 // Emit Named String/Integer Element.  This is shorthand to avoid repeating
 // the element name as both the name and the associated structure field.
@@ -247,6 +243,7 @@ jmp_buf env;
 #define E_NSE(name) E_NS (name, CURRENT_STRUCT_POINTER -> name)
 #define E_NIE(name) E_NI (name, CURRENT_STRUCT_POINTER -> name)
 #define E_NDE(name) E_ND (name, CURRENT_STRUCT_POINTER -> name)
+#define E_NPE(name) E_NP (name, CURRENT_STRUCT_POINTER -> name)
 
 
 // These functions take more arguments than their corresponding non-_full
@@ -401,6 +398,57 @@ emit_styles (Cardinal style_count, RouteStyleType *styles)
 }
 
 static void
+emit_font_new (Cardinal max_symbol_count, FontType *font)
+{
+  Cardinal ii;
+
+  E_S ("Font");
+  E_MS (YAML_BLOCK_MAPPING_STYLE);
+  {
+    for ( ii = 0 ; ii <= max_symbol_count ; ii++ ) {
+      // The key is the character (possibly non-printing, in which case integer
+      // value is used), and the value is a hash describing how it's rendered.
+      if ( ! font->Symbol[ii].Valid ) {
+        continue;
+      }
+      if ( isprint (ii) ) {
+        char as_string[2] = "";
+        as_string[0] = ii;
+        as_string[1] = '\0';
+        E_S (as_string);
+      }
+      else {
+        E_I (ii);
+      }
+
+      E_MS (YAML_BLOCK_MAPPING_STYLE);
+      {
+        E_S ("Lines");
+        E_SS (YAML_BLOCK_SEQUENCE_STYLE);
+        {
+          int jj = font->Symbol[ii].LineN;
+          LineType *line = font->Symbol[ii].Line;
+          for ( jj = 0 ; jj < font->Symbol[ii].LineN ; jj++, line++ ) {
+            E_MS (YAML_BLOCK_MAPPING_STYLE);
+            {
+#undef  CURRENT_STRUCT_POINTER
+#define CURRENT_STRUCT_POINTER line
+              E_NPE (Point1);
+              E_NPE (Point2);
+              E_NIE (Thickness);
+            }
+            E_ME ();
+          }
+        }
+        E_SE ();
+      }
+      E_ME ();
+    }
+  }
+  E_ME ();
+}
+
+static void
 emit_entire_yaml_file (PCBType *pcb)
 {
   EMIT_EVENT_NEW (stream_start, YAML_UTF8_ENCODING);
@@ -468,6 +516,8 @@ emit_entire_yaml_file (PCBType *pcb)
   E_NS (Groups, LayerGroupsToString (&(pcb->LayerGroups)));
 
   EC (styles, NUM_STYLES, pcb->RouteStyle);
+
+  EC (font_new, MAX_FONTPOSITION, (&(PCB->Font)));
 
   E_ME ();   // End of entire document mapping
   EMIT_EVENT_NEW (document_end, true);
