@@ -210,13 +210,13 @@ jmp_buf env;
 // Shorthand for commonly emitted things
 
 // Emit String
-#define E_S(string_value)  EC (string_new, string_value)
+#define E_S(string_value)  EC (string, string_value)
 
 // Emit Integer
-#define E_I(integer_value) EC (integer_new, integer_value)
+#define E_I(integer_value) EC (integer, integer_value)
 
 // Emit Double
-#define E_D(double_value)  EC (double_new, double_value)
+#define E_D(double_value)  EC (double, double_value)
 
 // Emit Point (expressed as a sequence)
 #define E_P(point_value)             \
@@ -281,7 +281,7 @@ emit_string_full (char const *string, yaml_scalar_style_t style)
 // Functions implementing construct emmission
 
 static void
-emit_string_new (char const *string)
+emit_string (char const *string)
 {
   EMIT_EVENT_NEW (
       scalar,
@@ -297,7 +297,7 @@ emit_string_new (char const *string)
 #define MAX_NUMBER_STRING_SIZE 42
 
 static void
-emit_integer_new (int64_t value)
+emit_integer (int64_t value)
 {
   char sr[MAX_NUMBER_STRING_SIZE + 1];   // String Representation
   int chars_printed
@@ -312,7 +312,7 @@ emit_integer_new (int64_t value)
 }
 
 static void
-emit_double_new (double value)
+emit_double (double value)
 {
   char sr[MAX_NUMBER_STRING_SIZE + 1];   // String Representation
   int chars_printed
@@ -398,7 +398,7 @@ emit_styles (Cardinal style_count, RouteStyleType *styles)
 }
 
 static void
-emit_font_new (Cardinal max_symbol_count, FontType *font)
+emit_font (Cardinal max_symbol_count, FontType *font)
 {
   Cardinal ii;
 
@@ -517,7 +517,7 @@ emit_entire_yaml_file (PCBType *pcb)
 
   EC (styles, NUM_STYLES, pcb->RouteStyle);
 
-  EC (font_new, MAX_FONTPOSITION, (&(PCB->Font)));
+  EC (font, MAX_FONTPOSITION, (&(PCB->Font)));
 
   E_ME ();   // End of entire document mapping
   EMIT_EVENT_NEW (document_end, true);
