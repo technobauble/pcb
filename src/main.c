@@ -43,6 +43,7 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <time.h> /* Seed for srand() */
+#include <errno.h> /* Seed for srand() */
 
 #include "global.h"
 #include "data.h"
@@ -2069,16 +2070,26 @@ main (int argc, char *argv[])
 
   if (command_line_pcb)
     {
-      if (access(command_line_pcb, F_OK))
+      FILE *f = fopen(command_line_pcb,"r");
+
+      if (f == NULL)
         {
-	   /* File does not exist, save the filename and continue with empty board */
-	   PCB->Filename = strdup (command_line_pcb);
-	   PCB->Fileformat = strdup (hid_get_default_format_id ());
+	  if (errno == ENOENT) /* File just does not exist, save the filename and continue with empty board */
+	    {
+	      PCB->Filename = strdup (command_line_pcb);
+	      PCB->Fileformat = strdup (hid_get_default_format_id ());
+	    }
+	  else /* File cannot be accessed from any other reason */
+	    {
+	      fprintf(stderr, "LoadPCB: Failed to open file \"%s\".\n", command_line_pcb);
+	      exit(1);
+	    }
 	}
       else
         {
-	   /* Hard fail if file exists and fails to load */
-           if (LoadPCB (command_line_pcb))
+	   fclose(f);
+
+	   if (LoadPCB (command_line_pcb)) /* Hard fail if file exists and fails to load */
              {
 	       fprintf(stderr, "LoadPCB: Failed to load existing file \"%s\". Is it supported PCB file?\n", command_line_pcb);
 	       exit(1);
