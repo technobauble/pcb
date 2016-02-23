@@ -4,6 +4,10 @@
  *  This widget is the main pcb menu.
  */
 
+#include <assert.h>
+
+#include <error.h>
+
 #include <glib.h>
 #include <glib-object.h>
 #include <gtk/gtk.h>
@@ -175,6 +179,187 @@ check_unique_accel (const char *accelerator)
   return accelerator;
 }
 
+// Die with a source location reference and error message if cond isn't met.
+#define REQUIRE(cond, error_message, ...) \
+  do {                                    \
+    if ( ! (cond) ) {                     \
+      fprintf (                           \
+          stderr,                         \
+          "%s:%d: " error_message,        \
+          __FILE__,                       \
+          __LINE__,                       \
+          __VA_ARGS__);                   \
+      exit (EXIT_FAILURE);                \
+    }                                     \
+  } while ( 0 )
+
+
+// Scan resource tree res for anchor declarations and add them all into
+// string-keyed hash table table as mappings from anchor names to resource
+// pointers.  A fatal error is triggered if the anchors aren't all unique
+// in table.  No new memory is allocated and the table keys and value remain
+// owned by the pre-existing res structure.
+static void
+add_resource_anchors (GHashTable *table, Resource const *res)
+{
+  for ( int ii = 0 ; ii < res->c ; ii++ ) {
+
+    ResourceVal *rv = &((res->v)[ii]);
+
+    // If the value is an anchor, add it to the table and verify it's new
+    if ( rv->name != NULL && strcmp (rv->name, "anchor") == 0 ) {
+      printf ("adding rv->value: %s\n", rv->value);
+      gboolean is_new
+        = g_hash_table_insert (table, rv->value, (gpointer) res);
+      REQUIRE (is_new, "Anchor '%s' isn't unique\n", rv->value);
+    }
+
+    // If the value is a subresource, traverse downward
+    if ( rv->subres != NULL ) {
+      add_resource_anchors (table, rv->subres);
+    }
+
+  }
+}
+
+// Find the first string of the form ref:anchor:field (where ref: is
+// literal and anchor and field are composed of isalnum() characters)
+// in str.  Return strdup()s of the anchor and field in *anchor and *field,
+// A pointer to the first character of the ref in str in *start, and a
+// pointer to the first character after the end of field as the result.
+// NULL is returned for everything if a ref isn't found.  Malformed ref
+// fields trigger a fatal error.
+static char *
+parse_first_ref (char const *str, char **start, char **anchor, char **field)
+{
+  // Find the start of the ref
+  *start = strstr (str, "ref:");
+
+  // If we didn't find any refs we do nothing and return NULL everywhere.
+  if ( *start == NULL ) {
+    *anchor = NULL;
+    *field = NULL;
+    return NULL;
+  }
+
+
+  // Get copies of the anchor and field parts of the ref
+  *anchor = strdup (*start + strlen ("ref:"));
+  *field = strstr (*anchor, ":");
+  REQUIRE (
+      *field != NULL,
+      "Malformed ref:  missing field part: near start of '%s'\n", *start );
+  **field = '\0';
+  (*field)++;
+  *field = strdup (*field);
+  char *temp;
+  for ( temp = *field ; isalnum(*temp) || *temp == '_' ; temp++ ) {
+    ; 
+  }
+  *temp = '\0';
+  REQUIRE (
+      strlen (*anchor) != 0, 
+      "Malformed ref: zero-length anchor part: near start of '%s'\n", *start );
+  REQUIRE (
+      strlen (*field) != 0, 
+      "Malformed ref: zero-length field part: near start of '%s'\n", *start );
+
+  // Return pointer to character after end of field
+  return (
+      *start +
+      strlen("ref:") +
+      strlen (*anchor) +
+      strlen (":") +
+      strlen (*field) );
+}
+
+// If str is non-NULL, return a new GString consisting of str with all
+// ref:anchor:field strings expanded using the Resource pointers in anchors,
+// otherwise return an empty GString.
+static GString * 
+expand_refs (char const *str, GHashTable *anchors)
+{
+  GString *result = g_string_new ("");
+
+  if ( str == NULL ) {
+    return result;
+  }
+
+  char *start, *anchor, *field, *rest = (char *) str;
+
+  char const *part_before = str;
+
+  while ( (rest = parse_first_ref (rest, &start, &anchor, &field)) ) {
+      
+    g_string_append_len (result, part_before, start - part_before);
+
+    Resource *res = g_hash_table_lookup (anchors, anchor);
+
+    REQUIRE (res != NULL, "Reference to non-existent anchor '%s'\n", anchor);
+
+    if ( strcmp (field, "hotkey") == 0 ) {
+
+      // Find the accelerator ("a") sub-resource
+      Resource *ar = NULL;
+      for ( int ii = 0 ; ii < res->c ; ii++ ) {
+        char *field_name = ((res->v)[ii]).name;
+        if ( field_name != NULL && strcmp (field_name, "a") == 0 ) {
+          ar = ((res->v)[ii]).subres;
+          break;
+        }
+      }
+      REQUIRE (
+          ar != NULL,
+          "Reference 'ref:%s:%s' is invalid because the resource containing "
+          "anchor '%s' doesn't also contain a accelerator sub-resource\n",
+          anchor, field, anchor );
+      // The human-readable HotKey Name is the first value of "a" sub-resource
+      char *hkn = (ar->v[0]).value;
+
+      g_string_append (result, hkn);
+    }
+
+    // FIXME: field is a misnomer since we display things from subres or
+    // parent resource
+
+    else if ( strcmp (field, "menu_path") == 0 ) {
+
+      GString *path = g_string_new ("");
+      Resource *cr = res;   // Current Resource
+      // Traverse up.  Menu item Resource entries have the menu item name
+      // as their first value, but top-level resources have a sub-resource
+      // as their first value, so when we get to one of those we're done.
+      do {
+        g_string_prepend (path, cr->v[0].value);
+        g_string_prepend (path, "->");
+        cr = cr->parent;
+      } while ( cr != NULL && (cr->v[0].value != NULL) );
+      assert (cr->v[0].subres != NULL);
+
+      g_string_erase (path, 0, strlen ("->"));   // Erase leading "->"
+
+      g_string_append (result, path->str);
+
+      g_string_free (path, TRUE);
+    }
+
+    else {
+      REQUIRE (false,  "Uknown field name '%s'\n", field);
+    }
+
+    part_before = rest;
+
+    free (field);
+    free (anchor);
+  }
+
+  // Note that because there din't turn out to be any more refs, the
+  // part_before now actually consists of everything from the point after
+  // the last ref to the end of the string.
+  g_string_append (result, part_before);
+
+  return result;
+}
 
 /*! \brief Translate a resource tree into a menu structure
  *
@@ -189,6 +374,13 @@ ghid_main_menu_real_add_resource (GHidMainMenu *menu, GtkMenuShell *shell,
   int i, j;
   const Resource *tmp_res;
   gchar mnemonic = 0;
+
+  printf ("creating menu for resource with first value %s\n", res->v[0].value);
+
+  printf ("creating new hash table\n");
+  GHashTable *anchors = g_hash_table_new (g_str_hash, g_str_equal);
+
+  add_resource_anchors (anchors, res);
 
   for (i = 0; i < res->c; ++i)
     {
@@ -250,11 +442,14 @@ ghid_main_menu_real_add_resource (GHidMainMenu *menu, GtkMenuShell *shell,
               GtkWidget *item = gtk_menu_item_new_with_mnemonic (menu_label);
               GtkWidget *tearoff = gtk_tearoff_menu_item_new ();
               const char *tip = resource_value (sub_res, "tip");
+              GString *tipwer = expand_refs (tip, anchors);
 
               gtk_menu_shell_append (shell, item);
               gtk_menu_item_set_submenu (GTK_MENU_ITEM (item), submenu);
 
-              gtk_widget_set_tooltip_text (item, tip);
+              gtk_widget_set_tooltip_text (item, tipwer->str);
+
+              g_string_free (tipwer, TRUE);
 
               /* add tearoff to menu */
               gtk_menu_shell_append (GTK_MENU_SHELL (submenu), tearoff);
@@ -269,14 +464,16 @@ ghid_main_menu_real_add_resource (GHidMainMenu *menu, GtkMenuShell *shell,
               const char *checked = resource_value (sub_res, "checked");
               const char *label = resource_value (sub_res, "sensitive");
               const char *tip = resource_value (sub_res, "tip");
+              /* Tip With Expanded Refs  */
+              GString *tipwer = expand_refs (tip, anchors);
               if (checked)
                 {
                   /* TOGGLE ITEM */
                   gchar *name = g_strdup_printf ("MainMenuAction%d",
                                                  action_counter++);
-
-                  action = GTK_ACTION (gtk_toggle_action_new (name, menu_label,
-                                                              tip, NULL));
+                  action
+                    = GTK_ACTION ( gtk_toggle_action_new (name, menu_label,
+                                                          tipwer->str, NULL));
                   /* checked=foo       is a binary flag (checkbox)
                    * checked=foo,bar   is a flag compared to a value (radio) */
                   gtk_toggle_action_set_draw_as_radio
@@ -288,15 +485,17 @@ ghid_main_menu_real_add_resource (GHidMainMenu *menu, GtkMenuShell *shell,
                   GtkWidget *item = gtk_menu_item_new_with_label (menu_label);
                   gtk_widget_set_sensitive (item, FALSE);
                   gtk_menu_shell_append (shell, item);
-                  gtk_widget_set_tooltip_text (item, tip);
+                  gtk_widget_set_tooltip_text (item, tipwer->str);
                 }
               else
                 {
                   /* NORMAL ITEM */
                   gchar *name
                     = g_strdup_printf ("MainMenuAction%d", action_counter++);
-                  action = gtk_action_new (name, menu_label, tip, NULL);
+                  action
+                    = gtk_action_new (name, menu_label, tipwer->str, NULL);
                 }
+              g_string_free (tipwer, TRUE);
             }
           /* If this menu item has an associated, create and set up it's
            * widget.  */
@@ -406,6 +605,8 @@ ghid_main_menu_real_add_resource (GHidMainMenu *menu, GtkMenuShell *shell,
           break;
       }
   }
+
+  g_hash_table_unref (anchors);
 }
 
 /* CONSTRUCTOR */

@@ -27,8 +27,9 @@ extern "C"
     struct Resource *parent;
     void *user_ptr;
     int flags;
-    int c;			/* number of v[i] */
+    int c;                 /* number of v[i] */
     ResourceVal *v;
+    GHashTable *anchors;   /* In top-level resources only.  For cross-refs.  */
   } Resource;
 
 #define resource_type(resval) (((resval).name?100:0)+((resval).value?10:0)+((resval).subres?1:0))

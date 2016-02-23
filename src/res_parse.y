@@ -138,6 +138,11 @@ resource_parse(const char *filename, const char **strings)
     }
   else
     res_strings = NULL;
+
+  parsed_res->anchors = g_hash_table_new (g_str_hash, g_str_equal); 
+  // FIXME: WORK POINT: port the anchor creation stuff to this file and test
+  //add_resource_anchors (parsed_res->anchors, parsed_res);
+
   return parsed_res;
 }
 
@@ -149,6 +154,7 @@ resource_create(Resource *parent)
   rv->flags = 0;
   rv->c = 0;
   rv->v = (ResourceVal *)malloc(sizeof(ResourceVal));
+  rv->anchors = NULL;   /* Filled in later for top-level resources only */
   return rv;
 }
 
