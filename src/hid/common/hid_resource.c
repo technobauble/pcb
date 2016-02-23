@@ -19,7 +19,7 @@ static Resource *
 res_wrap (char *value)
 {
   Resource *tmp;
-  tmp = resource_create (0);
+  tmp = resource_create (0, NULL);
   resource_add_val (tmp, 0, value, 0);
   return tmp;
 }

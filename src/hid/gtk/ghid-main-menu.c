@@ -179,103 +179,77 @@ check_unique_accel (const char *accelerator)
   return accelerator;
 }
 
-// Die with a source location reference and error message if cond isn't met.
-#define REQUIRE(cond, error_message, ...) \
-  do {                                    \
-    if ( ! (cond) ) {                     \
-      fprintf (                           \
-          stderr,                         \
-          "%s:%d: " error_message,        \
-          __FILE__,                       \
-          __LINE__,                       \
-          __VA_ARGS__);                   \
-      exit (EXIT_FAILURE);                \
-    }                                     \
+/* Die with a source location reference and err_message if cond isn't met.  */
+#define REQUIRE(cond, err_message, ...) \
+  do {                                  \
+    if ( ! (cond) ) {                   \
+      fprintf (                         \
+          stderr,                       \
+          "%s:%d: " err_message,        \
+          __FILE__,                     \
+          __LINE__,                     \
+          __VA_ARGS__);                 \
+      exit (EXIT_FAILURE);              \
+    }                                   \
   } while ( 0 )
 
-
-// Scan resource tree res for anchor declarations and add them all into
-// string-keyed hash table table as mappings from anchor names to resource
-// pointers.  A fatal error is triggered if the anchors aren't all unique
-// in table.  No new memory is allocated and the table keys and value remain
-// owned by the pre-existing res structure.
-static void
-add_resource_anchors (GHashTable *table, Resource const *res)
-{
-  for ( int ii = 0 ; ii < res->c ; ii++ ) {
-
-    ResourceVal *rv = &((res->v)[ii]);
-
-    // If the value is an anchor, add it to the table and verify it's new
-    if ( rv->name != NULL && strcmp (rv->name, "anchor") == 0 ) {
-      printf ("adding rv->value: %s\n", rv->value);
-      gboolean is_new
-        = g_hash_table_insert (table, rv->value, (gpointer) res);
-      REQUIRE (is_new, "Anchor '%s' isn't unique\n", rv->value);
-    }
-
-    // If the value is a subresource, traverse downward
-    if ( rv->subres != NULL ) {
-      add_resource_anchors (table, rv->subres);
-    }
-
-  }
-}
-
-// Find the first string of the form ref:anchor:field (where ref: is
-// literal and anchor and field are composed of isalnum() characters)
-// in str.  Return strdup()s of the anchor and field in *anchor and *field,
-// A pointer to the first character of the ref in str in *start, and a
-// pointer to the first character after the end of field as the result.
-// NULL is returned for everything if a ref isn't found.  Malformed ref
-// fields trigger a fatal error.
+/* Find the first string of the form ref:anchor:property (where ref: is
+ * literal and anchor and property are composed of isalnum() characters
+ * or underscores) in str.  Return strdup()s of the anchor and property in
+ * *anchor and *property, A pointer to the first character of the ref in str
+ * in *start, and a pointer to the first character after the end of property
+ * as the result.  NULL is returned for everything if a ref isn't found.
+ * Malformed refs trigger a fatal error.  */
 static char *
-parse_first_ref (char const *str, char **start, char **anchor, char **field)
+parse_first_ref (char const *str, char **start, char **anchor, char **property)
 {
-  // Find the start of the ref
+  /* Find the start of the ref */
   *start = strstr (str, "ref:");
 
-  // If we didn't find any refs we do nothing and return NULL everywhere.
+  /* If we didn't find any refs we do nothing and return all NULLs. */
   if ( *start == NULL ) {
     *anchor = NULL;
-    *field = NULL;
+    *property = NULL;
     return NULL;
   }
 
-
-  // Get copies of the anchor and field parts of the ref
+  /* Get copies of the anchor and property parts of the ref */
   *anchor = strdup (*start + strlen ("ref:"));
-  *field = strstr (*anchor, ":");
+  *property = strstr (*anchor, ":");
   REQUIRE (
-      *field != NULL,
-      "Malformed ref:  missing field part: near start of '%s'\n", *start );
-  **field = '\0';
-  (*field)++;
-  *field = strdup (*field);
+      *property != NULL,
+      "Malformed ref:  missing property part: near start of '%s'\n",
+      *start );
+  **property = '\0';
+  (*property)++;
+  *property = strdup (*property);
   char *temp;
-  for ( temp = *field ; isalnum(*temp) || *temp == '_' ; temp++ ) {
+  for ( temp = *property ; isalnum (*temp) || *temp == '_' ; temp++ ) {
     ; 
   }
   *temp = '\0';
   REQUIRE (
       strlen (*anchor) != 0, 
-      "Malformed ref: zero-length anchor part: near start of '%s'\n", *start );
+      "Malformed ref: zero-length anchor part: near start of '%s'\n",
+      *start );
   REQUIRE (
-      strlen (*field) != 0, 
-      "Malformed ref: zero-length field part: near start of '%s'\n", *start );
+      strlen (*property) != 0, 
+      "Malformed ref: zero-length property part: near start of '%s'\n",
+      *start );
 
-  // Return pointer to character after end of field
+  /* Return pointer to character after end of property */
   return (
       *start +
       strlen("ref:") +
       strlen (*anchor) +
       strlen (":") +
-      strlen (*field) );
+      strlen (*property) );
 }
 
-// If str is non-NULL, return a new GString consisting of str with all
-// ref:anchor:field strings expanded using the Resource pointers in anchors,
-// otherwise return an empty GString.
+/* If str is non-NULL, return a new GString consisting of str with all
+ * ref:anchor:property strings expanded using the Resource pointers in
+ * anchors, otherwise return an empty GString.  If anchors is NULL it is
+ * treated as an empty table.  */
 static GString * 
 expand_refs (char const *str, GHashTable *anchors)
 {
@@ -285,11 +259,16 @@ expand_refs (char const *str, GHashTable *anchors)
     return result;
   }
 
-  char *start, *anchor, *field, *rest = (char *) str;
+  if ( anchors == NULL ) {
+    g_string_append (result, str);
+    return result;
+  }
+
+  char *start, *anchor, *property, *rest = (char *) str;
 
   char const *part_before = str;
 
-  while ( (rest = parse_first_ref (rest, &start, &anchor, &field)) ) {
+  while ( (rest = parse_first_ref (rest, &start, &anchor, &property)) ) {
       
     g_string_append_len (result, part_before, start - part_before);
 
@@ -297,9 +276,9 @@ expand_refs (char const *str, GHashTable *anchors)
 
     REQUIRE (res != NULL, "Reference to non-existent anchor '%s'\n", anchor);
 
-    if ( strcmp (field, "hotkey") == 0 ) {
+    if ( strcmp (property, "hotkey") == 0 ) {
 
-      // Find the accelerator ("a") sub-resource
+      /* Find the accelerator ("a") sub-resource */
       Resource *ar = NULL;
       for ( int ii = 0 ; ii < res->c ; ii++ ) {
         char *field_name = ((res->v)[ii]).name;
@@ -311,24 +290,21 @@ expand_refs (char const *str, GHashTable *anchors)
       REQUIRE (
           ar != NULL,
           "Reference 'ref:%s:%s' is invalid because the resource containing "
-          "anchor '%s' doesn't also contain a accelerator sub-resource\n",
-          anchor, field, anchor );
-      // The human-readable HotKey Name is the first value of "a" sub-resource
+          "anchor '%s' doesn't also contain an accelerator sub-resource\n",
+          anchor, property, anchor );
+      /* The human-readable HotKey Name is first value of "a" sub-resource */
       char *hkn = (ar->v[0]).value;
 
       g_string_append (result, hkn);
     }
 
-    // FIXME: field is a misnomer since we display things from subres or
-    // parent resource
-
-    else if ( strcmp (field, "menu_path") == 0 ) {
+    else if ( strcmp (property, "menu_path") == 0 ) {
 
       GString *path = g_string_new ("");
-      Resource *cr = res;   // Current Resource
-      // Traverse up.  Menu item Resource entries have the menu item name
-      // as their first value, but top-level resources have a sub-resource
-      // as their first value, so when we get to one of those we're done.
+      Resource *cr = res;   /* Current Resource */
+      /* Traverse up.  Menu item Resource entries have the menu item name
+       * as their first value, but top-level resources have a sub-resource
+       * as their first value, so when we get to one of those we're done.  */
       do {
         g_string_prepend (path, cr->v[0].value);
         g_string_prepend (path, "->");
@@ -336,7 +312,7 @@ expand_refs (char const *str, GHashTable *anchors)
       } while ( cr != NULL && (cr->v[0].value != NULL) );
       assert (cr->v[0].subres != NULL);
 
-      g_string_erase (path, 0, strlen ("->"));   // Erase leading "->"
+      g_string_erase (path, 0, strlen ("->"));   /* Erase leading "->" */
 
       g_string_append (result, path->str);
 
@@ -344,18 +320,20 @@ expand_refs (char const *str, GHashTable *anchors)
     }
 
     else {
-      REQUIRE (false,  "Uknown field name '%s'\n", field);
+
+      REQUIRE (false,  "Unknown property name '%s'\n", property);
+
     }
 
     part_before = rest;
 
-    free (field);
+    free (property);
     free (anchor);
   }
 
-  // Note that because there din't turn out to be any more refs, the
-  // part_before now actually consists of everything from the point after
-  // the last ref to the end of the string.
+  /* Note that because there din't turn out to be any more refs, the
+   * part_before now actually consists of everything from the point after
+   * the last ref to the end of the string.  */
   g_string_append (result, part_before);
 
   return result;
@@ -375,12 +353,9 @@ ghid_main_menu_real_add_resource (GHidMainMenu *menu, GtkMenuShell *shell,
   const Resource *tmp_res;
   gchar mnemonic = 0;
 
-  printf ("creating menu for resource with first value %s\n", res->v[0].value);
-
-  printf ("creating new hash table\n");
-  GHashTable *anchors = g_hash_table_new (g_str_hash, g_str_equal);
-
-  add_resource_anchors (anchors, res);
+  /* Note that the anchors table should have all anchors associate with the
+   * top-level parent of the current resource.  */
+  GHashTable *anchors = res->anchors;
 
   for (i = 0; i < res->c; ++i)
     {
@@ -605,8 +580,6 @@ ghid_main_menu_real_add_resource (GHidMainMenu *menu, GtkMenuShell *shell,
           break;
       }
   }
-
-  g_hash_table_unref (anchors);
 }
 
 /* CONSTRUCTOR */

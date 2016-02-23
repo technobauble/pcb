@@ -3,6 +3,8 @@
 
 #include <stdio.h>
 
+#include <glib.h>
+
 #ifdef __cplusplus
 extern "C"
 {
@@ -29,7 +31,7 @@ extern "C"
     int flags;
     int c;                 /* number of v[i] */
     ResourceVal *v;
-    GHashTable *anchors;   /* In top-level resources only.  For cross-refs.  */
+    GHashTable *anchors;   /* Xref anchors for top-level parent, or NULL */
   } Resource;
 
 #define resource_type(resval) (((resval).name?100:0)+((resval).value?10:0)+((resval).subres?1:0))
@@ -41,7 +43,7 @@ extern "C"
   char *resource_value (const Resource * res, char *name);
   Resource *resource_subres (const Resource * res, const char *name);
 
-  Resource *resource_create (Resource * parent);
+  Resource *resource_create (Resource * parent, GHashTable *anchors);
   void resource_add_val (Resource * n, char *name, char *value,
 			 Resource * subres);
 

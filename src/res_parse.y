@@ -4,12 +4,15 @@
 #include "config.h"
 #endif
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 #ifdef HAVE_STRING_H
 #include <string.h>
 #endif
+
+#include <glib.h>
 
 #define YYDEBUG 0
 #define YYERROR_VERBOSE 1
@@ -26,6 +29,8 @@
 
 static Resource *parsed_res;
 static Resource *current_res;
+
+static GHashTable *anchors = NULL;
 
 int reserror(const char *);
 int reslex();
@@ -49,12 +54,12 @@ int reslex();
 %%
 
 top_res
- : { current_res = parsed_res = resource_create(NULL); }
+ : { current_res = parsed_res = resource_create(NULL, anchors); }
    res_item_zm
  ;
 
 res
- : { current_res = resource_create(current_res); }
+ : { current_res = resource_create(current_res, anchors); }
    '{' res_item_zm '}'
    { $$ = current_res; current_res = current_res->parent; }
  ;
@@ -104,9 +109,51 @@ res_parse_getchars(char *buf, int max_size)
   return 1;
 }
 
+/* Die with a source location reference and err_message if cond isn't met.  */
+#define REQUIRE(cond, err_message, ...) \
+  do {                                  \
+    if ( ! (cond) ) {                   \
+      fprintf (                         \
+          stderr,                       \
+          "%s:%d: " err_message,        \
+          __FILE__,                     \
+          __LINE__,                     \
+          __VA_ARGS__);                 \
+      exit (EXIT_FAILURE);              \
+    }                                   \
+  } while ( 0 )
+
+/* Scan resource tree res for anchor declarations and add them all into
+ * string-keyed hash table table as mappings from anchor names to resource
+ * pointers.  A fatal error is triggered if the anchors aren't all unique
+ * in table.  No new memory is allocated and the table keys and value remain
+ * owned by the pre-existing res structure.  */
+static void
+add_resource_anchors (GHashTable *table, Resource const *res)
+{
+  for ( int ii = 0 ; ii < res->c ; ii++ ) {
+
+    ResourceVal *rv = &((res->v)[ii]);
+
+    /* If the value is an anchor, add it to the table and verify it's new */
+    if ( rv->name != NULL && strcmp (rv->name, "anchor") == 0 ) {
+      gboolean is_new
+        = g_hash_table_insert (table, rv->value, (gpointer) res);
+      REQUIRE (is_new, "Anchor '%s' isn't unique\n", rv->value);
+    }
+
+    /* If the value is a subresource, traverse downward */
+    if ( rv->subres != NULL ) {
+      add_resource_anchors (table, rv->subres);
+    }
+
+  }
+}
+
 Resource *
 resource_parse(const char *filename, const char **strings)
 {
+  anchors = g_hash_table_new (g_str_hash, g_str_equal);
   res_lineno = 1;
   if (filename)
     {
@@ -114,6 +161,7 @@ resource_parse(const char *filename, const char **strings)
       if (res_file == NULL)
 	{
 	  perror(filename);
+          g_hash_table_unref (anchors);
 	  return NULL;
 	}
       res_filename = filename;
@@ -124,11 +172,14 @@ resource_parse(const char *filename, const char **strings)
       res_string_idx = 0;
     }
   else
-    return NULL;
+    {
+      g_hash_table_unref (anchors);
+      return NULL;
+    }
 #if YYDEBUG
   yydebug = 1;
 #endif
-  if (resparse())
+  if (resparse()) 
     parsed_res = NULL;
   if (filename)
     {
@@ -139,22 +190,36 @@ resource_parse(const char *filename, const char **strings)
   else
     res_strings = NULL;
 
-  parsed_res->anchors = g_hash_table_new (g_str_hash, g_str_equal); 
-  // FIXME: WORK POINT: port the anchor creation stuff to this file and test
-  //add_resource_anchors (parsed_res->anchors, parsed_res);
+  if ( parsed_res != NULL ) {
+    /* Now that the parse is complete we can go through and add the resource
+     * anchors that will be used for cross-refs.  */
+    assert (anchors != NULL);
+    add_resource_anchors (anchors, parsed_res);
+  }
+  else {
+    g_hash_table_unref (anchors);
+  }
 
   return parsed_res;
 }
 
 Resource *
-resource_create(Resource *parent)
+resource_create(Resource *parent, GHashTable *anchors)
 {
   Resource *rv = (Resource *)malloc(sizeof(Resource));
   rv->parent = parent;
   rv->flags = 0;
   rv->c = 0;
   rv->v = (ResourceVal *)malloc(sizeof(ResourceVal));
-  rv->anchors = NULL;   /* Filled in later for top-level resources only */
+
+  /* For the convenience of Resource users every resource gets it's own copy
+   * of the pointer to the xref table for the associated top-level resource.
+   * Note that callers of this routine can pass NULL, in which case they end
+   * up with a resource without a usable xref table.  Note also that although
+   * the table must exist at the call point, it need not have any entries yet:
+   * that's fine as long as they get filled in before being referred to.  */
+  rv->anchors = anchors;
+
   return rv;
 }
 

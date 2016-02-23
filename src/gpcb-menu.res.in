@@ -54,7 +54,7 @@ MainMenu =
 #
   {"File" m=F
    {"New" New() anchor=NEW a={"Ctrl-N" "Ctrl<Key>n"}}
-   {"Open..." Load(Layout) tip="Load ref:NEW:hotkey a layout from a file"}
+   {"Open..." Load(Layout) tip="Load a layout from a file"}
    -
    {"Save" Save(Layout) tip="Saves current layout" m=S a={"Ctrl-S" "Ctrl<Key>s"}}
    {"Save As..." Save(LayoutAs) tip="Saves current layout into a given file" m=A a={"Shift Ctrl-S" "Shift Ctrl<Key>s"}}
@@ -240,7 +240,7 @@ MainMenu =
    {"Select all visible" tip="Select all visible objects" Select(All)}
    {"Select all found" tip="Select everything connected to the net found using the Find button in the Netlist dialog (Window->Netlist)" Select(Found)}
 # FIXME: mentioning hotkeys like this is bad because they could easily fall out of sync with what's actually set, some macros or something should be made so that they can by synced automatically.
-   {"Select all connected" tip="Select everything currently found to be connected according to ref:LOOKUP_CONNECTION:menu_item (FIXME:hotkey_here)" Select(Connection)}
+   {"Select all connected" tip="Select everything currently found to be connected according to ref:LOOKUP_CONNECTION:menu_path (FIXME:hotkey_here)" Select(Connection)}
    -
    {"Unselect all" tip="Unselect all objects" Unselect(All)}
    {"Unselect all found" tip="Unselect everything connected to the net found using the Find button in the Netlist dialog (Window->Netlist)" Unselect(Found)}

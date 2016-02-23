@@ -578,7 +578,7 @@ insert_layerview_buttons (Widget menu)
 	  sprintf (buf, "Ctrl-%d", accel_idx + 1);
 	  as = XmStringCreatePCB (buf);
 	  stdarg (XmNacceleratorText, as);
-	  ar = resource_create (0);
+	  ar = resource_create (0, NULL);
 	  sprintf (av, "ToggleView(%d)", i + 1);
 	  resource_add_val (ar, 0, strdup (av), 0);
 	  resource_add_val (ar, 0, strdup (av), 0);
@@ -643,7 +643,7 @@ insert_layerpick_buttons (Widget menu)
         {
 	  Resource *ar;
 	  XmString as;
-	  ar = resource_create (0);
+	  ar = resource_create (0, NULL);
 	  resource_add_val (ar, 0, strdup (av), 0);
 	  resource_add_val (ar, 0, strdup (av), 0);
 	  ar->flags |= FLAG_V;
