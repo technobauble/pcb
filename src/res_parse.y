@@ -109,24 +109,24 @@ res_parse_getchars(char *buf, int max_size)
   return 1;
 }
 
-/* Die with a source location reference and err_message if cond isn't met.  */
-#define REQUIRE(cond, err_message, ...) \
-  do {                                  \
-    if ( ! (cond) ) {                   \
-      fprintf (                         \
-          stderr,                       \
-          "%s:%d: " err_message,        \
-          __FILE__,                     \
-          __LINE__,                     \
-          __VA_ARGS__);                 \
-      exit (EXIT_FAILURE);              \
-    }                                   \
+/* Die with a source location and error_message if cond isn't met.  */
+#define REQUIRE(cond, error_message, ...) \
+  do {                                    \
+    if ( ! (cond) ) {                     \
+      fprintf (                           \
+          stderr,                         \
+          "%s:%d: " error_message,        \
+          __FILE__,                       \
+          __LINE__,                       \
+          __VA_ARGS__);                   \
+      exit (EXIT_FAILURE);                \
+    }                                     \
   } while ( 0 )
 
 /* Scan resource tree res for anchor declarations and add them all into
  * string-keyed hash table table as mappings from anchor names to resource
- * pointers.  A fatal error is triggered if the anchors aren't all unique
- * in table.  No new memory is allocated and the table keys and value remain
+ * pointers.  A fatal error is triggered if the anchors aren't all unique in
+ * table.  No new memory is allocated and the table keys and values remain
  * owned by the pre-existing res structure.  */
 static void
 add_resource_anchors (GHashTable *table, Resource const *res)
@@ -137,6 +137,14 @@ add_resource_anchors (GHashTable *table, Resource const *res)
 
     /* If the value is an anchor, add it to the table and verify it's new */
     if ( rv->name != NULL && strcmp (rv->name, "anchor") == 0 ) {
+      char *na = rv->value;   /* New Anchor */
+      int jj; 
+      for ( jj = 0 ; jj < strlen (na); jj++ ) {
+        REQUIRE (
+          isalnum (na[jj]) || na[jj] == '_',
+          "Anchor '%s' doesn't consist of only alphanumeric and '_' chars\n",
+           na );
+      }
       gboolean is_new
         = g_hash_table_insert (table, rv->value, (gpointer) res);
       REQUIRE (is_new, "Anchor '%s' isn't unique\n", rv->value);
