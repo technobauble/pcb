@@ -60,7 +60,7 @@ MainMenu =
    {"Save As..." Save(LayoutAs) tip="Saves current layout into a given file" m=A a={"Shift Ctrl-S" "Shift Ctrl<Key>s"}}
    {"Revert" Load(Revert,none) tip="Revert to the layout stored on disk"}
    -
-   {"Import Schematics" Import() }
+   {"Import Schematics" anchor=import_schematics Import() }
    {"Load element to buffer" tip="Load an element (footprint) from a file into the paste buffer" PasteBuffer(Clear) Load(ElementTobuffer)}
    {"Load layout to buffer" tip="Load a layout (other pcb file) from a file into the paste buffer" PasteBuffer(Clear) Load(LayoutTobuffer)}
    {"Load netlist" Load(Netlist)}
@@ -151,7 +151,8 @@ MainMenu =
    }
    {"Realign grid" tip="Realign the global grid with the next point clicked.  This is best used by allowing the cursor to snap to a (possibly off-grid) element centroid, or by enabling 'Settings->Crosshair snaps to pins and pads'." GetXY(Click to set the grid origin) Display(ToggleGrid)}
    -
-   {"Displayed element name" tip="What to show on silk for elements"
+   # FIXME: currently messages about anchor being unknows get spewed into the message log
+   {"Displayed element name" anchor=displayed_element_name tip="What to show on silk for elements"
     {"Description" Display(Description) checked=elementname,1}
     {"Reference Designator" Display(NameOnPCB) checked=elementname,2}
     {"Value" Display(Value) checked=elementname,3}
@@ -200,8 +201,8 @@ MainMenu =
 # Settings menu
 #
   {"Settings" m=S
-   {"'All-direction' lines" tip="Allow lines and polygon edges to be drawn in any direction, not just at increments of 45 degrees" checked=alldirection Display(Toggle45Degree) a={"." "<Key>."}}
-   {"Auto swap line start angle" tip="When 'All-direction' lines is not enabled, enabling this option will cause successively drawn lines to alternate between starting with a vertical or horizontal segment and starting with an off-axis segment" checked=swapstartdir Display(ToggleStartDirection)}
+   {"'All-direction' lines" anchor=all_direction_lines tip="Allow lines and polygon edges to be drawn in any direction, not just at increments of 45 degrees" checked=alldirection Display(Toggle45Degree) a={"." "<Key>."}}
+   {"Auto swap line start angle" tip="When ref:all_direction_lines:menu_path is not enabled, enabling this option will cause successively drawn lines to alternate between starting with a vertical or horizontal segment and starting with an off-axis segment" checked=swapstartdir Display(ToggleStartDirection)}
    {"Orthogonal moves" tip="When objects which are not first selected are moved, their movement is constrained to either the X or Y dimension exclusively.  Selecting an object before moving it allows it to be moved arbitrarily regardless of this mode." checked=orthomove Display(ToggleOrthoMove)}
    {"Crosshair snaps to pins and pads" checked=snappin Display(ToggleSnapPin)}
    {"Show DRC clearance" tip="During line drawing (but not line or object moving or other operations), show the required DRC clearance" checked=showdrc Display(ToggleShowDRC)}
@@ -222,14 +223,16 @@ MainMenu =
    -
    {"Vendor drill mapping" tip="New instances of pins and vias will have their drill holes mapped to one of the allowed drill sizes specified in the currently loaded vendor drill table.  To enable drill mapping, a vendor resource file containing a drill table must be loaded first." ToggleVendor() checked=VendorMapOn}
 # FIXME: capitalization problem here
-   {"Import New Elements at" m=I
+   {"Import new elements at" tip="Set where elements inserted via
+ref:import_schematics:menu_path and the
+like should be placed" m=I
 # FIXME: check out how these work especially the mark one, might need to change
 # mark tooktip if it's overloaded for import purpose as well as measuring
-    {" Center" Import(setnewpoint,center) m=C}
-    {" Mark" Import(setnewpoint,mark) m=M}
-    {" Crosshair" Import(setnewpoint) m=h}
+    {" Center" tip="Place new elements at the center of the layout" Import(setnewpoint,center) m=C}
+    {" Mark" tip="Place new elements at the position of the mark (as set/cleared with the ref:mark_crosshair:hotkey hotkey) at the time this menu item is selected" Import(setnewpoint,mark) m=M}
+    {" Crosshair" tip="Place new elements at the position specified by the first click following the activation of this menu item" Import(setnewpoint) m=h}
     -
-    {"Set Dispersion" Import(setdisperse) m=D}
+    {"Set dispersion" tip="Set the approximate displacement from the selected insertion point to use for individual new elements (so they don't start out stacked on top of each other).  The dialog input field allows a units suffix, and without one very tiny units might be used." Import(setdisperse) m=D}
    }
   }
 
@@ -238,15 +241,14 @@ MainMenu =
 #
   {"Select" m=l
    {"Select all visible" tip="Select all visible objects" Select(All)}
-   {"Select all found" tip="Select everything connected to the net found using the Find button in the Netlist dialog (Window->Netlist)" Select(Found)}
-# FIXME: mentioning hotkeys like this is bad because they could easily fall out of sync with what's actually set, some macros or something should be made so that they can by synced automatically.
-   {"Select all connected" tip="Select everything currently found to be connected according to ref:LOOKUP_CONNECTION:menu_path (FIXME:hotkey_here)" Select(Connection)}
+   {"Select all found" tip="Select everything with the 'found' flag set.  The 'found' flag can be set in a few different ways.  One is by using the Find button in the Netlist dialog (ref:netlist_dialog:menu_path).  Another is by looking for connected objects (ref:find_connections:hotkey or ref:lookup_connection:hotkey hotkeys) when rat lines are involved: objects connected to the queried object by rat lines are marked as 'found' but not 'connected'. " Select(Found)}
+   {"Select all connected" tip="Select everything with the 'connected' flag set. The 'connected' flag can be set using the ref:find_connections:hotkey or ref:lookup_connection:hotkey hotkeys" Select(Connection)}
    -
    {"Unselect all" tip="Unselect all objects" Unselect(All)}
-   {"Unselect all found" tip="Unselect everything connected to the net found using the Find button in the Netlist dialog (Window->Netlist)" Unselect(Found)}
-   {"Unselect all connected" tip="Unselect everything currently found to be connected according to Connects->Lookup connection (Ctrl-F)" Unselect(Connection)}
+   {"Unselect all found" tip="Unselect everything with the 'found' flag set.  The 'found' flag can be set in a few different ways.  One is by using the Find button in the Netlist dialog (ref:netlist_dialog:menu_path).  Another is by looking for connected objects (ref:find_connections:hotkey or ref:lookup_connection:hotkey hotkeys) when rat lines are involved: objects connected to the queried object by rat lines are marked as 'found' but not 'connected'. " Unselect(Found)}
+   {"Unselect all connected" tip="Unselect everything with the 'connected' flag set. The 'connected' flag can be set using the ref:find_connections:hotkey or ref:lookup_connection:hotkey hotkeys" Unselect(Connection)}
    -
-   {"Select by name" tip="Select by object type (chosen in sub-menu) and case-insensitive POSIX extended regex.  The regex must match the entire name, so leading and trailing '.*' may be required.  The names searched are the ones set to be displayed by the 'View->Displayed element name' menu item (so by setting this option first it's possible to search by description or value as well as refdes)." 
+   {"Select by name" tip="Select by object type (chosen in sub-menu) and case-insensitive POSIX extended regex.  The regex must match the entire name, so leading and trailing '.*' may be required.  The names searched are the ones set to be displayed by the selected ref:displayed_element_name:menu_path submenu item (so by setting this option first it's possible to search by description or value as well as refdes)." 
     {"All objects" Select(ObjectByName) active=have_regex}
     {"Elements" Select(ElementByName) active=have_regex}
     {"Pads" Select(PadByName) active=have_regex}
@@ -255,18 +257,18 @@ MainMenu =
     {"Vias" Select(ViaByName) active=have_regex}
    }
    -
-   {"Auto-place selected elements" AutoPlaceSelected() a={"Ctrl-P" "Ctrl<Key>p"}}
-   {"Disperse all elements" DisperseElements(All)}
-   {"Disperse selected elements" DisperseElements(Selected)}
+   {"Auto-place selected elements" tip="Attempt to automatically position the elements in a useful way FIXME: criteria clue?" AutoPlaceSelected() a={"Ctrl-P" "Ctrl<Key>p"}}
+   {"Disperse all elements" tip="Spread out all the elements.  This is useful for elements that haven't been positioned yet, to get them unstacked and easily viewable." DisperseElements(All)}
+   {"Disperse selected elements" tip="Spread the selected elements out.  This is useful for elements that haven't been positioned yet, to get them unstacked and easily viewable." DisperseElements(Selected)}
    -
-   {"Move selected elements to other side" Flip(SelectedElements) a={"Shift-B" "Shift<Key>b"}}
-   {"Move selected to current layer" MoveToCurrentLayer(Selected) a={"Shift-M" "Shift<Key>m"}}
+   {"Move selected elements to other side" tip="Move the selected element(s) to the other side of the board.  See also ref:flip_object:menu_path (ref:flip_object:hotkey hotkey) which is more convenient for individual objects."  Flip(SelectedElements) a={"Shift-B" "Shift<Key>b"}}
+   {"Move selected non-elements to current layer" tip="Move the selected non-element objects to the current layer.  Selected elements are not affected." MoveToCurrentLayer(Selected) a={"Shift-M" "Shift<Key>m"}}
    {"Remove selected objects" RemoveSelected() a={"Shift-Delete" "Shift<Key>Delete"}}
-   {"Convert selection to element" Select(Convert)}
+   {"Convert selection to element" tip="Convert selected non-element objects to an element.  Objects that don't touch at least one of the surface layers are removed.  The elements must be selected before this menu item is activated, but an additional click on the selected is required afterwords as well." Select(Convert)}
    -
-   {"Optimize selected rats" DeleteRats(SelectedRats) AddRats(SelectedRats)}
-   {"Auto-route selected rats" AutoRoute(SelectedRats) a={"Alt-R" "Alt<Key>r"}}
-   {"Rip up selected auto-routed tracks" RipUp(Selected)}
+   {"Optimize selected rats" tip="Update the rats nest by adding or removing rat lines between selected objects such that the displayed lines represent the remaining connections which need to be made to satisfy the netlist.  This will also set the 'warn' flag for at least some of the objects involved in shorts, which will turn them orange." DeleteRats(SelectedRats) AddRats(SelectedRats)}
+   {"Auto-route selected rats" tip="Attempt to automatically route all selected rat lines" AutoRoute(SelectedRats) a={"Alt-R" "Alt<Key>r"}}
+   {"Rip up selected auto-routed tracks" tip="Delete any selected traces which have the 'auto' flag (because they were created by the auto router)" RipUp(Selected)}
    -
    {"Change size of selected objects"
     {"Lines -10 mil" ChangeSize(SelectedLines,-10,mil) ChangeSize(SelectedArcs,-10,mil)}
@@ -289,8 +291,8 @@ MainMenu =
    }
    -
    {"Change square-flag of selected objects"
-    {"Elements" ChangeSquare(SelectedElements)}
-    {"Pins" ChangeSquare(SelectedPins)}
+    {"Elements" tip="Set the 'square' flag for all pins of the selected element" ChangeSquare(SelectedElements)}
+    {"Pins" tip="Set the 'square' flag for the selected pins" ChangeSquare(SelectedPins)}
    }
   }
 
@@ -326,7 +328,7 @@ MainMenu =
 # Connects menu
 #
   {"Connects" m=C
-   {"Lookup connection" anchor=LOOKUP_CONNECTION GetXY(Click on the object) Connection(Find) a={"Ctrl-F" "Ctrl<Key>f"}}
+   {"Lookup connection" anchor=lookup_connection GetXY(Click on the object) Connection(Find) a={"Ctrl-F" "Ctrl<Key>f"}}
    {"Reset scanned pads/pins/vias" Connection(ResetPinsViasAndPads) Display(Redraw)}
    {"Reset scanned lines/polygons" Connection(ResetLinesAndPolygons) Display(Redraw)}
    {"Reset all connections" Connection(Reset) Display(Redraw) a={"Shift-F" "Shift<Key>f"}}
@@ -400,8 +402,10 @@ MainMenu =
      Atomic(Block)
     }
     {"Set Same" a={"A" "<Key>a"} SetSame()}
-    {"Flip Object" a={"B" "<Key>b"} Flip(Object)}
-    {"Find Connections" a={"F" "<Key>f"} Connection(Reset) Connection(Find)}
+# FIXME: This should be renamed to Flip Element since it only works on
+# elements, not arbitrary objects
+    {"Flip Object" anchor=flip_object a={"B" "<Key>b"} Flip(Object)}
+    {"Find Connections" anchor=find_connections a={"F" "<Key>f"} Connection(Reset) Connection(Find)}
     {"ToggleHideName Object" a={"H" "<Key>h"} ToggleHideName(Object)}
     {"ToggleHideName SelectedElement" a={"Shift-H" "Shift<Key>h"} ToggleHideName(SelectedElements)}
     {"ChangeHole Object" a={"Ctrl-H" "Ctrl<Key>h"} ChangeHole(Object)}
@@ -414,7 +418,7 @@ MainMenu =
     {"Line Tool size +" a={"L" "<Key>l"} SetValue(LineSize,+)}
     {"Line Tool size -" a={"Shift-L" "Shift<Key>l"} SetValue(LineSize,-)}
     {"Move Object to current layer" a={"M" "<Key>m"} MoveToCurrentLayer(Object)}
-    {"MarkCrosshair" a={"Ctrl-M" "Ctrl<Key>m"} MarkCrosshair()}
+    {"MarkCrosshair" anchor=mark_crosshair a={"Ctrl-M" "Ctrl<Key>m"} MarkCrosshair()}
     {"Select shortest rat" a={"Shift-N" "Shift<Key>n"} AddRats(Close)}
     {"AddRats to selected pins" a={"Shift-O" "Shift<Key>o"}
      Atomic(Save)
@@ -463,7 +467,7 @@ MainMenu =
    {"Library" DoWindows(Library) a={"i" "<Key>i"}}
    {"Message Log" DoWindows(Log)}
    {"DRC Check" DoWindows(DRC)}
-   {"Netlist" DoWindows(Netlist)}
+   {"Netlist" anchor=netlist_dialog DoWindows(Netlist)}
    {"Command Entry" Command() a={":" "<Key>:"}}
    {"Pinout" Display(Pinout) a={"Shift-D" "Shift<Key>d"}}
    -
