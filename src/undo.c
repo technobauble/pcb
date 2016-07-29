@@ -114,6 +114,12 @@ typedef struct			/* information about layer changes */
   int new_index;
 } LayerChangeType;
 
+typedef struct			/* information about layer changes */
+{
+  int from;
+  int to;
+} SetViaLayersChangeType;
+
 typedef struct			/* information about poly clear/restore */
 {
   bool Clear;		/* true was clear, false was restore */
@@ -144,6 +150,7 @@ typedef struct			/* holds information about an operation */
     LayerChangeType LayerChange;
     ClearPolyType ClearPoly;
     NetlistChangeType NetlistChange;
+    SetViaLayersChangeType SetViaLayersChange;
     long int CopyID;
   }
   Data;
@@ -186,6 +193,7 @@ static bool UndoChangeAngles (UndoListType *);
 static bool UndoChangeClearSize (UndoListType *);
 static bool UndoChangeMaskSize (UndoListType *);
 static bool UndoClearPoly (UndoListType *);
+static bool UndoSetViaLayers (UndoListType *);
 static int PerformUndo (UndoListType *);
 
 /* ---------------------------------------------------------------------------
@@ -915,6 +923,39 @@ UndoNetlistChange (UndoListType *Entry)
   return true;
 }
 
+
+/* ---------------------------------------------------------------------------
+ * recovers an object from a Size change operation
+ */
+static bool
+UndoSetViaLayers (UndoListType *Entry)
+{
+  void *ptr1, *ptr2, *ptr3;
+  int type;
+  int from, to;
+
+  /* lookup entry by ID */
+  type =
+    SearchObjectByID (PCB->Data, &ptr1, &ptr2, &ptr3, Entry->ID, Entry->Kind);
+  if (type == VIA_TYPE)
+    {
+      from = ((PinType *) ptr2)->BuriedFrom;
+      to = ((PinType *) ptr2)->BuriedTo;
+      RestoreToPolygon (PCB->Data, type, ptr1, ptr2);
+      if (andDraw)
+	EraseObject (type, ptr1, ptr2);
+      ((PinType *) ptr2)->BuriedFrom = Entry->Data.SetViaLayersChange.from;
+      ((PinType *) ptr2)->BuriedTo = Entry->Data.SetViaLayersChange.to;
+      Entry->Data.SetViaLayersChange.from = from;
+      Entry->Data.SetViaLayersChange.to = to;
+      ClearFromPolygon (PCB->Data, type, ptr1, ptr2);
+      if (andDraw)
+	DrawObject (type, ptr1, ptr2);
+      return (true);
+    }
+  return (false);
+}
+
 /* ---------------------------------------------------------------------------
  * undo of any 'hard to recover' operation
  *
@@ -1096,6 +1137,11 @@ PerformUndo (UndoListType *ptr)
     case UNDO_MIRROR:
       if (UndoMirror (ptr))
 	return (UNDO_MIRROR);
+      break;
+
+    case UNDO_CHANGESETVIALAYERS:
+      if (UndoSetViaLayers (ptr))
+        return (UNDO_CHANGESETVIALAYERS);
       break;
     }
   return 0;
@@ -1713,6 +1759,23 @@ AddNetlistLibToUndoList (LibraryType *lib)
 
     }
 }
+
+/* ---------------------------------------------------------------------------
+ * adds an object to the list of objects with buried info data
+ */
+void
+AddObjectToSetViaLayersUndoList (void *ptr1, void *ptr2, void *ptr3)
+{
+  UndoListType *undo;
+
+  if (!Locked)
+    {
+      undo = GetUndoSlot (UNDO_CHANGESETVIALAYERS, OBJECT_ID (ptr2), VIA_TYPE);
+      undo->Data.SetViaLayersChange.from = ((PinType *) ptr2)->BuriedFrom;
+      undo->Data.SetViaLayersChange.to = ((PinType *) ptr2)->BuriedTo;
+    }
+}
+
 
 /* ---------------------------------------------------------------------------
  * set lock flag
