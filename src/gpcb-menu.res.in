@@ -151,7 +151,7 @@ MainMenu =
    }
    {"Realign grid" tip="Realign the global grid with the next point clicked.  This is best used by allowing the cursor to snap to a (possibly off-grid) element centroid, or by enabling 'Settings->Crosshair snaps to pins and pads'." GetXY(Click to set the grid origin) Display(ToggleGrid)}
    -
-   # FIXME: currently messages about anchor being unknows get spewed into the message log
+   # FIXME: currently messages about anchor being unknow get spewed into the message log
    {"Displayed element name" anchor=displayed_element_name tip="What to show on silk for elements"
     {"Description" Display(Description) checked=elementname,1}
     {"Reference Designator" Display(NameOnPCB) checked=elementname,2}
@@ -227,7 +227,7 @@ MainMenu =
 ref:import_schematics:menu_path and the
 like should be placed" m=I
 # FIXME: check out how these work especially the mark one, might need to change
-# mark tooktip if it's overloaded for import purpose as well as measuring
+# mark tooltip if it's overloaded for import purpose as well as measuring
     {" Center" tip="Place new elements at the center of the layout" Import(setnewpoint,center) m=C}
     {" Mark" tip="Place new elements at the position of the mark (as set/cleared with the ref:mark_crosshair:hotkey hotkey) at the time this menu item is selected" Import(setnewpoint,mark) m=M}
     {" Crosshair" tip="Place new elements at the position specified by the first click following the activation of this menu item" Import(setnewpoint) m=h}
