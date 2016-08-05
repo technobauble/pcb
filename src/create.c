@@ -545,6 +545,15 @@ CreateNewArcOnLayer (LayerType *Layer,
 		     Angle dir, Coord Thickness,
 		     Coord Clearance, FlagType Flags)
 {
+  // Currently pcb only supports arcs of circles (not arcs of ellipses)
+  assert (width == height);
+
+  // Degenerate 0-radius arcs aren't supported
+  assert (width > 0);
+
+  // Arcs with square end caps aren't supported
+  assert (!FLAG_SET_HAS_FLAG (Flags, SQUAREFLAG));
+
   ArcType *Arc;
 
   ARC_LOOP (Layer);
