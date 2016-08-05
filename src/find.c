@@ -11,10 +11,6 @@
  *   Coarse searching is accomplished with the data rtrees.</li>
  * <li> There's no 'speed-up' mechanism for polygons because they are
  *   not used as often as other objects.</li> 
- * <li> The maximum distance between line and pin ... would depend on
- *   the angle between them. To speed up computation the limit is set
- *   to one half of the thickness of the objects (cause of square
- *   pins).</li>
  * </ul>
  *
  * PV:  means pin or via (objects that connect layers).\n
@@ -30,16 +26,6 @@
  * <li> Lookup all PVs connected to the LOs from (2) and (3).</li>
  * <li> Start again with (1) for all new PVs from (4).</li>
  * </ol>
- *
- * Intersection of line <--> circle:\n
- * <ul>
- * <li> Calculate the signed distance from the line to the center,
- *   return false if abs(distance) > R.</li>
- * <li> Get the distance from the line <--> distancevector intersection
- *   to (X1,Y1) in range [0,1], return true if 0 <= distance <= 1.</li>
- * <li> Depending on (r > 1.0 or r < 0.0) check the distance of X2,Y2 or
- *   X1,Y1 to X,Y.</li>
- * </ul>
  *
  * Intersection of line <--> line:\n
  * <ul>
@@ -89,6 +75,7 @@
 #include "misc.h"
 #include "rtree.h"
 #include "polygon.h"
+#include "pcb_geometry.h"
 #include "pcb-printf.h"
 #include "search.h"
 #include "set.h"
@@ -125,16 +112,20 @@
 #define IS_PV_ON_RAT(PV, Rat) \
 	(IsPointOnLineEnd((PV)->X,(PV)->Y, (Rat)))
 
-#define IS_PV_ON_ARC(PV, Arc)	\
+#define IS_PV_ON_ARC(PV, Arc, pii)	\
 	(TEST_FLAG(SQUAREFLAG, (PV)) ? \
 		IsArcInRectangle( \
 			(PV)->X -MAX(((PV)->Thickness+1)/2 +Bloat,0), (PV)->Y -MAX(((PV)->Thickness+1)/2 +Bloat,0), \
 			(PV)->X +MAX(((PV)->Thickness+1)/2 +Bloat,0), (PV)->Y +MAX(((PV)->Thickness+1)/2 +Bloat,0), \
-			(Arc)) : \
-		IsPointOnArc((PV)->X,(PV)->Y,MAX((PV)->Thickness/2.0 + Bloat,0.0), (Arc)))
+			(Arc), \
+                        (pii)) : \
+		IsPointOnArc( \
+                        (PV)->X,(PV)->Y,MAX((PV)->Thickness/2.0 + Bloat,0.0), \
+                        (Arc), \
+                        (pii)))
 
-#define	IS_PV_ON_PAD(PV,Pad) \
-	( IsPointInPad((PV)->X, (PV)->Y, MAX((PV)->Thickness/2 +Bloat,0), (Pad)))
+#define	IS_PV_ON_PAD(PV, Pad, pii) \
+	( IsPointInPad((PV)->X, (PV)->Y, MAX((PV)->Thickness/2 +Bloat,0), (Pad), (pii)))
 
 
 static DrcViolationType
@@ -280,6 +271,15 @@ static Cardinal TotalP, TotalV;
 static ListType LineList[MAX_LAYER],    /*!< List of objects to. */
   PolygonList[MAX_LAYER], ArcList[MAX_LAYER], PadList[2], RatList, PVList;
 
+// Magic number meaning that we don't have the most recent intersection point.
+// If any field of pimri is set to this, the whole value is invalid.
+#define PIMRI_UNSET -2
+
+// Point In Most Recent Intersection.  Currently this is just used for
+// accurately reporting the position of DRC violations involing intersections.
+static PointType pimri
+  = { PIMRI_UNSET, PIMRI_UNSET, PIMRI_UNSET, PIMRI_UNSET }; 
+
 /* ---------------------------------------------------------------------------
  * some local prototypes
  */
@@ -289,11 +289,11 @@ static bool LookupLOConnectionsToPolygon (PolygonType *, Cardinal, int, bool);
 static bool LookupLOConnectionsToArc (ArcType *, Cardinal, int, bool);
 static bool LookupLOConnectionsToRatEnd (PointType *, Cardinal, int);
 static bool IsRatPointOnLineEnd (PointType *, LineType *);
-static bool ArcArcIntersect (ArcType *, ArcType *);
+static bool ArcArcIntersect (ArcType *, ArcType *, PointType *pii);
 static bool PrepareNextLoop (FILE *);
 static void DrawNewConnections (void);
 static void DumpList (void);
-static void LocateError (Coord *, Coord *);
+static void LocateErrorObject (Coord *, Coord *);
 static void BuildObjectList (int *, long int **, int **);
 static bool SetThing (int, void *, void *, void *);
 static bool IsArcInPolygon (ArcType *, PolygonType *);
@@ -308,15 +308,15 @@ static bool IsPolygonInPolygon (PolygonType *, PolygonType *);
  * struct starts with a line struct. See global.h for details.
  */
 bool
-LinePadIntersect (LineType *Line, PadType *Pad)
+LinePadIntersect (LineType *Line, PadType *Pad, PointType *pii)
 {
-  return LineLineIntersect ((Line), (LineType *)Pad);
+  return LineLineIntersect ((Line), (LineType *)Pad, pii);
 }
 
 bool
-ArcPadIntersect (ArcType *Arc, PadType *Pad)
+ArcPadIntersect (ArcType *Arc, PadType *Pad, PointType *pii)
 {
-  return LineArcIntersect ((LineType *) (Pad), (Arc));
+  return LineArcIntersect ((LineType *) (Pad), (Arc), pii);
 }
 
 static bool
@@ -395,22 +395,37 @@ expand_bounds (BoxType *box_in)
 }
 
 bool
-PinLineIntersect (PinType *PV, LineType *Line)
+PinLineIntersect (PinType *PV, LineType *Line, PointType *pii)
 {
   /* IsLineInRectangle already has Bloat factor */
-  return TEST_FLAG (SQUAREFLAG,
-                    PV) ? IsLineInRectangle (PV->X - (PIN_SIZE (PV) + 1) / 2,
-                                             PV->Y - (PIN_SIZE (PV) + 1) / 2,
-                                             PV->X + (PIN_SIZE (PV) + 1) / 2,
-                                             PV->Y + (PIN_SIZE (PV) + 1) / 2,
-                                             Line) : IsPointInPad (PV->X,
-                                                                    PV->Y,
-								   MAX (PIN_SIZE (PV)
-                                                                         /
-                                                                         2.0 +
-                                                                         Bloat,
-                                                                         0.0),
-                                                                    (PadType *)Line);
+
+  // FIXME: BUT NOT NOW: so we have all these points where we test for
+  // "square" pins.  But we never check for octagonal pins.  pcb will
+  // render and produce them, but it doesn't really do the intersection
+  // and DRC tests for them completely correctly.  It comes close, since
+  // they're almost circular, but the failure can be seen by putting a round
+  // line end cap just slightly on one of the octagon verticies and using
+  // Connects->Lookup connection (Cntrl-F) on either the line or the pin.
+  // The connection isn't detected.  Since it probably only fails for
+  // overlaps smaller than any sensible DRC minimum overlap setting this
+  // is maybe not worth fixing given the many code points involved.  Still,
+  // it's unfortunate to have connection detection not quite catch everything.
+  
+  return 
+    TEST_FLAG (SQUAREFLAG, PV) ?
+      IsLineInRectangle (
+          PV->X - (PIN_SIZE (PV) + 1) / 2,
+          PV->Y - (PIN_SIZE (PV) + 1) / 2,
+          PV->X + (PIN_SIZE (PV) + 1) / 2,
+          PV->Y + (PIN_SIZE (PV) + 1) / 2,
+          Line,
+          pii ) :
+      IsPointInPad (
+          PV->X,
+          PV->Y,
+          MAX (PIN_SIZE (PV) / 2.0 + Bloat, 0.0),
+          (PadType *) Line,
+          pii );
 }
 
 
@@ -425,32 +440,63 @@ SetThing (int type, void *ptr1, void *ptr2, void *ptr3)
 }
 
 bool
-BoxBoxIntersection (BoxType *b1, BoxType *b2)
+BoxBoxIntersection (BoxType *b1, BoxType *b2, PointType *pii)
 {
-  if (b2->X2 < b1->X1 || b2->X1 > b1->X2)
+  if (b2->X2 < b1->X1 || b2->X1 > b1->X2) {
     return false;
-  if (b2->Y2 < b1->Y1 || b2->Y1 > b1->Y2)
+  }
+  if (b2->Y2 < b1->Y1 || b2->Y1 > b1->Y2) {
     return false;
+  }
+
+  // We have an intersection. 
+
+  if ( pii != NULL ) {
+
+    // We'll report the intersection point as the center of area.
+    Coord ix, iy;   // Intersection X/Y
+
+    if ( b1->X1 <= b2->X2 && b2->X2 <= b1->X2 ) {
+      ix = b2->X2 - (b2->X2 - b1->X1) / 2;
+    }
+    else {
+      ix = b1->X2 - (b1->X2 - b2->X1) / 2;
+    }
+    
+    if ( b1->Y1 <= b2->Y2 && b2->Y2 <= b1->Y2 ) {
+      iy = b2->Y2 - (b2->Y2 - b1->Y1) / 2;
+    }
+    else {
+      iy = b1->Y2 - (b1->Y2 - b2->Y1) / 2;
+    }
+
+    pii->X = ix;
+    pii->Y = iy;
+  }
+
   return true;
 }
 
 static bool
-PadPadIntersect (PadType *p1, PadType *p2)
+PadPadIntersect (PadType *p1, PadType *p2, PointType *pii)
 {
-  return LinePadIntersect ((LineType *) p1, p2);
+  return LinePadIntersect ((LineType *) p1, p2, pii);
 }
 
 static inline bool
-PV_TOUCH_PV (PinType *PV1, PinType *PV2)
+PV_TOUCH_PV (PinType *PV1, PinType *PV2, PointType *pii)
 {
   double t1, t2;
   BoxType b1, b2;
 
   t1 = MAX (PV1->Thickness / 2.0 + Bloat, 0);
   t2 = MAX (PV2->Thickness / 2.0 + Bloat, 0);
-  if (IsPointOnPin (PV1->X, PV1->Y, t1, PV2)
-      || IsPointOnPin (PV2->X, PV2->Y, t2, PV1))
+  if ( IsPointOnPin (PV1->X, PV1->Y, t1, PV2, pii) ) {
     return true;
+  }
+  if ( IsPointOnPin (PV2->X, PV2->Y, t2, PV1, pii) ) {
+    return true;
+  }
   if (!TEST_FLAG (SQUAREFLAG, PV1) || !TEST_FLAG (SQUAREFLAG, PV2))
     return false;
   /* check for square/square overlap */
@@ -463,7 +509,7 @@ PV_TOUCH_PV (PinType *PV1, PinType *PV2)
   b2.X2 = PV2->X + t2;
   b2.Y1 = PV2->Y - t2;
   b2.Y2 = PV2->Y + t2;
-  return BoxBoxIntersection (&b1, &b2);
+  return BoxBoxIntersection (&b1, &b2, pii);
 }
 
 /*!
@@ -617,7 +663,7 @@ LOCtoPVline_callback (const BoxType * b, void *cl)
   LineType *line = (LineType *) b;
   struct pv_info *i = (struct pv_info *) cl;
 
-  if (!TEST_FLAG (i->flag, line) && PinLineIntersect (i->pv, line) &&
+  if (!TEST_FLAG (i->flag, line) && PinLineIntersect (i->pv, line, &pimri) &&
       !TEST_FLAG (HOLEFLAG, i->pv))
     {
       if (ADD_LINE_TO_LIST (i->layer, line, i->flag))
@@ -632,7 +678,7 @@ LOCtoPVarc_callback (const BoxType * b, void *cl)
   ArcType *arc = (ArcType *) b;
   struct pv_info *i = (struct pv_info *) cl;
 
-  if (!TEST_FLAG (i->flag, arc) && IS_PV_ON_ARC (i->pv, arc) &&
+  if (!TEST_FLAG (i->flag, arc) && IS_PV_ON_ARC (i->pv, arc, &pimri) &&
       !TEST_FLAG (HOLEFLAG, i->pv))
     {
       if (ADD_ARC_TO_LIST (i->layer, arc, i->flag))
@@ -647,11 +693,12 @@ LOCtoPVpad_callback (const BoxType * b, void *cl)
   PadType *pad = (PadType *) b;
   struct pv_info *i = (struct pv_info *) cl;
 
-  if (!TEST_FLAG (i->flag, pad) && IS_PV_ON_PAD (i->pv, pad) &&
+  if (!TEST_FLAG (i->flag, pad) && IS_PV_ON_PAD (i->pv, pad, &pimri) &&
       !TEST_FLAG (HOLEFLAG, i->pv) &&
       ADD_PAD_TO_LIST (TEST_FLAG (ONSOLDERFLAG, pad) ? BOTTOM_SIDE :
-                       TOP_SIDE, pad, i->flag))
+                       TOP_SIDE, pad, i->flag)) {
     longjmp (i->env, 1);
+  }
   return 0;
 }
 
@@ -671,6 +718,8 @@ LOCtoPVpoly_callback (const BoxType * b, void *cl)
 {
   PolygonType *polygon = (PolygonType *) b;
   struct pv_info *i = (struct pv_info *) cl;
+
+  // FIXME: BUT NOT NOW: pimri isn't set at all for polygons at the moment
 
   /* if the pin doesn't have a therm and polygon is clearing
    * then it can't touch due to clearance, so skip the expensive
@@ -875,10 +924,11 @@ LookupLOConnectionsToLOList (int flag, bool AndRats)
                       return false;
                     }
                   position = &padposition[layer];
-                  for (; *position < PadList[layer].Number; (*position)++)
+                  for (; *position < PadList[layer].Number; (*position)++) {
                     if (LookupLOConnectionsToPad
                         (PADLIST_ENTRY (layer, *position), group, flag, AndRats))
                       return (true);
+                  }
                 }
             }
         }
@@ -905,7 +955,7 @@ pv_pv_callback (const BoxType * b, void *cl)
   PinType *pin = (PinType *) b;
   struct pv_info *i = (struct pv_info *) cl;
 
-  if (!TEST_FLAG (i->flag, pin) && PV_TOUCH_PV (i->pv, pin))
+  if (!TEST_FLAG (i->flag, pin) && PV_TOUCH_PV (i->pv, pin, &pimri))
     {
       if (TEST_FLAG (HOLEFLAG, pin) || TEST_FLAG (HOLEFLAG, i->pv))
         {
@@ -977,17 +1027,16 @@ pv_line_callback (const BoxType * b, void *cl)
   PinType *pv = (PinType *) b;
   struct lo_info *i = (struct lo_info *) cl;
 
-  if (!TEST_FLAG (i->flag, pv) && PinLineIntersect (pv, i->line))
-    {
-      if (TEST_FLAG (HOLEFLAG, pv))
-        {
-          SET_FLAG (WARNFLAG, pv);
-          Settings.RatWarn = true;
-          Message (_("WARNING: Hole too close to line.\n"));
-        }
-      else if (ADD_PV_TO_LIST (pv, i->flag))
-        longjmp (i->env, 1);
+  if (!TEST_FLAG (i->flag, pv) && PinLineIntersect (pv, i->line, &pimri)) {
+    if (TEST_FLAG (HOLEFLAG, pv)) {
+      SET_FLAG (WARNFLAG, pv);
+      Settings.RatWarn = true;
+      Message (_("WARNING: Hole too close to line.\n"));
     }
+    else if (ADD_PV_TO_LIST (pv, i->flag)) {
+      longjmp (i->env, 1);
+    }
+  }
   return 0;
 }
 
@@ -997,7 +1046,7 @@ pv_pad_callback (const BoxType * b, void *cl)
   PinType *pv = (PinType *) b;
   struct lo_info *i = (struct lo_info *) cl;
 
-  if (!TEST_FLAG (i->flag, pv) && IS_PV_ON_PAD (pv, i->pad))
+  if (!TEST_FLAG (i->flag, pv) && IS_PV_ON_PAD (pv, i->pad, &pimri))
     {
       if (TEST_FLAG (HOLEFLAG, pv))
         {
@@ -1006,7 +1055,9 @@ pv_pad_callback (const BoxType * b, void *cl)
           Message (_("WARNING: Hole too close to pad.\n"));
         }
       else if (ADD_PV_TO_LIST (pv, i->flag))
-        longjmp (i->env, 1);
+        {
+          longjmp (i->env, 1);
+        }
     }
   return 0;
 }
@@ -1017,7 +1068,7 @@ pv_arc_callback (const BoxType * b, void *cl)
   PinType *pv = (PinType *) b;
   struct lo_info *i = (struct lo_info *) cl;
 
-  if (!TEST_FLAG (i->flag, pv) && IS_PV_ON_ARC (pv, i->arc))
+  if (!TEST_FLAG (i->flag, pv) && IS_PV_ON_ARC (pv, i->arc, &pimri))
     {
       if (TEST_FLAG (HOLEFLAG, pv))
         {
@@ -1236,184 +1287,172 @@ LookupPVConnectionsToLOList (int flag, bool AndRats)
   return (false);
 }
 
-/*!
- * \brief Reduce arc start angle and delta to 0..360.
- */
-static void
-normalize_angles (Angle *sa, Angle *d)
-{
-  if (*d < 0)
-    {
-      *sa += *d;
-      *d = - *d;
-    }
-  if (*d > 360) /* full circle */
-    *d = 360;
-  *sa = NormalizeAngle (*sa);
-}
+// Shorthand macro for conditional copy of some stuff between types
+#define SET_XY_IF_NOT_NULL(target, source) \
+  do {                                     \
+    if ( target != NULL ) {                \
+      (target)->X = (source).x;            \
+      (target)->Y = (source).y;            \
+    }                                      \
+  } while ( 0 )
 
-static int
-radius_crosses_arc (double x, double y, ArcType *arc)
-{
-  double alpha = atan2 (y - arc->Y, -x + arc->X) * RAD_TO_DEG;
-  Angle sa = arc->StartAngle, d = arc->Delta;
-
-  normalize_angles (&sa, &d);
-  if (alpha < 0)
-    alpha += 360;
-  if (sa <= alpha)
-    return (sa + d) >= alpha;
-  return (sa + d - 360) >= alpha;
-}
-
-static void
-get_arc_ends (Coord *box, ArcType *arc)
-{
-  box[0] = arc->X - arc->Width  * cos (M180 * arc->StartAngle);
-  box[1] = arc->Y + arc->Height * sin (M180 * arc->StartAngle);
-  box[2] = arc->X - arc->Width  * cos (M180 * (arc->StartAngle + arc->Delta));
-  box[3] = arc->Y + arc->Height * sin (M180 * (arc->StartAngle + arc->Delta));
-}
-
-/*!
- * \brief Check if two arcs intersect.
- *
- * First we check for circle intersections,
- * then find the actual points of intersection
- * and test them to see if they are on arcs.
- *
- * Consider a, the distance from the center of arc 1
- * to the point perpendicular to the intersecting points.
- *
- * \ta = (r1^2 - r2^2 + l^2)/(2l)
- *
- * The perpendicular distance to the point of intersection
- * is then:
- *
- * \td = sqrt(r1^2 - a^2)
- *
- * The points of intersection would then be:
- *
- * \tx = X1 + a/l dx +- d/l dy
- *
- * \ty = Y1 + a/l dy -+ d/l dx
- *
- * Where dx = X2 - X1 and dy = Y2 - Y1.
- */
 static bool
-ArcArcIntersect (ArcType *Arc1, ArcType *Arc2)
+ArcArcIntersect (ArcType *Arc1, ArcType *Arc2, PointType *pii)
 {
-  double x, y, dx, dy, r1, r2, a, d, l, t, t1, t2, dl;
-  Coord pdx, pdy;
-  Coord box[8];
+  // We're going to do this by detecting any intersections of the inner
+  // or outer edges of Arc1 with the inner or outer edges of Arc2 or with
+  // the end caps of Arc2, and vice versa.  Note that this doesn't catch
+  // cases where Arc1 is entirely contained withing Arc2 or vice versa,
+  // but we don't care because in that situation the contained arc can't
+  // change the overall connectivity anyway.  This is true (as required)
+  // even under non-zero bloat, since bloat is linear and therefore doesn't
+  // change containment.  For the (round) end caps area detection is used,
+  // which takes care of the potential problem of "chinks" at corners into
+  // which otheer edges might fall: they are plugged by the area end caps.
+  // The alternative of using area detection everywhere is a little more
+  // painful and can't be factored as easily into the terms of existing code.
 
-  t  = 0.5 * Arc1->Thickness + Bloat;
-  t2 = 0.5 * Arc2->Thickness;
-  t1 = t2 + Bloat;
+  // We don't handle arc of ellipse at the moment
+  assert (Arc1->Width == Arc1->Height);
+  assert (Arc2->Width == Arc2->Height);
+  
+  // We don't handle arcs with square ends
+  assert (! TEST_FLAG (SQUAREFLAG, Arc1));
+  assert (! TEST_FLAG (SQUAREFLAG, Arc2));
 
-  /* too thin arc */
-  if (t < 0 || t1 < 0)
+  Coord a1to2 = Bloat / 2 + Arc1->Thickness / 2;        // Arc1 Thickness / 2
+  Coord a2to2 = Bloat / 2 + Arc2->Thickness / 2;        // Arc2 Thickness / 2
+  
+  // If either arc's thickness has reached 0 at the current Bloat, then
+  // we're done.  In painful theory there could still be intersections at 0
+  // thickness, and since we're on integer coordinates they could in some
+  // situation be detected, but not consistently because the underlying
+  // calculatios use floating point, making consistant tangent intersection
+  // detection impossible.
+  if ( a1to2 <= 0 || a2to2 <= 0 ) {
     return false;
+  }
 
-  /* try the end points first */
-  get_arc_ends (&box[0], Arc1);
-  get_arc_ends (&box[4], Arc2);
-  if (IsPointOnArc (box[0], box[1], t, Arc2)
-      || IsPointOnArc (box[2], box[3], t, Arc2)
-      || IsPointOnArc (box[4], box[5], t, Arc1)
-      || IsPointOnArc (box[6], box[7], t, Arc1))
-    return true;
+  // Note that Bloat doesn't change radius.
+  Coord rad1 = Arc1->Width, rad2 = Arc2->Width;
+  
+  // Convert the arc angles to the conventions used in geometry.h
+  Angle a1sa, a1ad;   // Arc1 Start Angle/Angle Delta
+  pcb_to_geometry_angle_range (Arc1->StartAngle, Arc1->Delta, &a1sa, &a1ad);
+  Angle a2sa, a2ad;   // Arc1 Start Angle/Angle Delta
+  pcb_to_geometry_angle_range (Arc2->StartAngle, Arc2->Delta, &a2sa, &a2ad);
 
-  pdx = Arc2->X - Arc1->X;
-  pdy = Arc2->Y - Arc1->Y;
-  dl = Distance (Arc1->X, Arc1->Y, Arc2->X, Arc2->Y);
-  /* concentric arcs, simpler intersection conditions */
-  if (dl < 0.5)
-    {
-      if ((Arc1->Width - t >= Arc2->Width - t2
-           && Arc1->Width - t <= Arc2->Width + t2)
-          || (Arc1->Width + t >= Arc2->Width - t2
-              && Arc1->Width + t <= Arc2->Width + t2))
-        {
-	  Angle sa1 = Arc1->StartAngle, d1 = Arc1->Delta;
-	  Angle sa2 = Arc2->StartAngle, d2 = Arc2->Delta;
-	  /* NB the endpoints have already been checked,
-	     so we just compare the angles */
+  // These arcs go down the middle of the fat "arcs" Arc1 and Arc2
+  Arc
+    a1 = { { { Arc1->X, Arc1->Y }, rad1 }, a1sa, a1ad },
+    a2 = { { { Arc2->X, Arc2->Y }, rad2 }, a2sa, a2ad };
+    
+  // If we have arcs of identical circles just check if the arc center
+  // lines overlap.  The arc_arc_intersection() function doesn't try to
+  // return the details of the intersection in this case, so we can't use it.
+  if ( arc_arc_intersection (&a1, &a2, NULL) == INT_MAX ) {
 
-	  normalize_angles (&sa1, &d1);
-	  normalize_angles (&sa2, &d2);
-	  /* sa1 == sa2 was caught when checking endpoints */
-	  if (sa1 > sa2)
-            if (sa1 < sa2 + d2 || sa1 + d1 - 360 > sa2)
-              return true;
-	  if (sa2 > sa1)
-	    if (sa2 < sa1 + d1 || sa2 + d2 - 360 > sa1)
-              return true;
-        }
+    Angle osa, oad;   // Overlap Start Angle, Overlap Angle Delta
+    // Angular Spans Overlap
+    bool aso = angular_spans_overlap (a1sa, a1ad, a2sa, a2ad, &osa, &oad);
+    if ( aso ) {
+      if ( pii != NULL ) {
+        Angle aocoo = osa + (oad / 2.0);   // Angle Of Center Of Overlap
+        // Point In Intersection As Point (not yet PointType :)
+        Point piiap = {
+          a1.circle.center.x + a1.circle.radius * cos (aocoo),   
+          a1.circle.center.y + a1.circle.radius * sin (aocoo) };
+        pii->X = piiap.x;
+        pii->Y = piiap.y;
+      }
+      return true;
+    }
+    else {
       return false;
     }
-  r1 = Arc1->Width;
-  r2 = Arc2->Width;
-  /* arcs centerlines are too far or too near */
-  if (dl > r1 + r2 || dl + r1 < r2 || dl + r2 < r1)
-    {
-      /* check the nearest to the other arc's center point */
-      dx = pdx * r1 / dl;
-      dy = pdy * r1 / dl;
-      if (dl + r1 < r2) /* Arc1 inside Arc2 */
-	{
-	  dx = - dx;
-	  dy = - dy;
-	}
+  }
+  
+  // Inner/Outer Arcs (of ArcType Arc, due to its thickness).  Note that the
+  // inner arcs might have radius <= 0 even at Bloat == 0, but the outer
+  // arcs should never have radius <= 0 at this point since we've already
+  // returned false for thickness of 0 or less.
+  Arc
+    a1oa = { { a1.circle.center, rad1 + a1to2 }, a1sa, a1ad },
+    a1ia = { { a1.circle.center, rad1 - a1to2 }, a1sa, a1ad },
+    a2oa = { { a2.circle.center, rad2 + a2to2 }, a2sa, a2ad },
+    a2ia = { { a2.circle.center, rad2 - a2to2 }, a2sa, a2ad };
+  assert (a1oa.circle.radius > 0);
+  assert (a2oa.circle.radius > 0);
 
-      if (radius_crosses_arc (Arc1->X + dx, Arc1->Y + dy, Arc1)
-	  && IsPointOnArc (Arc1->X + dx, Arc1->Y + dy, t, Arc2))
-	return true;
+  Point intersection[2];
 
-      dx = - pdx * r2 / dl;
-      dy = - pdy * r2 / dl;
-      if (dl + r2 < r1) /* Arc2 inside Arc1 */
-	{
-	  dx = - dx;
-	  dy = - dy;
-	}
+  // Check if any of the arc edges intersect, skipping degenerate edges
+  if ( arc_arc_intersection (&a1oa, &a2oa, intersection) ) {
+    SET_XY_IF_NOT_NULL (pii, intersection[0]);
+    return TRUE;
+  } 
+  if ( a1ia.circle.radius > 0 ) {
+    if ( arc_arc_intersection (&a1ia, &a2oa, intersection) ) {
+      SET_XY_IF_NOT_NULL (pii, intersection[0]);
+      return TRUE;
+    } 
+  }
+  if ( a2ia.circle.radius > 0 ) {
+    if ( arc_arc_intersection (&a1oa, &a2ia, intersection) ) {
+      SET_XY_IF_NOT_NULL (pii, intersection[0]);
+      return TRUE;
+    } 
+  }
+  if ( a1ia.circle.radius > 0 && a2ia.circle.radius > 0 ) {
+    if ( arc_arc_intersection (&a1ia, &a2ia, intersection) ) {
+      SET_XY_IF_NOT_NULL (pii, intersection[0]);
+      return TRUE;
+    } 
+  }
 
-      if (radius_crosses_arc (Arc2->X + dx, Arc2->Y + dy, Arc2)
-	  && IsPointOnArc (Arc2->X + dx, Arc2->Y + dy, t1, Arc1))
-	return true;
-      return false;
+  // Check if any of the end caps touch the other arc (including it's end caps)
+  {
+    Point a1ep[2], a2ep[2];   // Arc 1/2 End Points
+    arc_end_points (&a1, a1ep);
+    arc_end_points (&a2, a2ep);
+    Point np;                 // Nearest Point (reused)
+    Circle epc, apc;          // End/Arc Point Circle (reused)
+    Point piiap;              // Point In Intersection As Point
+
+    np = nearest_point_on_arc (a1ep[0], &a2);
+    epc = (Circle) { a1ep[0], a1to2 }; 
+    apc = (Circle) { np, a2to2 };
+    if ( circle_intersects_circle (&epc, &apc, &piiap) ) {
+      SET_XY_IF_NOT_NULL (pii, piiap);
+      return TRUE;
     }
 
-  l = dl * dl;
-  r1 *= r1;
-  r2 *= r2;
-  a = 0.5 * (r1 - r2 + l) / l;
-  r1 = r1 / l;
-  d = r1 - a * a;
-  /* the circles are too far apart to touch or probably just touch:
-     check the nearest point */
-  if (d < 0)
-    d = 0;
-  else
-    d = sqrt (d);
-  x = Arc1->X + a * pdx;
-  y = Arc1->Y + a * pdy;
-  dx = d * pdx;
-  dy = d * pdy;
-  if (radius_crosses_arc (x + dy, y - dx, Arc1)
-      && IsPointOnArc (x + dy, y - dx, t, Arc2))
-    return true;
-  if (radius_crosses_arc (x + dy, y - dx, Arc2)
-      && IsPointOnArc (x + dy, y - dx, t1, Arc1))
-    return true;
+    np = nearest_point_on_arc (a1ep[1], &a2);
+    epc = (Circle) { a1ep[1], a1to2 }; 
+    apc = (Circle) { np, a2to2 };
+    if ( circle_intersects_circle (&epc, &apc, &piiap) ) {
+      SET_XY_IF_NOT_NULL (pii, piiap);
+      return TRUE;
+    }
 
-  if (radius_crosses_arc (x - dy, y + dx, Arc1)
-      && IsPointOnArc (x - dy, y + dx, t, Arc2))
-    return true;
-  if (radius_crosses_arc (x - dy, y + dx, Arc2)
-      && IsPointOnArc (x - dy, y + dx, t1, Arc1))
-    return true;
-  return false;
+    np = nearest_point_on_arc (a2ep[0], &a1);
+    epc = (Circle) { a2ep[0], a2to2 }; 
+    apc = (Circle) { np, a1to2 };
+    if ( circle_intersects_circle (&epc, &apc, &piiap) ) {
+      SET_XY_IF_NOT_NULL (pii, piiap);
+      return TRUE;
+    }
+    
+    np = nearest_point_on_arc (a2ep[1], &a1);
+    epc = (Circle) { a2ep[1], a2to2 }; 
+    apc = (Circle) { np, a1to2 };
+    if ( circle_intersects_circle (&epc, &apc, &piiap) ) {
+      SET_XY_IF_NOT_NULL (pii, piiap);
+      return TRUE;
+    }
+  }
+
+  return FALSE;
 }
 
 /*!
@@ -1518,7 +1557,7 @@ form_slanted_rectangle (PointType p[4], LineType *l)
  * </pre>
  */
 bool
-LineLineIntersect (LineType *Line1, LineType *Line2)
+LineLineIntersect (LineType *Line1, LineType *Line2, PointType *pii)
 {
   double s, r;
   double line1_dx, line1_dy, line2_dx, line2_dy,
@@ -1527,7 +1566,7 @@ LineLineIntersect (LineType *Line1, LineType *Line2)
     {
       PointType p[4];
       form_slanted_rectangle (p, Line1);
-      return IsLineInQuadrangle (p, Line2);
+      return IsLineInQuadrangle (p, Line2, pii);
     }
   /* here come only round Line1 because IsLineInQuadrangle()
      calls LineLineIntersect() with first argument rounded*/
@@ -1535,26 +1574,26 @@ LineLineIntersect (LineType *Line1, LineType *Line2)
     {
       PointType p[4];
       form_slanted_rectangle (p, Line2);
-      return IsLineInQuadrangle (p, Line1);
+      return IsLineInQuadrangle (p, Line1, pii);
     }
   /* now all lines are round */
 
   /* Check endpoints: this provides a quick exit, catches
-   *  cases where the "real" lines don't intersect but the
-   *  thick lines touch, and ensures that the dx/dy business
-   *  below does not cause a divide-by-zero. */
-  if (IsPointInPad (Line2->Point1.X, Line2->Point1.Y,
-                    MAX (Line2->Thickness / 2 + Bloat, 0),
-                    (PadType *) Line1)
+   * cases where the "real" lines don't intersect but the
+   * thick lines touch, and ensures that the dx/dy business
+   * below does not cause a divide-by-zero. */
+  if (    IsPointInPad (Line2->Point1.X, Line2->Point1.Y,
+                        MAX (Line2->Thickness / 2 + Bloat, 0),
+                        (PadType *) Line1, pii)
        || IsPointInPad (Line2->Point2.X, Line2->Point2.Y,
                         MAX (Line2->Thickness / 2 + Bloat, 0),
-                        (PadType *) Line1)
+                        (PadType *) Line1, pii)
        || IsPointInPad (Line1->Point1.X, Line1->Point1.Y,
                         MAX (Line1->Thickness / 2 + Bloat, 0),
-                        (PadType *) Line2)
+                        (PadType *) Line2, pii)
        || IsPointInPad (Line1->Point2.X, Line1->Point2.Y,
                         MAX (Line1->Thickness / 2 + Bloat, 0),
-                        (PadType *) Line2))
+                        (PadType *) Line2, pii) )
     return true;
 
   /* setup some constants */
@@ -1589,8 +1628,16 @@ LineLineIntersect (LineType *Line1, LineType *Line2)
   r = (point1_dy * line2_dx - point1_dx * line2_dy) / r;
 
   /* intersection is at least on AB */
-  if (r >= 0.0 && r <= 1.0)
-    return (s >= 0.0 && s <= 1.0);
+  if (r >= 0.0 && r <= 1.0) {
+    if ( s >= 0.0 && s <= 1.0 ) {
+      if ( pii != NULL ) {
+        pii->X = Line1->Point1.X + r * line1_dx;
+        pii->Y = Line1->Point1.Y + r * line1_dy;
+      }
+      return true;
+    }
+    return false;
+  }
 
   /* intersection is at least on CD */
   /* [removed this case since it always returns false --asp] */
@@ -1600,87 +1647,135 @@ LineLineIntersect (LineType *Line1, LineType *Line2)
 /*!
  * \brief Check for line intersection with an arc.
  *
- * Mostly this is like the circle/line intersection
- * found in IsPointOnLine (search.c) see the detailed
- * discussion for the basics there.
- *
- * Since this is only an arc, not a full circle we need
- * to find the actual points of intersection with the
- * circle, and see if they are on the arc.
- *
- * To do this, we translate along the line from the point Q
- * plus or minus a distance delta = sqrt(Radius^2 - d^2)
- * but it's handy to normalize with respect to l, the line
- * length so a single projection is done (e.g. we don't first
- * find the point Q.
- *
- * <pre>
- * The projection is now of the form:
- *
- *      Px = X1 + (r +- r2)(X2 - X1)
- *      Py = Y1 + (r +- r2)(Y2 - Y1)
- * </pre>
- *
- * Where r2 sqrt(Radius^2 l^2 - d^2)/l^2
- * note that this is the variable d, not the symbol d described in
- * IsPointOnLine (variable d = symbol d * l).
- *
- * The end points are hell so they are checked individually.
- */
+ * There are a lot of cases to consider due to square/round line end caps and
+ * arcs with thickness / 2 > radius, so almost a full constructive geometry
+ * solution is used, with checks between most combinations of sub-figures.
+ */ 
 bool
-LineArcIntersect (LineType *Line, ArcType *Arc)
+LineArcIntersect (LineType *Line, ArcType *arc, PointType *pii)
 {
-  double dx, dy, dx1, dy1, l, d, r, r2, Radius;
-  BoxType *box;
+  // We don't handle arc of ellipse at the moment
+  assert (arc->Width == arc->Height);
+ 
+  // Note that Bloat doesn't change radius (arcs are shrunk "in place").
+  Coord radius = arc->Width;
+  
+  // We don't handle arcs with square ends
+  assert (! TEST_FLAG (SQUAREFLAG, arc));
 
-  dx = Line->Point2.X - Line->Point1.X;
-  dy = Line->Point2.Y - Line->Point1.Y;
-  dx1 = Line->Point1.X - Arc->X;
-  dy1 = Line->Point1.Y - Arc->Y;
-  l = dx * dx + dy * dy;
-  d = dx * dy1 - dy * dx1;
-  d *= d;
+  Coord lto2 = Bloat / 2 + Line->Thickness / 2;       // Line Thickness / 2
+  Coord ato2 = Bloat / 2 + arc->Thickness / 2;        // Arc Thickness / 2
+  // Both thickness / 2 (Sum of Thicknesses Over 2)
+  Coord sto2 = Bloat + (Line->Thickness + arc->Thickness) / 2;
+  
+  // If either the arc or line thickness has reached 0 at the current Bloat,
+  // then we're done.  In painful theory of course there could still be
+  // intersections at 0 thickness, and since we're on integer coordinates
+  // they could in some situation be detected, but not consistently because
+  // the underlying calculatios use floating point.
+  if ( lto2 <= 0 || ato2 <= 0 ) {
+    return false;
+  }
 
-  /* use the larger diameter circle first */
-  Radius =
-    Arc->Width + MAX (0.5 * (Arc->Thickness + Line->Thickness) + Bloat, 0.0);
-  Radius *= Radius;
-  r2 = Radius * l - d;
-  /* projection doesn't even intersect circle when r2 < 0 */
-  if (r2 < 0)
-    return (false);
-  /* check the ends of the line in case the projected point */
-  /* of intersection is beyond the line end */
-  if (IsPointOnArc
-      (Line->Point1.X, Line->Point1.Y,
-       MAX (0.5 * Line->Thickness + Bloat, 0.0), Arc))
-    return (true);
-  if (IsPointOnArc
-      (Line->Point2.X, Line->Point2.Y,
-       MAX (0.5 * Line->Thickness + Bloat, 0.0), Arc))
-    return (true);
-  if (l == 0.0)
-    return (false);
-  r2 = sqrt (r2);
-  Radius = -(dx * dx1 + dy * dy1);
-  r = (Radius + r2) / l;
-  if (r >= 0 && r <= 1
-      && IsPointOnArc (Line->Point1.X + r * dx,
-                       Line->Point1.Y + r * dy,
-                       MAX (0.5 * Line->Thickness + Bloat, 0.0), Arc))
-    return (true);
-  r = (Radius - r2) / l;
-  if (r >= 0 && r <= 1
-      && IsPointOnArc (Line->Point1.X + r * dx,
-                       Line->Point1.Y + r * dy,
-                       MAX (0.5 * Line->Thickness + Bloat, 0.0), Arc))
-    return (true);
-  /* check arc end points */
-  box = GetArcEnds (Arc);
-  if (IsPointInPad (box->X1, box->Y1, Arc->Thickness * 0.5 + Bloat, (PadType *)Line))
-    return true;
-  if (IsPointInPad (box->X2, box->Y2, Arc->Thickness * 0.5 + Bloat, (PadType *)Line))
-    return true;
+  // Rectangular Part Of Line
+  Rectangle rpol = rectangular_part_of_line (Line, Bloat / 2);
+
+  LineSegment rectangle_edges[4] = {
+    ((LineSegment) { rpol.corner[0], rpol.corner[1] }),
+    ((LineSegment) { rpol.corner[1], rpol.corner[2] }),
+    ((LineSegment) { rpol.corner[2], rpol.corner[3] }),
+    ((LineSegment) { rpol.corner[3], rpol.corner[0] }) };
+  
+  // Convert the arc angles to the conventions used in geometry.h
+  Angle sa, ad;   // Start Angle, Angle Delta
+  pcb_to_geometry_angle_range (arc->StartAngle, arc->Delta, &sa, &ad);
+
+  // Inner/Outer Arcs (of ArcType Arc, due to its thickness).  Note that
+  // ia might have radius <= 0 even at Bloat == 0, but oa should never
+  // have radius <= 0 at this point since we've already returned false for
+  // thickness of 0 or less above.
+  Arc
+    oa = { { { arc->X, arc->Y }, radius + ato2 }, sa, ad },
+    ia = { { { arc->X, arc->Y }, radius - ato2 }, sa, ad };
+  assert (oa.circle.radius > 0);
+
+  Arc acl = { { { arc->X, arc->Y}, radius }, sa, ad };   // Arc Center Line
+  Point aep[2];                                          // Arc End Points
+  arc_end_points (&acl, aep);
+ 
+  // Check if the rectangular part of line intersects anything
+  for ( int ii = 0 ; ii < 4 ; ii++ ) {
+
+    // Check arc edges
+    Point ip[2];   // Intersection Points
+    int ipc;       // Intersection Point Count
+    ipc = arc_line_segment_intersection (&oa, &(rectangle_edges[ii]), ip);
+    if ( ipc > 0 ) {
+      SET_XY_IF_NOT_NULL (pii, ip[0]);
+      return true;
+    }
+    if ( ia.circle.radius > 0 ) {   // If ia isn't degenerate check it also
+      ipc = arc_line_segment_intersection (&ia, &(rectangle_edges[ii]), ip);
+      if ( ipc > 0 ) {
+        SET_XY_IF_NOT_NULL (pii, ip[0]);
+        return true;
+      }
+    }
+
+    // Check arc end caps (which are always round).  Note that this catches
+    // the case in which the line is entirely contained within an arc end cap.
+    for ( int jj = 0 ; jj < 2 ; jj++ ) {
+      Point npol
+        = nearest_point_on_probably_axis_aligned_line_segment (
+            aep[jj],
+            &(rectangle_edges[ii]) );
+      if ( vec_mag (vec_from (aep[jj], npol) ) <= ato2 ) {
+        SET_XY_IF_NOT_NULL (pii, npol);
+        return true;
+      }
+    }
+    
+    // The rectangular line might be entirely contained between the inner and
+    // outer edges of the arc.  In this case all the corners of the rectangle
+    // will be within ato2 of acl, so it's sufficient to check one of them.
+    Point ctc = rpol.corner[0];                      // Corner To Check
+    Point nptc = nearest_point_on_arc (ctc, &acl);   // Nearest Point To Corner
+    if ( vec_mag (vec_from (ctc, nptc)) <= ato2 ) {
+      SET_XY_IF_NOT_NULL (pii, ctc);
+      return true;
+    }
+  }
+  
+  // Unless the line has square end caps (in which case they will already
+  // have been incorporated into the single rectangle used to represent
+  // the line)...
+  if ( ! TEST_FLAG (SQUAREFLAG, Line) ) {
+
+    Point leccs[2] = {   // Line End Cap Centers
+      { Line->Point1.X, Line->Point1.Y },
+      { Line->Point2.X, Line->Point2.Y } };
+    
+    // Check if the line end caps intersect the arc.  Note that this catches
+    // intersections with the arc end caps, since they are always round.
+    for ( int ii = 0 ; ii < 2 ; ii++ ) {
+      Point lecc = leccs[ii];   // Line End Cap Center
+      Point np2lep;   // Nearest Point to Line End Point
+      np2lep = nearest_point_on_arc (lecc, &acl);
+      // (Vector from) Line Cap Center to Nearest Point (on acl)
+      Vec lcc_np = vec_from (lecc, np2lep);
+      if ( vec_mag (lcc_np) <= sto2 ) {
+        if ( pii != NULL ) {
+          Point piiap   // Point In Intersection As Point
+            = vec_sum (lecc, vec_scale (lcc_np, (lto2 / vec_mag (lcc_np))));
+          pii->X = piiap.x;
+          pii->Y = piiap.y;
+        }
+        return true;
+      } 
+    }
+
+  } 
+
   return false;
 }
 
@@ -1690,7 +1785,7 @@ LOCtoArcLine_callback (const BoxType * b, void *cl)
   LineType *line = (LineType *) b;
   struct lo_info *i = (struct lo_info *) cl;
 
-  if (!TEST_FLAG (i->flag, line) && LineArcIntersect (line, i->arc))
+  if (!TEST_FLAG (i->flag, line) && LineArcIntersect (line, i->arc, &pimri))
     {
       if (ADD_LINE_TO_LIST (i->layer, line, i->flag))
         longjmp (i->env, 1);
@@ -1706,7 +1801,7 @@ LOCtoArcArc_callback (const BoxType * b, void *cl)
 
   if (!arc->Thickness)
     return 0;
-  if (!TEST_FLAG (i->flag, arc) && ArcArcIntersect (i->arc, arc))
+  if (!TEST_FLAG (i->flag, arc) && ArcArcIntersect (i->arc, arc, &pimri))
     {
       if (ADD_ARC_TO_LIST (i->layer, arc, i->flag))
         longjmp (i->env, 1);
@@ -1720,10 +1815,12 @@ LOCtoArcPad_callback (const BoxType * b, void *cl)
   PadType *pad = (PadType *) b;
   struct lo_info *i = (struct lo_info *) cl;
 
-  if (!TEST_FLAG (i->flag, pad) && i->layer ==
-      (TEST_FLAG (ONSOLDERFLAG, pad) ? BOTTOM_SIDE : TOP_SIDE)
-      && ArcPadIntersect (i->arc, pad) && ADD_PAD_TO_LIST (i->layer, pad, i->flag))
+  if ( !TEST_FLAG (i->flag, pad) &&
+        i->layer == (TEST_FLAG (ONSOLDERFLAG, pad) ? BOTTOM_SIDE : TOP_SIDE) &&
+        ArcPadIntersect (i->arc, pad, &pimri) &&
+        ADD_PAD_TO_LIST (i->layer, pad, i->flag) ) {
     longjmp (i->env, 1);
+  }
   return 0;
 }
 
@@ -1802,7 +1899,7 @@ LOCtoLineLine_callback (const BoxType * b, void *cl)
   LineType *line = (LineType *) b;
   struct lo_info *i = (struct lo_info *) cl;
 
-  if (!TEST_FLAG (i->flag, line) && LineLineIntersect (i->line, line))
+  if (!TEST_FLAG (i->flag, line) && LineLineIntersect (i->line, line, &pimri))
     {
       if (ADD_LINE_TO_LIST (i->layer, line, i->flag))
         longjmp (i->env, 1);
@@ -1818,7 +1915,7 @@ LOCtoLineArc_callback (const BoxType * b, void *cl)
 
   if (!arc->Thickness)
     return 0;
-  if (!TEST_FLAG (i->flag, arc) && LineArcIntersect (i->line, arc))
+  if (!TEST_FLAG (i->flag, arc) && LineArcIntersect (i->line, arc, &pimri))
     {
       if (ADD_ARC_TO_LIST (i->layer, arc, i->flag))
         longjmp (i->env, 1);
@@ -1856,10 +1953,12 @@ LOCtoLinePad_callback (const BoxType * b, void *cl)
   PadType *pad = (PadType *) b;
   struct lo_info *i = (struct lo_info *) cl;
 
-  if (!TEST_FLAG (i->flag, pad) && i->layer ==
-      (TEST_FLAG (ONSOLDERFLAG, pad) ? BOTTOM_SIDE : TOP_SIDE)
-      && LinePadIntersect (i->line, pad) && ADD_PAD_TO_LIST (i->layer, pad, i->flag))
+  if ( !TEST_FLAG (i->flag, pad) &&
+       i->layer == (TEST_FLAG (ONSOLDERFLAG, pad) ? BOTTOM_SIDE : TOP_SIDE) &&
+       LinePadIntersect (i->line, pad, &pimri) &&
+       ADD_PAD_TO_LIST (i->layer, pad, i->flag) ) {
     longjmp (i->env, 1);
+  }
   return 0;
 }
 
@@ -1993,6 +2092,13 @@ LOCtoPad_callback (const BoxType * b, void *cl)
   PadType *pad = (PadType *) b;
   struct rat_info *i = (struct rat_info *) cl;
 
+  // Note: this one doesn't need to worry about setting pimri at the moment
+  // because it's currently only called from LookupLOConnectionsToRatEnd()
+  // (which we don't care about because violations shouldn't happen for rat
+  // intersections themselves, though I think they can be produced when a
+  // violation in a rat-connected set changes connectivity via something
+  // real).
+
   if (!TEST_FLAG (i->flag, pad) && i->layer ==
 	(TEST_FLAG (ONSOLDERFLAG, pad) ? BOTTOM_SIDE : TOP_SIDE) &&
       ((pad->Point1.X == i->Point->X && pad->Point1.Y == i->Point->Y) ||
@@ -2066,7 +2172,7 @@ LOCtoPadLine_callback (const BoxType * b, void *cl)
   LineType *line = (LineType *) b;
   struct lo_info *i = (struct lo_info *) cl;
 
-  if (!TEST_FLAG (i->flag, line) && LinePadIntersect (line, i->pad))
+  if (!TEST_FLAG (i->flag, line) && LinePadIntersect (line, i->pad, &pimri))
     {
       if (ADD_LINE_TO_LIST (i->layer, line, i->flag))
         longjmp (i->env, 1);
@@ -2082,7 +2188,7 @@ LOCtoPadArc_callback (const BoxType * b, void *cl)
 
   if (!arc->Thickness)
     return 0;
-  if (!TEST_FLAG (i->flag, arc) && ArcPadIntersect (arc, i->pad))
+  if (!TEST_FLAG (i->flag, arc) && ArcPadIntersect (arc, i->pad, &pimri))
     {
       if (ADD_ARC_TO_LIST (i->layer, arc, i->flag))
         longjmp (i->env, 1);
@@ -2143,10 +2249,12 @@ LOCtoPadPad_callback (const BoxType * b, void *cl)
   PadType *pad = (PadType *) b;
   struct lo_info *i = (struct lo_info *) cl;
 
-  if (!TEST_FLAG (i->flag, pad) && i->layer ==
-      (TEST_FLAG (ONSOLDERFLAG, pad) ? BOTTOM_SIDE : TOP_SIDE)
-      && PadPadIntersect (pad, i->pad) && ADD_PAD_TO_LIST (i->layer, pad, i->flag))
+  if ( !TEST_FLAG (i->flag, pad) &&
+       i->layer == (TEST_FLAG (ONSOLDERFLAG, pad) ? BOTTOM_SIDE : TOP_SIDE) &&
+       PadPadIntersect (pad, i->pad, &pimri) &&
+       ADD_PAD_TO_LIST (i->layer, pad, i->flag) ) {
     longjmp (i->env, 1);
+  }
   return 0;
 }
 
@@ -3405,6 +3513,28 @@ DRCFind (int What, void *ptr1, void *ptr2, void *ptr3)
       drc = true;               /* abort the search if we find anything not already found */
       if (DoIt (FOUNDFLAG, true, false))
         {
+          // We want to be sure to capture the location of the intersection
+          // that's actually causing the violation, so we do this before the
+          // below stuff that implements flag change undoability.  I think
+          // it doesn't matter because it's just re-running the same pair
+          // of tests at the same respective bloats, but there's no reason
+          // to not capture the location (from the global) immediately after
+          // the intersection that puts us on this violation branch.
+          if ( pimri.X != PIMRI_UNSET ) {
+            x = pimri.X;
+            y = pimri.Y;
+            // Clear to avoid confuse ourselves next time
+            pimri.X = PIMRI_UNSET; 
+          }
+          else {
+            // If we end up here it means some code somewhere hasn't
+            // been rewritten to set pimri yet.  Hopefully all the
+            // intersection-detecting paths are fixed to set pimri now.
+            // If debugging is enabled we fire an assertion if not, but in
+            // normal use just fall back to using the object position.
+            assert (false);
+            LocateErrorObject (&x, &y);
+          }
           DumpList ();
           /* make the flag changes undoable */
           ClearFlagOnAllObjects (false, FOUNDFLAG | SELECTEDFLAG);
@@ -3422,19 +3552,19 @@ DRCFind (int What, void *ptr1, void *ptr2, void *ptr3)
           User = false;
           drc = false;
           drcerr_count++;
-          LocateError (&x, &y);
           BuildObjectList (&object_count, &object_id_list, &object_type_list);
-          violation = pcb_drc_violation_new (_("Potential for broken trace"),
-                                             _("Insufficient overlap between objects can lead to broken tracks\n"
-                                               "due to registration errors with old wheel style photo-plotters."),
-                                             x, y,
-                                             0,     /* ANGLE OF ERROR UNKNOWN */
-                                             FALSE, /* MEASUREMENT OF ERROR UNKNOWN */
-                                             0,     /* MAGNITUDE OF ERROR UNKNOWN */
-                                             PCB->Shrink,
-                                             object_count,
-                                             object_id_list,
-                                             object_type_list);
+          violation = pcb_drc_violation_new (
+              _("Potential for broken trace"),
+              _("Insufficient overlap between objects can lead to broken tracks\n"
+                "due to registration errors with old wheel style photo-plotters."),
+              x, y,
+              0,     /* ANGLE OF ERROR UNKNOWN */
+              FALSE, /* MEASUREMENT OF ERROR UNKNOWN */
+              0,     /* MAGNITUDE OF ERROR UNKNOWN */
+              PCB->Shrink,
+              object_count,
+              object_id_list,
+              object_type_list);
           append_drc_violation (violation);
           pcb_drc_violation_free (violation);
           free (object_id_list);
@@ -3460,6 +3590,28 @@ DRCFind (int What, void *ptr1, void *ptr2, void *ptr3)
   drc = true;
   while (DoIt (flag, true, false))
     {
+      // We want to be sure to capture the location of the intersection
+      // that's actually causing the violation, so we do this before the
+      // below stuff that implements flag change undoability.  I think
+      // it doesn't matter because it's just re-running the same pair
+      // of tests at the same respective bloats, but there's no reason
+      // to not capture the location (from the global) immediately after
+      // the intersection that puts us on this violation branch.
+      if ( pimri.X != PIMRI_UNSET ) {
+        x = pimri.X;
+        y = pimri.Y;
+        // Clear to avoid confuse ourselves next time
+        pimri.X = PIMRI_UNSET; 
+      }
+      else {
+        // If we end up here it means some code somewhere hasn't
+        // been rewritten to set pimri yet.  Hopefully all the
+        // intersection-detecting paths are fixed to set pimri now.
+        // If debugging is enabled we fire an assertion if not, but in normal
+        // use just fall back to using the object position.
+        assert (false);
+        LocateErrorObject (&x, &y);
+      }
       DumpList ();
       /* make the flag changes undoable */
       ClearFlagOnAllObjects (false, FOUNDFLAG | SELECTEDFLAG);
@@ -3475,19 +3627,19 @@ DRCFind (int What, void *ptr1, void *ptr2, void *ptr3)
       DoIt (FOUNDFLAG, true, true);
       DumpList ();
       drcerr_count++;
-      LocateError (&x, &y);
       BuildObjectList (&object_count, &object_id_list, &object_type_list);
-      violation = pcb_drc_violation_new (_("Copper areas too close"),
-                                         _("Circuits that are too close may bridge during imaging, etching,\n"
-                                           "plating, or soldering processes resulting in a direct short."),
-                                         x, y,
-                                         0,     /* ANGLE OF ERROR UNKNOWN */
-                                         FALSE, /* MEASUREMENT OF ERROR UNKNOWN */
-                                         0,     /* MAGNITUDE OF ERROR UNKNOWN */
-                                         PCB->Bloat,
-                                         object_count,
-                                         object_id_list,
-                                         object_type_list);
+      violation = pcb_drc_violation_new (
+          _("Copper areas too close"),
+          _("Circuits that are too close may bridge during imaging, etching,\n"
+            "plating, or soldering processes resulting in a direct short."),
+          x, y,
+          0,     /* ANGLE OF ERROR UNKNOWN */
+          FALSE, /* MEASUREMENT OF ERROR UNKNOWN */
+          0,     /* MAGNITUDE OF ERROR UNKNOWN */
+          PCB->Bloat,
+          object_count,
+          object_id_list,
+          object_type_list);
       append_drc_violation (violation);
       pcb_drc_violation_free (violation);
       free (object_id_list);
@@ -3595,7 +3747,7 @@ doIsBad:
   DrawPolygon (layer, polygon);
   DrawObject (type, ptr1, ptr2);
   drcerr_count++;
-  LocateError (&x, &y);
+  LocateErrorObject (&x, &y);
   BuildObjectList (&object_count, &object_id_list, &object_type_list);
   violation = pcb_drc_violation_new (message,
                                      _("Circuits that are too close may bridge during imaging, etching,\n"
@@ -3638,6 +3790,10 @@ DRCAll (void)
   int nopastecnt = 0;
   bool IsBad;
   struct drc_info info;
+
+  // Make sure pimri starts out unset.  It's should be cleared by code that
+  // consumes it's setting, so this is just defensive programming.
+  pimri.X = PIMRI_UNSET;   // Mark the entire pimri value as unset
 
   reset_drc_dialog_message();
 
@@ -3736,7 +3892,7 @@ DRCAll (void)
             DrawLine (layer, line);
             drcerr_count++;
             SetThing (LINE_TYPE, layer, line, line);
-            LocateError (&x, &y);
+            LocateErrorObject (&x, &y);
             BuildObjectList (&object_count, &object_id_list, &object_type_list);
             violation = pcb_drc_violation_new (_("Line width is too thin"),
                                                _("Process specifications dictate a minimum feature-width\n"
@@ -3780,7 +3936,7 @@ DRCAll (void)
             DrawArc (layer, arc);
             drcerr_count++;
             SetThing (ARC_TYPE, layer, arc, arc);
-            LocateError (&x, &y);
+            LocateErrorObject (&x, &y);
             BuildObjectList (&object_count, &object_id_list, &object_type_list);
             violation = pcb_drc_violation_new (_("Arc width is too thin"),
                                                _("Process specifications dictate a minimum feature-width\n"
@@ -3825,7 +3981,7 @@ DRCAll (void)
             DrawPin (pin);
             drcerr_count++;
             SetThing (PIN_TYPE, element, pin, pin);
-            LocateError (&x, &y);
+            LocateErrorObject (&x, &y);
             BuildObjectList (&object_count, &object_id_list, &object_type_list);
             violation = pcb_drc_violation_new (_("Pin annular ring too small"),
                                                _("Annular rings that are too small may erode during etching,\n"
@@ -3857,7 +4013,7 @@ DRCAll (void)
             DrawPin (pin);
             drcerr_count++;
             SetThing (PIN_TYPE, element, pin, pin);
-            LocateError (&x, &y);
+            LocateErrorObject (&x, &y);
             BuildObjectList (&object_count, &object_id_list, &object_type_list);
             violation = pcb_drc_violation_new (_("Pin drill size is too small"),
                                                _("Process rules dictate the minimum drill size which can be used"),
@@ -3900,7 +4056,7 @@ DRCAll (void)
             DrawPad (pad);
             drcerr_count++;
             SetThing (PAD_TYPE, element, pad, pad);
-            LocateError (&x, &y);
+            LocateErrorObject (&x, &y);
             BuildObjectList (&object_count, &object_id_list, &object_type_list);
             violation = pcb_drc_violation_new (_("Pad is too thin"),
                                                _("Pads which are too thin may erode during etching,\n"
@@ -3945,7 +4101,7 @@ DRCAll (void)
             DrawVia (via);
             drcerr_count++;
             SetThing (VIA_TYPE, via, via, via);
-            LocateError (&x, &y);
+            LocateErrorObject (&x, &y);
             BuildObjectList (&object_count, &object_id_list, &object_type_list);
             violation = pcb_drc_violation_new (_("Via annular ring too small"),
                                                _("Annular rings that are too small may erode during etching,\n"
@@ -3977,7 +4133,7 @@ DRCAll (void)
             DrawVia (via);
             drcerr_count++;
             SetThing (VIA_TYPE, via, via, via);
-            LocateError (&x, &y);
+            LocateErrorObject (&x, &y);
             BuildObjectList (&object_count, &object_id_list, &object_type_list);
             violation = pcb_drc_violation_new (_("Via drill size is too small"),
                                                _("Process rules dictate the minimum drill size which can be used"),
@@ -4020,7 +4176,7 @@ DRCAll (void)
             DrawLine (layer, line);
             drcerr_count++;
             SetThing (LINE_TYPE, layer, line, line);
-            LocateError (&x, &y);
+            LocateErrorObject (&x, &y);
             BuildObjectList (&object_count, &object_id_list, &object_type_list);
             violation = pcb_drc_violation_new (_("Silk line is too thin"),
                                                _("Process specifications dictate a minimum silkscreen\n"
@@ -4071,7 +4227,7 @@ DRCAll (void)
             DrawElement (element);
             drcerr_count++;
             SetThing (ELEMENT_TYPE, element, element, element);
-            LocateError (&x, &y);
+            LocateErrorObject (&x, &y);
             BuildObjectList (&object_count, &object_id_list, &object_type_list);
 
             title = _("Element %s has %i silk lines which are too thin");
@@ -4134,7 +4290,7 @@ DRCAll (void)
  * \brief Locate the coordinatates of offending item (thing).
  */
 static void
-LocateError (Coord *x, Coord *y)
+LocateErrorObject (Coord *x, Coord *y)
 {
   switch (thing_type)
     {
@@ -4236,7 +4392,7 @@ GotoError (void)
 {
   Coord X, Y;
 
-  LocateError (&X, &Y);
+  LocateErrorObject (&X, &Y);
 
   switch (thing_type)
     {

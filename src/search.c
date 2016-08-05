@@ -50,6 +50,7 @@
 #include "error.h"
 #include "find.h"
 #include "misc.h"
+#include "pcb_geometry.h"
 #include "polygon.h"
 #include "rtree.h"
 #include "search.h"
@@ -118,7 +119,7 @@ pinorvia_callback (const BoxType * box, void *cl)
   if (TEST_FLAG (i->locked, ptr1))
     return 0;
 
-  if (!IsPointOnPin (PosX, PosY, SearchRadius, pin))
+  if (!IsPointOnPin (PosX, PosY, SearchRadius, pin, NULL))
     return 0;
   *i->ptr1 = ptr1;
   *i->ptr2 = *i->ptr3 = pin;
@@ -191,7 +192,7 @@ pad_callback (const BoxType * b, void *cl)
   /* Reject locked pads, backside pads (if !BackToo), and non-hit pads */
   if (TEST_FLAG (i->locked, ptr1) ||
       (!FRONT (pad) && !i->BackToo) ||
-      !IsPointInPad (PosX, PosY, SearchRadius, pad))
+      !IsPointInPad (PosX, PosY, SearchRadius, pad, NULL))
     return 0;
 
   /* Determine how close our test-position was to the center of the pad  */
@@ -253,7 +254,7 @@ line_callback (const BoxType * box, void *cl)
   if (TEST_FLAG (i->locked, l))
     return 0;
 
-  if (!IsPointInPad (PosX, PosY, SearchRadius, (PadType *)l))
+  if (!IsPointInPad (PosX, PosY, SearchRadius, (PadType *)l, NULL))
     return 0;
   *i->Line = l;
   *i->Point = (PointType *) l;
@@ -345,7 +346,7 @@ arc_callback (const BoxType * box, void *cl)
   if (TEST_FLAG (i->locked, a))
     return 0;
 
-  if (!IsPointOnArc (PosX, PosY, SearchRadius, a))
+  if (!IsPointOnArc (PosX, PosY, SearchRadius, a, NULL))
     return 0;
   *i->Arc = a;
   *i->Dummy = a;
@@ -713,7 +714,7 @@ SearchElementByLocation (int locked,
  * \brief Checks if a point is on a pin.
  */
 bool
-IsPointOnPin (Coord X, Coord Y, Coord Radius, PinType *pin)
+IsPointOnPin (Coord X, Coord Y, Coord Radius, PinType *pin, PointType *pii)
 {
   Coord t = PIN_SIZE (pin) / 2;
   if (TEST_FLAG (SQUAREFLAG, pin))
@@ -724,11 +725,16 @@ IsPointOnPin (Coord X, Coord Y, Coord Radius, PinType *pin)
       b.X2 = pin->X + t;
       b.Y1 = pin->Y - t;
       b.Y2 = pin->Y + t;
-      if (IsPointInBox (X, Y, &b, Radius))
+      if (IsPointInBox (X, Y, &b, Radius, pii))
 	return true;
     }
-  else if (Distance (pin->X, pin->Y, X, Y) <= Radius + t)
+  else if (Distance (pin->X, pin->Y, X, Y) <= Radius + t) {
+    if ( pii != NULL ) {
+      pii->X = X;
+      pii->Y = Y;
+    }
     return true;
+  }
   return false;
 }
 
@@ -806,15 +812,21 @@ IsPointOnLine (Coord X, Coord Y, Coord Radius, LineType *Line)
  * \brief Checks if a line crosses a rectangle.
  */
 bool
-IsLineInRectangle (Coord X1, Coord Y1, Coord X2, Coord Y2, LineType *Line)
+IsLineInRectangle (
+    Coord X1, Coord Y1, Coord X2, Coord Y2, LineType *Line, PointType *pii )
 {
   LineType line;
 
   /* first, see if point 1 is inside the rectangle */
   /* in case the whole line is inside the rectangle */
   if (X1 < Line->Point1.X && X2 > Line->Point1.X &&
-      Y1 < Line->Point1.Y && Y2 > Line->Point1.Y)
+      Y1 < Line->Point1.Y && Y2 > Line->Point1.Y) {
+    if ( pii != NULL ) {
+      pii->X = Line->Point1.X;
+      pii->Y = Line->Point1.Y;
+    }
     return (true);
+  }
   /* construct a set of dummy lines and check each of them */
   line.Thickness = 0;
   line.Flags = NoFlags ();
@@ -823,28 +835,28 @@ IsLineInRectangle (Coord X1, Coord Y1, Coord X2, Coord Y2, LineType *Line)
   line.Point1.Y = line.Point2.Y = Y1;
   line.Point1.X = X1;
   line.Point2.X = X2;
-  if (LineLineIntersect (&line, Line))
+  if (LineLineIntersect (&line, Line, pii))
     return (true);
 
   /* upper-right to lower-right corner */
   line.Point1.X = X2;
   line.Point1.Y = Y1;
   line.Point2.Y = Y2;
-  if (LineLineIntersect (&line, Line))
+  if (LineLineIntersect (&line, Line, pii))
     return (true);
 
   /* lower-right to lower-left corner */
   line.Point1.Y = Y2;
   line.Point1.X = X1;
   line.Point2.X = X2;
-  if (LineLineIntersect (&line, Line))
+  if (LineLineIntersect (&line, Line, pii))
     return (true);
 
   /* lower-left to upper-left corner */
   line.Point2.X = X1;
   line.Point1.Y = Y1;
   line.Point2.Y = Y2;
-  if (LineLineIntersect (&line, Line))
+  if (LineLineIntersect (&line, Line, pii))
     return (true);
 
   return (false);
@@ -854,11 +866,11 @@ IsLineInRectangle (Coord X1, Coord Y1, Coord X2, Coord Y2, LineType *Line)
  * \brief Checks if a point (of null radius) is in a slanted rectangle.
  */
 static int
-IsPointInQuadrangle(PointType p[4], PointType *l)
+IsPointInQuadrangle(PointType p[4], PointType *l, PointType *pii)
 {
   Coord dx, dy, x, y;
   double prod0, prod1;
-
+  
   dx = p[1].X - p[0].X;
   dy = p[1].Y - p[0].Y;
   x = l->X - p[0].X;
@@ -875,8 +887,13 @@ IsPointInQuadrangle(PointType p[4], PointType *l)
       x = l->X - p[2].X;
       y = l->Y - p[2].Y;
       prod1 = (double) x * dx + (double) y * dy;
-      if (prod0 * prod1 <= 0)
+      if (prod0 * prod1 <= 0) {
+        if ( pii != NULL ) {
+          pii->X = l->X;
+          pii->Y = l->Y;
+        }
 	return true;
+      }
     }
   return false;
 }
@@ -888,16 +905,18 @@ IsPointInQuadrangle(PointType p[4], PointType *l)
  * \note Actually this quadrangle is a slanted rectangle.
  */
 bool
-IsLineInQuadrangle (PointType p[4], LineType *Line)
+IsLineInQuadrangle (PointType p[4], LineType *Line, PointType *pii)
 {
   LineType line;
-
+  
   /* first, see if point 1 is inside the rectangle */
   /* in case the whole line is inside the rectangle */
-  if (IsPointInQuadrangle(p,&(Line->Point1)))
+  if ( IsPointInQuadrangle(p,&(Line->Point1), pii) ) {
     return true;
-  if (IsPointInQuadrangle(p,&(Line->Point2)))
+  }
+  if ( IsPointInQuadrangle(p,&(Line->Point2), pii) ) {
     return true;
+  }
   /* construct a set of dummy lines and check each of them */
   line.Thickness = 0;
   line.Flags = NoFlags ();
@@ -905,31 +924,33 @@ IsLineInQuadrangle (PointType p[4], LineType *Line)
   /* upper-left to upper-right corner */
   line.Point1.X = p[0].X; line.Point1.Y = p[0].Y;
   line.Point2.X = p[1].X; line.Point2.Y = p[1].Y;
-  if (LineLineIntersect (&line, Line))
+  if (LineLineIntersect (&line, Line, pii))
     return (true);
 
   /* upper-right to lower-right corner */
   line.Point1.X = p[2].X; line.Point1.Y = p[2].Y;
-  if (LineLineIntersect (&line, Line))
+  if (LineLineIntersect (&line, Line, pii))
     return (true);
 
   /* lower-right to lower-left corner */
   line.Point2.X = p[3].X; line.Point2.Y = p[3].Y;
-  if (LineLineIntersect (&line, Line))
+  if (LineLineIntersect (&line, Line, pii))
     return (true);
 
   /* lower-left to upper-left corner */
   line.Point1.X = p[0].X; line.Point1.Y = p[0].Y;
-  if (LineLineIntersect (&line, Line))
+  if (LineLineIntersect (&line, Line, pii))
     return (true);
 
   return (false);
 }
+
 /*!
  * \brief Checks if an arc crosses a square.
  */
 bool
-IsArcInRectangle (Coord X1, Coord Y1, Coord X2, Coord Y2, ArcType *Arc)
+IsArcInRectangle (
+    Coord X1, Coord Y1, Coord X2, Coord Y2, ArcType *Arc, PointType *pii )
 {
   LineType line;
 
@@ -941,111 +962,108 @@ IsArcInRectangle (Coord X1, Coord Y1, Coord X2, Coord Y2, ArcType *Arc)
   line.Point1.Y = line.Point2.Y = Y1;
   line.Point1.X = X1;
   line.Point2.X = X2;
-  if (LineArcIntersect (&line, Arc))
+  if (LineArcIntersect (&line, Arc, pii))
     return (true);
 
   /* upper-right to lower-right corner */
   line.Point1.X = line.Point2.X = X2;
   line.Point1.Y = Y1;
   line.Point2.Y = Y2;
-  if (LineArcIntersect (&line, Arc))
+  if (LineArcIntersect (&line, Arc, pii))
     return (true);
 
   /* lower-right to lower-left corner */
   line.Point1.Y = line.Point2.Y = Y2;
   line.Point1.X = X1;
   line.Point2.X = X2;
-  if (LineArcIntersect (&line, Arc))
+  if (LineArcIntersect (&line, Arc, pii))
     return (true);
 
   /* lower-left to upper-left corner */
   line.Point1.X = line.Point2.X = X1;
   line.Point1.Y = Y1;
   line.Point2.Y = Y2;
-  if (LineArcIntersect (&line, Arc))
+  if (LineArcIntersect (&line, Arc, pii))
     return (true);
 
   return (false);
 }
 
+/* Shorthand macro for conditional copy of some stuff between types */
+#define SET_XY_IF_NOT_NULL(target, source) \
+  do {                                     \
+    if ( target != NULL ) {                \
+      (target)->X = (source).x;            \
+      (target)->Y = (source).y;            \
+    }                                      \
+  } while ( 0 )
+
 /*!
  * \brief Check if a circle of Radius with center at (X, Y) intersects
  * a Pad.
- *
- * Written to enable arbitrary pad directions; for rounded pads, too.
  */
 bool
-IsPointInPad (Coord X, Coord Y, Coord Radius, PadType *Pad)
+IsPointInPad (Coord X, Coord Y, Coord Radius, PadType *Pad, PointType *pii)
 {
-  double r, Sin, Cos;
-  Coord x; 
-  Coord t2 = (Pad->Thickness + 1) / 2, range;
-  PadType pad = *Pad;
+  // Cirlce Around Point, having radius Radius centered at X, Y.  Despite the
+  // name of this function it checks for the intersection of a pad and a
+  // circle, not a pad and a point.
+  Circle circ = { {X, Y}, Radius };
 
-  /* series of transforms saving range */
-  /* move Point1 to the origin */
-  X -= pad.Point1.X;
-  Y -= pad.Point1.Y;
+  // Ends of line defining extent of rectangle in one dimension.
+  Point pa = { Pad->Point1.X, Pad->Point1.Y };   // Pad (end) A
+  Point pb = { Pad->Point2.X, Pad->Point2.Y };   // Pad (end) B
 
-  pad.Point2.X -= pad.Point1.X;
-  pad.Point2.Y -= pad.Point1.Y;
-  /* so, pad.Point1.X = pad.Point1.Y = 0; */
+  Coord pt = Pad->Thickness;   // Convenience alias
 
-  /* rotate round (0, 0) so that Point2 coordinates be (r, 0) */
-  r = Distance (0, 0, pad.Point2.X, pad.Point2.Y);
-  if (r < .1)
-    {
-      Cos = 1;
-      Sin = 0;
-    }
-  else
-    {
-      Sin = pad.Point2.Y / r;
-      Cos = pad.Point2.X / r;
-    }
-  x = X;
-  X = X * Cos + Y * Sin;
-  Y = Y * Cos - x * Sin;
-  /* now pad.Point2.X = r; pad.Point2.Y = 0; */
+  // Point In Intersection As Point (for adapting this fctn interface to
+  // geometry.h interface)
+  Point piiap;  
 
-  /* take into account the ends */
-  if (TEST_FLAG (SQUAREFLAG, Pad))
-    {
-      r += Pad->Thickness;
-      X += t2;
+  // Handle the case where the pad has 0 thickness.  We treat it as a true
+  // line segment in this case, and return a true result if (X, Y) is within
+  // Radius of that segment.  The intersection point is considered to be
+  // the nearest point on the true segment.
+  assert (Pad->Thickness >= 0);
+  if ( Pad->Thickness == 0 ) {
+    Point pt = { X, Y };
+    PointType p1 = Pad->Point1, p2 = Pad->Point2; 
+    LineSegment pcl = { { p1.X, p1.Y }, { p2.X, p2.Y }  };
+    Point npols
+      = nearest_point_on_probably_axis_aligned_line_segment (pt, &pcl);
+    if ( vec_mag (vec_from (pt, npols)) <= Radius ) {
+      SET_XY_IF_NOT_NULL (pii, npols);
+      return true;
     }
-  if (Y < 0)
-    Y = -Y;	/* range value is evident now*/
+    else {
+      return false;
+    }
+  }
 
-  if (TEST_FLAG (SQUAREFLAG, Pad))
-    {
-      if (X <= 0)
-	{
-	  if (Y <= t2)
-            range = -X;
-          else
-	    return Radius > Distance (0, t2, X, Y);
-	}
-      else if (X >= r)
-	{
-	  if (Y <= t2)
-            range = X - r;
-          else 
-	    return Radius > Distance (r, t2, X, Y);
-	}
-      else
-	range = Y - t2;
+  // Note that this includes the end caps if the line has square ends
+  Rectangle rpol = rectangular_part_of_line ((LineType *) Pad, 0);
+
+  if ( circle_intersects_rectangle (&circ, &rpol, &piiap) ) {
+    SET_XY_IF_NOT_NULL (pii, piiap);
+    return true;
+  }
+
+  // For lines with round end caps we have to check those also
+  if ( ! TEST_FLAG (SQUAREFLAG, Pad) ) {
+    Circle cac = { pa, (pt + 1) / 2 };   // Cap A Circle
+    Circle cbc = { pb, (pt + 1) / 2 };   // Cap B Circle
+    // Note that piiap (if not NULL) is computed by the first short-circuit
+    // true result here.
+    bool ci = (   // Circles Intersect
+        circle_intersects_circle (&cac, &circ, &piiap) ||
+        circle_intersects_circle (&cbc, &circ, &piiap) );
+    if ( ci ) {
+      SET_XY_IF_NOT_NULL (pii, piiap);
+      return true;
     }
-  else/*Rounded pad: even more simple*/
-    {
-      if (X <= 0)
-	return (Radius + t2) > Distance (0, 0, X, Y);
-      else if (X >= r) 
-	return (Radius + t2) > Distance (r, 0, X, Y);
-      else
-	range = Y - t2;
-    }
-  return range < Radius;
+  }
+
+  return false;
 }
 
 /*!
@@ -1055,7 +1073,7 @@ IsPointInPad (Coord X, Coord Y, Coord Radius, PadType *Pad)
  * coordinates.
  */
 bool
-IsPointInBox (Coord X, Coord Y, BoxType *box, Coord Radius)
+IsPointInBox (Coord X, Coord Y, BoxType *box, Coord Radius, PointType *pii)
 {
   Coord width, height, range;
 
@@ -1066,95 +1084,131 @@ IsPointInBox (Coord X, Coord Y, BoxType *box, Coord Radius)
   width =  box->X2 - box->X1;
   height = box->Y2 - box->Y1;
 
-  if (X <= 0)
+  if ( X <= 0 )
     {
-      if (Y < 0)
-        return Radius > Distance (0, 0, X, Y);
+      if ( Y < 0 )
+        if ( Radius > Distance (0, 0, X, Y) ) {
+          if ( pii != NULL ) {
+            pii->X = X + box->X1;
+            pii->Y = Y + box->Y1;
+          }
+          return true;
+        }
+        else {
+          return false;
+        }
       else if (Y > height)
-        return Radius > Distance (0, height, X, Y);
+        if ( Radius > Distance (0, height, X, Y) ) {
+          if ( pii != NULL ) {
+            pii->X = X + box->X1;
+            pii->Y = Y + box->Y1;
+          }
+          return true;
+        }
+        else {
+          return false;
+        }
       else
         range = -X;
     }
-  else if (X >= width)
+  else if ( X >= width )
     {
-      if (Y < 0)
-        return Radius > Distance (width, 0, X, Y);
-      else if (Y > height)
-        return Radius > Distance (width, height, X, Y);
-      else
+      if ( Y < 0 ) {
+        if ( Radius > Distance (width, 0, X, Y) ) {
+          if ( pii != NULL ) {
+            pii->X = X + box->X1;
+            pii->Y = Y + box->Y1;
+          }
+          return true;
+        }
+        else {
+          return false;
+        }
+      }
+      else if ( Y > height ) {
+        if ( Radius > Distance (width, height, X, Y) ) {
+          if ( pii != NULL ) {
+            pii->X = X + box->X1;
+            pii->Y = Y + box->Y1;
+          }
+          return true;
+        }
+        else {
+          return false;
+        }
+      }
+      else {
         range = X - width;
+      }
     }
   else
     {
-      if (Y < 0)
+      if (Y < 0) {
         range = -Y;
-      else if (Y > height)
+      }
+      else if (Y > height) {
         range = Y - height;
-      else
+      }
+      else {
+        if ( pii != NULL ) {
+          pii->X = X + box->X1;
+          pii->Y = Y + box->Y1;
+        }
         return true;
+      }
     }
 
-  return range < Radius;
+  if ( range < Radius ) {
+    if ( pii != NULL ) {
+      pii->X = X + box->X1;
+      pii->Y = Y + box->Y1;
+    }
+    return true;
+  }
+  else {
+    return false;
+  }
 }
 
 /*!
  * \brief .
  *
- * \todo This code is BROKEN in the case of non-circular arcs, and in
- * the case that the arc thickness is greater than the radius.
+ * \todo This code is BROKEN in the case of non-circular arcs
  */
 bool
-IsPointOnArc (Coord X, Coord Y, Coord Radius, ArcType *Arc)
+IsPointOnArc (
+    Coord X, Coord Y, Coord Radius, ArcType *arc, PointType *pii )
 {
-  /* Calculate angle of point from arc center */
-  double p_dist = Distance (X, Y, Arc->X, Arc->Y);
-  double p_cos = (X - Arc->X) / p_dist;
-  Angle p_ang = acos (p_cos) * RAD_TO_DEG;
-  Angle ang1, ang2;
+  // Currently we can only handle arcs of circles
+  assert (arc->Width == arc->Height);
 
-  /* Convert StartAngle, Delta into bounding angles in [0, 720) */
-  if (Arc->Delta > 0)
-    {
-      ang1 = NormalizeAngle (Arc->StartAngle);
-      ang2 = NormalizeAngle (Arc->StartAngle + Arc->Delta);
+  Point pt = { X, Y };
+
+  // Convert the arc angles to the conventions used in geometry.h
+  Angle sa, ad;   // Start Angle, Angle Delta
+  pcb_to_geometry_angle_range (arc->StartAngle, arc->Delta, &sa, &ad);
+
+  Arc sarc = { { { arc->X, arc->Y }, arc->Width }, sa, ad };
+
+  Point np = nearest_point_on_arc (pt, &sarc);
+
+  Vec np_pt = vec_from (np, pt);      //  Vector from np to pt
+  
+  double m_np_pt = vec_mag (np_pt);   // Magnitude of np-pt
+  
+  // Square flags on arcs aren't supported
+  assert (! TEST_FLAG (SQUAREFLAG, arc));
+
+  if ( m_np_pt <= Radius + arc->Thickness / 2.0 ) {
+    if ( pii != NULL ) {
+      pii->X = X - np_pt.x / 2;
+      pii->Y = Y - np_pt.y / 2;
     }
-  else
-    {
-      ang1 = NormalizeAngle (Arc->StartAngle + Arc->Delta);
-      ang2 = NormalizeAngle (Arc->StartAngle);
-    }
-  if (ang1 > ang2)
-    ang2 += 360;
-  /* Make sure full circles aren't treated as zero-length arcs */
-  if (Arc->Delta == 360 || Arc->Delta == -360)
-    ang2 = ang1 + 360;
-
-  if (Y > Arc->Y)
-    p_ang = -p_ang;
-  p_ang += 180;
-
-  /* Check point is outside arc range, check distance from endpoints */
-  if (ang1 >= p_ang || ang2 <= p_ang)
-    {
-      Coord ArcX, ArcY;
-
-      ArcX = Arc->X + Arc->Width *
-              cos ((Arc->StartAngle + 180) / RAD_TO_DEG);
-      ArcY = Arc->Y - Arc->Width *
-              sin ((Arc->StartAngle + 180) / RAD_TO_DEG);
-      if (Distance (X, Y, ArcX, ArcY) < Radius + Arc->Thickness / 2)
-        return true;
-
-      ArcX = Arc->X + Arc->Width *
-              cos ((Arc->StartAngle + Arc->Delta + 180) / RAD_TO_DEG);
-      ArcY = Arc->Y - Arc->Width *
-              sin ((Arc->StartAngle + Arc->Delta + 180) / RAD_TO_DEG);
-      if (Distance (X, Y, ArcX, ArcY) < Radius + Arc->Thickness / 2)
-        return true;
-      return false;
-    }
-  /* If point is inside the arc range, just compare it to the arc */
-  return fabs (Distance (X, Y, Arc->X, Arc->Y) - Arc->Width) < Radius + Arc->Thickness / 2;
+    return true;
+  }
+  else {
+    return false;
+  }
 }
 
 /*!
