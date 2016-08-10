@@ -18,3 +18,6 @@ pcb-menu.res
 parse_y.output
 unittest
 unittest.exe
+test-suite.log
+unittest.log
+unittest.trs
