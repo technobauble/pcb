@@ -4263,3 +4263,101 @@ FreeConnectionLookupMemory (void)
   FreeComponentLookupMemory ();
   FreeLayoutLookupMemory ();
 }
+
+#ifdef PCB_UNIT_TEST
+
+#include "file.h"
+
+// Fixture for tests involving exactly one line and one arc.
+typedef struct {
+   ArcType  *the_arc;    /* associated tests involve exactly one arc */
+   LineType *the_line;   /* associated tests involve exactly one line */
+} LineArcIntersectionTestsFixture;
+
+static void
+line_arc_intersection_tests_fixture_set_up (
+    LineArcIntersectionTestsFixture *fixture,
+    gconstpointer pcb_file )
+{
+  /* Set up a fixture for line-arc intersection tests by loading one of each
+   * from the given file.  */
+ 
+  int return_code = LoadPCB ((char *) pcb_file);
+  g_assert (return_code == 0);
+
+  /* Load the line */
+  fixture->the_line = NULL;
+  COPPERLINE_LOOP (PCB->Data);
+  {
+    /* Because test case should not have >1 line */
+    g_assert (fixture->the_line == NULL);
+    fixture->the_line = line; 
+  }
+  ENDALL_LOOP;
+  /* Because test case should not have <1 line */
+  g_assert (fixture->the_line != NULL);
+
+  /* Load the arc */
+  fixture->the_arc = NULL;
+  COPPERARC_LOOP (PCB->Data);
+  {
+    /* Because test case should not have >1 line */
+    g_assert (fixture->the_arc == NULL);
+    fixture->the_arc = arc; 
+  }
+  ENDALL_LOOP;
+  /* Because test case should not have <1 line */
+  g_assert (fixture->the_arc != NULL);
+}
+
+static void
+expect_line_arc_intersection (
+    LineArcIntersectionTestsFixture *fixture,
+    gconstpointer pcb_file )
+{
+  g_assert_true (
+      LineArcIntersect (fixture->the_line, fixture->the_arc, NULL) );
+}
+
+static void
+expect_no_line_arc_intersection (
+    LineArcIntersectionTestsFixture *fixture,
+    gconstpointer pcb_file )
+{
+  g_assert_false (
+      LineArcIntersect (fixture->the_line, fixture->the_arc, NULL) );
+}
+
+/* Add Line-Arc Intersection Test Test */
+#define ALAITT(case_ending, expectation)                     \
+  g_test_add (                                               \
+      "/line_arc_intersection/" case_ending,                 \
+      LineArcIntersectionTestsFixture,                       \
+      "test_data/line_arc_intersection_" case_ending ".pcb", \
+      line_arc_intersection_tests_fixture_set_up,            \
+      expectation,                                           \
+      NULL )
+
+void
+find_register_tests (void)
+{
+  /* Register all tests defined for this module for execution with g_test */
+
+  ALAITT ("1", expect_line_arc_intersection);
+  ALAITT ("2", expect_line_arc_intersection);
+  ALAITT ("3", expect_line_arc_intersection);
+  ALAITT ("4", expect_line_arc_intersection);
+  ALAITT ("5", expect_line_arc_intersection);
+  ALAITT ("6", expect_line_arc_intersection);
+  ALAITT ("7", expect_line_arc_intersection);
+  ALAITT ("8", expect_line_arc_intersection);
+  ALAITT ("9", expect_line_arc_intersection);
+
+  ALAITT ("10", expect_no_line_arc_intersection);
+  ALAITT ("11", expect_no_line_arc_intersection);
+  ALAITT ("12", expect_no_line_arc_intersection);
+  ALAITT ("13", expect_no_line_arc_intersection);
+  ALAITT ("14", expect_no_line_arc_intersection);
+}
+
+#endif

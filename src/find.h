@@ -61,4 +61,8 @@ void FreeConnectionLookupMemory (void);
 void RatFindHook (int, void *, void *, void *, bool, int flag, bool);
 int DRCAll (void);
 
+#ifdef PCB_UNIT_TEST
+void find_register_tests (void);
+#endif
+
 #endif

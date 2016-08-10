@@ -1558,8 +1558,6 @@ REGISTER_ATTRIBUTES (main_attribute_list)
 {
   char *tmps;
   
-  printf ("%s:%i:%s: checkpoint\n", __FILE__, __LINE__, __func__);
-
   if (Settings.LibraryCommand != NULL &&
       Settings.LibraryCommand[0] != '\0' &&
       Settings.LibraryCommand[0] != PCB_DIR_SEPARATOR_C &&
@@ -1582,8 +1580,6 @@ REGISTER_ATTRIBUTES (main_attribute_list)
 		Settings.LibraryContentsCommand, NULL);
     }
   
-  printf ("%s:%i:%s: checkpoint\n", __FILE__, __LINE__, __func__);
-
   if (Settings.LineThickness > MAX_LINESIZE
       || Settings.LineThickness < MIN_LINESIZE)
     Settings.LineThickness = MIL_TO_COORD(10);
@@ -1599,12 +1595,8 @@ REGISTER_ATTRIBUTES (main_attribute_list)
   Settings.MaxWidth  = CLAMP (Settings.MaxWidth, MIN_SIZE, MAX_COORD);
   Settings.MaxHeight = CLAMP (Settings.MaxHeight, MIN_SIZE, MAX_COORD);
   
-  printf ("%s:%i:%s: checkpoint\n", __FILE__, __LINE__, __func__);
-
   ParseRouteString (Settings.Routes, &Settings.RouteStyle[0], "cmil");
   
-  printf ("%s:%i:%s: checkpoint\n", __FILE__, __LINE__, __func__);
-
   /*
    * Make sure we have settings for some various programs we may wish
    * to call
@@ -1627,8 +1619,6 @@ REGISTER_ATTRIBUTES (main_attribute_list)
     Settings.GnetlistProgram = strdup ("gnetlist");
   }
   
-  printf ("%s:%i:%s: checkpoint\n", __FILE__, __LINE__, __func__);
-
   if (grid_units)
     Settings.grid_unit = get_unit_struct (grid_units);
   if (!grid_units || Settings.grid_unit == NULL)
@@ -1967,7 +1957,6 @@ main (int argc, char *argv[])
   /* Set up layers. */
   for (i = 0; i < MAX_LAYER; i++)
     {
-      printf ("%s:%i:%s: checkpoint\n", __FILE__, __LINE__, __func__); 
       char buf[20];
       sprintf (buf, "signal%d", i + 1);
       Settings.DefaultLayerName[i] = strdup (buf);
@@ -1977,12 +1966,8 @@ main (int argc, char *argv[])
   
   gui->parse_arguments (&argc, &argv);
 
-  printf ("%s:%i:%s: checkpoint\n", __FILE__, __LINE__, __func__);
-  
   settings_post_process ();
   
-  printf ("%s:%i:%s: checkpoint\n", __FILE__, __LINE__, __func__);
-
   /* Create a new PCB object in memory */
   PCB = CreateNewPCB ();
   ParseGroupString (Settings.Groups, &PCB->LayerGroups, &PCB->Data->LayerN);
@@ -2019,8 +2004,6 @@ main (int argc, char *argv[])
    */
   leaky_init ();
   
-  printf ("%s:%i:%s: checkpoint\n", __FILE__, __LINE__, __func__);
-
   /* Register a function to be called when the program terminates.
    * This makes sure that data is saved even if LEX/YACC routines
    * abort the program.
@@ -2037,10 +2020,11 @@ main (int argc, char *argv[])
   //if (!ReadLibraryContents () && Library.MenuN)
   //  hid_action ("LibraryChanged");
   
-  // FIXME: strip out all the command line handling stuff, we don't want to
-  // let that into automated tests
-
-  printf ("%s:%i:%s: checkpoint\n", __FILE__, __LINE__, __func__);
+  // FIXME: should probably strip out all the command line handling stuff,
+  // we don't want to let that into automated tests or else more autoconf
+  // changes for no good reason.  If we want to merge this with the regular
+  // main.c we could just use the definedness of PCB_UNIT_TEST to run tests
+  // after the context is set up instead of actually launching pcb.
 
 #ifdef HAVE_LIBSTROKE
   stroke_init ();
@@ -2057,45 +2041,15 @@ main (int argc, char *argv[])
       Message (_("Executing startup action %s\n"), Settings.ActionString);
       hid_parse_actions (Settings.ActionString);
     }
-  
-  // OK EVERYTHING IS INITIALIZED NOW TESTS CAN GO HERE WITH FULL PCB CONTEXT
-  // NO COMMAND LINES ARE HONORED BUT WE SHOULD BE ABLE TO DO ANYTHING THE
-  // GUI CAN DO VIA FCTN CALLS
-  
+
+  /* We now have a normal pcb context, we're ready for tests */
+
   g_test_init (&argc, &argv, NULL);
 
   find_register_tests ();
   pcb_printf_register_tests ();
   
-  /*
-  g_test_add (
-      "/line-arc-intersection/test1",
-      LineArcIntersectionTestsFixture,
-      "test_pcb_files/intersecting_arc_line.pcb",
-      line_arc_intersection_tests_fixture_set_up,
-      expect_line_arc_intersection,
-      NULL );
-      */
-
   g_test_run ();
+
   return 0;
 }
-
-/*
-int
-main (int argc, char *argv[])
-{
-  initialize_units ();
-  pcb_printf_register_tests ();
-
-  g_assert (LoadPCB ("test_pcb_files/single_arc.pcb") == 0);
-  g_assert (false);
-
-  printf ("%s:%i:%s: checkpoint\n", __FILE__, __LINE__, __func__);  
-
-  g_test_init (&argc, &argv, NULL);
-  g_test_run ();
-  return 0;
-}
-*/
-
