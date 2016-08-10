@@ -271,12 +271,12 @@ static Cardinal TotalP, TotalV;
 static ListType LineList[MAX_LAYER],    /*!< List of objects to. */
   PolygonList[MAX_LAYER], ArcList[MAX_LAYER], PadList[2], RatList, PVList;
 
-// Magic number meaning that we don't have the most recent intersection point.
-// If any field of pimri is set to this, the whole value is invalid.
+/* Magic number meaning that we don't have the most recent intersection point.
+ * If any field of pimri is set to this, the whole value is invalid.  */
 #define PIMRI_UNSET -2
 
-// Point In Most Recent Intersection.  Currently this is just used for
-// accurately reporting the position of DRC violations involing intersections.
+/* Point In Most Recent Intersection.  Currently this is just used for
+ * reporting the position of DRC violations involing intersections. */
 static PointType pimri
   = { PIMRI_UNSET, PIMRI_UNSET, PIMRI_UNSET, PIMRI_UNSET }; 
 
@@ -399,17 +399,18 @@ PinLineIntersect (PinType *PV, LineType *Line, PointType *pii)
 {
   /* IsLineInRectangle already has Bloat factor */
 
-  // FIXME: BUT NOT NOW: so we have all these points where we test for
-  // "square" pins.  But we never check for octagonal pins.  pcb will
-  // render and produce them, but it doesn't really do the intersection
-  // and DRC tests for them completely correctly.  It comes close, since
-  // they're almost circular, but the failure can be seen by putting a round
-  // line end cap just slightly on one of the octagon verticies and using
-  // Connects->Lookup connection (Cntrl-F) on either the line or the pin.
-  // The connection isn't detected.  Since it probably only fails for
-  // overlaps smaller than any sensible DRC minimum overlap setting this
-  // is maybe not worth fixing given the many code points involved.  Still,
-  // it's unfortunate to have connection detection not quite catch everything.
+  /* FIXME: BUT NOT NOW: so we have all these points where we test for
+   * "square" pins.  But we never check for octagonal pins.  pcb will
+   * render and produce them, but it doesn't really do the intersection
+   * and DRC tests for them completely correctly.  It comes close, since
+   * they're almost circular, but the failure can be seen by putting a round
+   * line end cap just slightly on one of the octagon verticies and using
+   * Connects->Lookup connection (Cntrl-F) on either the line or the pin.
+   * The connection isn't detected.  Since it probably only fails for
+   * overlaps smaller than any sensible DRC minimum overlap setting this
+   * is maybe not worth fixing given the many code points involved.  Still,
+   * it's unfortunate to have connection detection not quite catch
+   * everything.  */
   
   return 
     TEST_FLAG (SQUAREFLAG, PV) ?
@@ -449,12 +450,12 @@ BoxBoxIntersection (BoxType *b1, BoxType *b2, PointType *pii)
     return false;
   }
 
-  // We have an intersection. 
+  /* We have an intersection.  */
 
   if ( pii != NULL ) {
 
-    // We'll report the intersection point as the center of area.
-    Coord ix, iy;   // Intersection X/Y
+    /* We'll report the intersection point as the center of area.  */
+    Coord ix, iy;   /* Intersection X/Y */
 
     if ( b1->X1 <= b2->X2 && b2->X2 <= b1->X2 ) {
       ix = b2->X2 - (b2->X2 - b1->X1) / 2;
@@ -719,7 +720,7 @@ LOCtoPVpoly_callback (const BoxType * b, void *cl)
   PolygonType *polygon = (PolygonType *) b;
   struct pv_info *i = (struct pv_info *) cl;
 
-  // FIXME: BUT NOT NOW: pimri isn't set at all for polygons at the moment
+  /* FIXME: BUT NOT NOW: pimri isn't set at all for polygons at the moment */
 
   /* if the pin doesn't have a therm and polygon is clearing
    * then it can't touch due to clearance, so skip the expensive
@@ -1287,7 +1288,7 @@ LookupPVConnectionsToLOList (int flag, bool AndRats)
   return (false);
 }
 
-// Shorthand macro for conditional copy of some stuff between types
+/* Shorthand macro for conditional copy of some stuff between types */
 #define SET_XY_IF_NOT_NULL(target, source) \
   do {                                     \
     if ( target != NULL ) {                \
@@ -1299,66 +1300,68 @@ LookupPVConnectionsToLOList (int flag, bool AndRats)
 static bool
 ArcArcIntersect (ArcType *Arc1, ArcType *Arc2, PointType *pii)
 {
-  // We're going to do this by detecting any intersections of the inner
-  // or outer edges of Arc1 with the inner or outer edges of Arc2 or with
-  // the end caps of Arc2, and vice versa.  Note that this doesn't catch
-  // cases where Arc1 is entirely contained withing Arc2 or vice versa,
-  // but we don't care because in that situation the contained arc can't
-  // change the overall connectivity anyway.  This is true (as required)
-  // even under non-zero bloat, since bloat is linear and therefore doesn't
-  // change containment.  For the (round) end caps area detection is used,
-  // which takes care of the potential problem of "chinks" at corners into
-  // which otheer edges might fall: they are plugged by the area end caps.
-  // The alternative of using area detection everywhere is a little more
-  // painful and can't be factored as easily into the terms of existing code.
+  /* We're going to do this by detecting any intersections of the inner
+   * or outer edges of Arc1 with the inner or outer edges of Arc2 or with
+   * the end caps of Arc2, and vice versa.  Note that this doesn't catch
+   * cases where Arc1 is entirely contained withing Arc2 or vice versa,
+   * but we don't care because in that situation the contained arc can't
+   * change the overall connectivity anyway.  This is true (as required)
+   * even under non-zero bloat, since bloat is linear and therefore doesn't
+   * change containment.  For the (round) end caps area detection is used,
+   * which takes care of the potential problem of "chinks" at corners into
+   * which otheer edges might fall: they are plugged by the area end caps.
+   * The alternative of using area detection everywhere is a little more
+   * painful and can't be factored as easily into the terms of existing
+   * code.  */
 
-  // We don't handle arc of ellipse at the moment
+  /* We don't handle arc of ellipse at the moment */
   assert (Arc1->Width == Arc1->Height);
   assert (Arc2->Width == Arc2->Height);
   
-  // We don't handle arcs with square ends
+  /* We don't handle arcs with square ends */
   assert (! TEST_FLAG (SQUAREFLAG, Arc1));
   assert (! TEST_FLAG (SQUAREFLAG, Arc2));
 
-  Coord a1to2 = Bloat / 2 + Arc1->Thickness / 2;        // Arc1 Thickness / 2
-  Coord a2to2 = Bloat / 2 + Arc2->Thickness / 2;        // Arc2 Thickness / 2
+  Coord a1to2 = Bloat / 2 + Arc1->Thickness / 2;      /* Arc1 Thickness / 2 */
+  Coord a2to2 = Bloat / 2 + Arc2->Thickness / 2;      /* Arc2 Thickness / 2 */
   
-  // If either arc's thickness has reached 0 at the current Bloat, then
-  // we're done.  In painful theory there could still be intersections at 0
-  // thickness, and since we're on integer coordinates they could in some
-  // situation be detected, but not consistently because the underlying
-  // calculatios use floating point, making consistant tangent intersection
-  // detection impossible.
+  /* If either arc's thickness has reached 0 at the current Bloat, then
+   * we're done.  In painful theory there could still be intersections at 0
+   * thickness, and since we're on integer coordinates they could in some
+   * situation be detected, but not consistently because the underlying
+   * calculatios use floating point, making consistant tangent intersection
+   * detection impossible. */
   if ( a1to2 <= 0 || a2to2 <= 0 ) {
     return false;
   }
 
-  // Note that Bloat doesn't change radius.
+  /* Note that Bloat doesn't change radius.  */
   Coord rad1 = Arc1->Width, rad2 = Arc2->Width;
   
-  // Convert the arc angles to the conventions used in geometry.h
-  Angle a1sa, a1ad;   // Arc1 Start Angle/Angle Delta
+  /* Convert the arc angles to the conventions used in geometry.h */
+  Angle a1sa, a1ad;   /* Arc1 Start Angle/Angle Delta */
   pcb_to_geometry_angle_range (Arc1->StartAngle, Arc1->Delta, &a1sa, &a1ad);
-  Angle a2sa, a2ad;   // Arc1 Start Angle/Angle Delta
+  Angle a2sa, a2ad;   /* Arc1 Start Angle/Angle Delta */
   pcb_to_geometry_angle_range (Arc2->StartAngle, Arc2->Delta, &a2sa, &a2ad);
 
-  // These arcs go down the middle of the fat "arcs" Arc1 and Arc2
+  /* These arcs go down the middle of the fat "arcs" Arc1 and Arc2 */
   Arc
     a1 = { { { Arc1->X, Arc1->Y }, rad1 }, a1sa, a1ad },
     a2 = { { { Arc2->X, Arc2->Y }, rad2 }, a2sa, a2ad };
     
-  // If we have arcs of identical circles just check if the arc center
-  // lines overlap.  The arc_arc_intersection() function doesn't try to
-  // return the details of the intersection in this case, so we can't use it.
+  /* If we have arcs of identical circles just check if the arc center
+   * lines overlap.  The arc_arc_intersection() function doesn't try to
+   * return the details of the intersection in this case, so we can't use
+   * it.  */
   if ( arc_arc_intersection (&a1, &a2, NULL) == INT_MAX ) {
 
-    Angle osa, oad;   // Overlap Start Angle, Overlap Angle Delta
-    // Angular Spans Overlap
+    Angle osa, oad;   /* Overlap Start Angle, Overlap Angle Delta */
+    /* Angular Spans Overlap */
     bool aso = angular_spans_overlap (a1sa, a1ad, a2sa, a2ad, &osa, &oad);
     if ( aso ) {
       if ( pii != NULL ) {
-        Angle aocoo = osa + (oad / 2.0);   // Angle Of Center Of Overlap
-        // Point In Intersection As Point (not yet PointType :)
+        Angle aocoo = osa + (oad / 2.0);   /* Angle Of Center Of Overlap */
+        /* Point In Intersection As Point (not yet PointType :) */
         Point piiap = {
           a1.circle.center.x + a1.circle.radius * cos (aocoo),   
           a1.circle.center.y + a1.circle.radius * sin (aocoo) };
@@ -1372,10 +1375,10 @@ ArcArcIntersect (ArcType *Arc1, ArcType *Arc2, PointType *pii)
     }
   }
   
-  // Inner/Outer Arcs (of ArcType Arc, due to its thickness).  Note that the
-  // inner arcs might have radius <= 0 even at Bloat == 0, but the outer
-  // arcs should never have radius <= 0 at this point since we've already
-  // returned false for thickness of 0 or less.
+  /* Inner/Outer Arcs (of ArcType Arc, due to its thickness).  Note that the
+   * inner arcs might have radius <= 0 even at Bloat == 0, but the outer
+   * arcs should never have radius <= 0 at this point since we've already
+   * returned false for thickness of 0 or less.  */
   Arc
     a1oa = { { a1.circle.center, rad1 + a1to2 }, a1sa, a1ad },
     a1ia = { { a1.circle.center, rad1 - a1to2 }, a1sa, a1ad },
@@ -1386,7 +1389,7 @@ ArcArcIntersect (ArcType *Arc1, ArcType *Arc2, PointType *pii)
 
   Point intersection[2];
 
-  // Check if any of the arc edges intersect, skipping degenerate edges
+  /* Check if any of the arc edges intersect, skipping degenerate edges */
   if ( arc_arc_intersection (&a1oa, &a2oa, intersection) ) {
     SET_XY_IF_NOT_NULL (pii, intersection[0]);
     return TRUE;
@@ -1410,14 +1413,14 @@ ArcArcIntersect (ArcType *Arc1, ArcType *Arc2, PointType *pii)
     } 
   }
 
-  // Check if any of the end caps touch the other arc (including it's end caps)
+  /* Check if any of the end caps touch other arc (including it's end caps) */
   {
-    Point a1ep[2], a2ep[2];   // Arc 1/2 End Points
+    Point a1ep[2], a2ep[2];   /* Arc 1/2 End Points */
     arc_end_points (&a1, a1ep);
     arc_end_points (&a2, a2ep);
-    Point np;                 // Nearest Point (reused)
-    Circle epc, apc;          // End/Arc Point Circle (reused)
-    Point piiap;              // Point In Intersection As Point
+    Point np;                 /* Nearest Point (reused) */
+    Circle epc, apc;          /* End/Arc Point Circle (reused) */
+    Point piiap;              /* Point In Intersection As Point */
 
     np = nearest_point_on_arc (a1ep[0], &a2);
     epc = (Circle) { a1ep[0], a1to2 }; 
@@ -1654,30 +1657,30 @@ LineLineIntersect (LineType *Line1, LineType *Line2, PointType *pii)
 bool
 LineArcIntersect (LineType *Line, ArcType *arc, PointType *pii)
 {
-  // We don't handle arc of ellipse at the moment
+  /* We don't handle arc of ellipse at the moment */
   assert (arc->Width == arc->Height);
  
-  // Note that Bloat doesn't change radius (arcs are shrunk "in place").
+  /* Note that Bloat doesn't change radius (arcs are shrunk "in place").  */
   Coord radius = arc->Width;
   
-  // We don't handle arcs with square ends
+  /* We don't handle arcs with square ends */
   assert (! TEST_FLAG (SQUAREFLAG, arc));
 
-  Coord lto2 = Bloat / 2 + Line->Thickness / 2;       // Line Thickness / 2
-  Coord ato2 = Bloat / 2 + arc->Thickness / 2;        // Arc Thickness / 2
-  // Both thickness / 2 (Sum of Thicknesses Over 2)
+  Coord lto2 = Bloat / 2 + Line->Thickness / 2;       /* Line Thickness / 2 */
+  Coord ato2 = Bloat / 2 + arc->Thickness / 2;        /* Arc Thickness / 2 */
+  /* Both thickness / 2 (Sum of Thicknesses Over 2) */
   Coord sto2 = Bloat + (Line->Thickness + arc->Thickness) / 2;
   
-  // If either the arc or line thickness has reached 0 at the current Bloat,
-  // then we're done.  In painful theory of course there could still be
-  // intersections at 0 thickness, and since we're on integer coordinates
-  // they could in some situation be detected, but not consistently because
-  // the underlying calculatios use floating point.
+  /* If either the arc or line thickness has reached 0 at the current Bloat,
+   * then we're done.  In painful theory of course there could still be
+   * intersections at 0 thickness, and since we're on integer coordinates
+   * they could in some situation be detected, but not consistently because
+   * the underlying calculatios use floating point.  */
   if ( lto2 <= 0 || ato2 <= 0 ) {
     return false;
   }
 
-  // Rectangular Part Of Line
+  /* Rectangular Part Of Line */
   Rectangle rpol = rectangular_part_of_line (Line, Bloat / 2);
 
   LineSegment rectangle_edges[4] = {
@@ -1686,35 +1689,35 @@ LineArcIntersect (LineType *Line, ArcType *arc, PointType *pii)
     ((LineSegment) { rpol.corner[2], rpol.corner[3] }),
     ((LineSegment) { rpol.corner[3], rpol.corner[0] }) };
   
-  // Convert the arc angles to the conventions used in geometry.h
-  Angle sa, ad;   // Start Angle, Angle Delta
+  /* Convert the arc angles to the conventions used in geometry.h */
+  Angle sa, ad;   /* Start Angle, Angle Delta */
   pcb_to_geometry_angle_range (arc->StartAngle, arc->Delta, &sa, &ad);
 
-  // Inner/Outer Arcs (of ArcType Arc, due to its thickness).  Note that
-  // ia might have radius <= 0 even at Bloat == 0, but oa should never
-  // have radius <= 0 at this point since we've already returned false for
-  // thickness of 0 or less above.
+  /* Inner/Outer Arcs (of ArcType Arc, due to its thickness).  Note that
+   * ia might have radius <= 0 even at Bloat == 0, but oa should never
+   * have radius <= 0 at this point since we've already returned false for
+   * thickness of 0 or less above.  */
   Arc
     oa = { { { arc->X, arc->Y }, radius + ato2 }, sa, ad },
     ia = { { { arc->X, arc->Y }, radius - ato2 }, sa, ad };
   assert (oa.circle.radius > 0);
 
-  Arc acl = { { { arc->X, arc->Y}, radius }, sa, ad };   // Arc Center Line
-  Point aep[2];                                          // Arc End Points
+  Arc acl = { { { arc->X, arc->Y}, radius }, sa, ad };   /* Arc Center Line */
+  Point aep[2];                                          /* Arc End Points */
   arc_end_points (&acl, aep);
  
-  // Check if the rectangular part of line intersects anything
+  /* Check if the rectangular part of line intersects anything */
   for ( int ii = 0 ; ii < 4 ; ii++ ) {
 
-    // Check arc edges
-    Point ip[2];   // Intersection Points
-    int ipc;       // Intersection Point Count
+    /* Check arc edges */
+    Point ip[2];   /* Intersection Points */
+    int ipc;       /* Intersection Point Count */
     ipc = arc_line_segment_intersection (&oa, &(rectangle_edges[ii]), ip);
     if ( ipc > 0 ) {
       SET_XY_IF_NOT_NULL (pii, ip[0]);
       return true;
     }
-    if ( ia.circle.radius > 0 ) {   // If ia isn't degenerate check it also
+    if ( ia.circle.radius > 0 ) {   /* If ia isn't degenerate check it also */
       ipc = arc_line_segment_intersection (&ia, &(rectangle_edges[ii]), ip);
       if ( ipc > 0 ) {
         SET_XY_IF_NOT_NULL (pii, ip[0]);
@@ -1722,8 +1725,8 @@ LineArcIntersect (LineType *Line, ArcType *arc, PointType *pii)
       }
     }
 
-    // Check arc end caps (which are always round).  Note that this catches
-    // the case in which the line is entirely contained within an arc end cap.
+    /* Check arc end caps (which are always round).  Note: this catches the
+     * case in which the line is entirely contained within an arc end cap.  */
     for ( int jj = 0 ; jj < 2 ; jj++ ) {
       Point npol
         = nearest_point_on_probably_axis_aligned_line_segment (
@@ -1735,37 +1738,37 @@ LineArcIntersect (LineType *Line, ArcType *arc, PointType *pii)
       }
     }
     
-    // The rectangular line might be entirely contained between the inner and
-    // outer edges of the arc.  In this case all the corners of the rectangle
-    // will be within ato2 of acl, so it's sufficient to check one of them.
-    Point ctc = rpol.corner[0];                      // Corner To Check
-    Point nptc = nearest_point_on_arc (ctc, &acl);   // Nearest Point To Corner
+    /* The rectangular line might be entirely contained between the inner and
+     * outer edges of the arc.  In this case all the corners of the rectangle
+     * will be within ato2 of acl, so it's sufficient to check one of them.  */
+    Point ctc = rpol.corner[0];                   /* Corner To Check */
+    Point nptc = nearest_point_on_arc (ctc, &acl);/* Nearest Point To Corner */
     if ( vec_mag (vec_from (ctc, nptc)) <= ato2 ) {
       SET_XY_IF_NOT_NULL (pii, ctc);
       return true;
     }
   }
   
-  // Unless the line has square end caps (in which case they will already
-  // have been incorporated into the single rectangle used to represent
-  // the line)...
+  /* Unless the line has square end caps (in which case they will already
+   * have been incorporated into the single rectangle used to represent
+   * the line)... */
   if ( ! TEST_FLAG (SQUAREFLAG, Line) ) {
 
-    Point leccs[2] = {   // Line End Cap Centers
+    Point leccs[2] = {   /* Line End Cap Centers */
       { Line->Point1.X, Line->Point1.Y },
       { Line->Point2.X, Line->Point2.Y } };
     
-    // Check if the line end caps intersect the arc.  Note that this catches
-    // intersections with the arc end caps, since they are always round.
+    /* Check if the line end caps intersect the arc.  Note that this catches
+     * intersections with the arc end caps, since they are always round.  */
     for ( int ii = 0 ; ii < 2 ; ii++ ) {
-      Point lecc = leccs[ii];   // Line End Cap Center
-      Point np2lep;   // Nearest Point to Line End Point
+      Point lecc = leccs[ii];   /* Line End Cap Center */
+      Point np2lep;   /* Nearest Point to Line End Point */
       np2lep = nearest_point_on_arc (lecc, &acl);
-      // (Vector from) Line Cap Center to Nearest Point (on acl)
+      /* (Vector from) Line Cap Center to Nearest Point (on acl) */
       Vec lcc_np = vec_from (lecc, np2lep);
       if ( vec_mag (lcc_np) <= sto2 ) {
         if ( pii != NULL ) {
-          Point piiap   // Point In Intersection As Point
+          Point piiap   /* Point In Intersection As Point */
             = vec_sum (lecc, vec_scale (lcc_np, (lto2 / vec_mag (lcc_np))));
           pii->X = piiap.x;
           pii->Y = piiap.y;
@@ -2092,12 +2095,12 @@ LOCtoPad_callback (const BoxType * b, void *cl)
   PadType *pad = (PadType *) b;
   struct rat_info *i = (struct rat_info *) cl;
 
-  // Note: this one doesn't need to worry about setting pimri at the moment
-  // because it's currently only called from LookupLOConnectionsToRatEnd()
-  // (which we don't care about because violations shouldn't happen for rat
-  // intersections themselves, though I think they can be produced when a
-  // violation in a rat-connected set changes connectivity via something
-  // real).
+  /* Note: this one doesn't need to worry about setting pimri at the moment
+   * because it's currently only called from LookupLOConnectionsToRatEnd()
+   * (which we don't care about because violations shouldn't happen for rat
+   * intersections themselves, though I think they can be produced when a
+   * violation in a rat-connected set changes connectivity via something
+   * real). */
 
   if (!TEST_FLAG (i->flag, pad) && i->layer ==
 	(TEST_FLAG (ONSOLDERFLAG, pad) ? BOTTOM_SIDE : TOP_SIDE) &&
@@ -3513,25 +3516,25 @@ DRCFind (int What, void *ptr1, void *ptr2, void *ptr3)
       drc = true;               /* abort the search if we find anything not already found */
       if (DoIt (FOUNDFLAG, true, false))
         {
-          // We want to be sure to capture the location of the intersection
-          // that's actually causing the violation, so we do this before the
-          // below stuff that implements flag change undoability.  I think
-          // it doesn't matter because it's just re-running the same pair
-          // of tests at the same respective bloats, but there's no reason
-          // to not capture the location (from the global) immediately after
-          // the intersection that puts us on this violation branch.
+          /* We want to be sure to capture the location of the intersection
+           * that's actually causing the violation, so we do this before the
+           * below stuff that implements flag change undoability.  I think
+           * it doesn't matter because it's just re-running the same pair
+           * of tests at the same respective bloats, but there's no reason
+           * to not capture the location (from the global) immediately after
+           * the intersection that puts us on this violation branch.  */
           if ( pimri.X != PIMRI_UNSET ) {
             x = pimri.X;
             y = pimri.Y;
-            // Clear to avoid confuse ourselves next time
+            /* Clear to avoid confuse ourselves next time */
             pimri.X = PIMRI_UNSET; 
           }
           else {
-            // If we end up here it means some code somewhere hasn't
-            // been rewritten to set pimri yet.  Hopefully all the
-            // intersection-detecting paths are fixed to set pimri now.
-            // If debugging is enabled we fire an assertion if not, but in
-            // normal use just fall back to using the object position.
+            /* If we end up here it means some code somewhere hasn't
+             * been rewritten to set pimri yet.  Hopefully all the
+             * intersection-detecting paths are fixed to set pimri now.
+             * If debugging is enabled we fire an assertion if not, but in
+             * normal use just fall back to using the object position.  */
             assert (false);
             LocateErrorObject (&x, &y);
           }
@@ -3590,25 +3593,25 @@ DRCFind (int What, void *ptr1, void *ptr2, void *ptr3)
   drc = true;
   while (DoIt (flag, true, false))
     {
-      // We want to be sure to capture the location of the intersection
-      // that's actually causing the violation, so we do this before the
-      // below stuff that implements flag change undoability.  I think
-      // it doesn't matter because it's just re-running the same pair
-      // of tests at the same respective bloats, but there's no reason
-      // to not capture the location (from the global) immediately after
-      // the intersection that puts us on this violation branch.
+      /* We want to be sure to capture the location of the intersection
+       * that's actually causing the violation, so we do this before the
+       * below stuff that implements flag change undoability.  I think
+       * it doesn't matter because it's just re-running the same pair
+       * of tests at the same respective bloats, but there's no reason
+       * to not capture the location (from the global) immediately after
+       * the intersection that puts us on this violation branch.  */
       if ( pimri.X != PIMRI_UNSET ) {
         x = pimri.X;
         y = pimri.Y;
-        // Clear to avoid confuse ourselves next time
+        /* Clear to avoid confuse ourselves next time */
         pimri.X = PIMRI_UNSET; 
       }
       else {
-        // If we end up here it means some code somewhere hasn't
-        // been rewritten to set pimri yet.  Hopefully all the
-        // intersection-detecting paths are fixed to set pimri now.
-        // If debugging is enabled we fire an assertion if not, but in normal
-        // use just fall back to using the object position.
+        /* If we end up here it means some code somewhere hasn't
+         * been rewritten to set pimri yet.  Hopefully all the
+         * intersection-detecting paths are fixed to set pimri now.
+         * If debugging is enabled we fire an assertion if not, but in normal
+         * use just fall back to using the object position.  */
         assert (false);
         LocateErrorObject (&x, &y);
       }
@@ -3791,9 +3794,9 @@ DRCAll (void)
   bool IsBad;
   struct drc_info info;
 
-  // Make sure pimri starts out unset.  It's should be cleared by code that
-  // consumes it's setting, so this is just defensive programming.
-  pimri.X = PIMRI_UNSET;   // Mark the entire pimri value as unset
+  /* Make sure pimri starts out unset.  It's should be cleared by code that
+   * consumes it's setting, so this is just defensive programming.  */
+  pimri.X = PIMRI_UNSET;   /* Mark the entire pimri value as unset */
 
   reset_drc_dialog_message();
 

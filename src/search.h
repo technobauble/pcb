@@ -75,10 +75,10 @@
 /* ---------------------------------------------------------------------------
  * prototypes
  */
-// Note: the only IsFooIn/OnBar functions that don't get a pii argument to
-// report the intersection position are the ones that only end up being used
-// for rat line intersection tests.  We don't need to report DRC violation
-// positions for these, so they don't need the extra argument.
+/* Note: the only IsFooIn/OnBar functions that don't get a pii argument to
+ * report the intersection position are the ones that only end up being used
+ * for rat line intersection tests.  We don't need to report DRC violation
+ * positions for these, so they don't need the extra argument.  */
 bool IsPointOnLine (Coord, Coord, Coord, LineType *);
 bool IsPointOnPin (Coord, Coord, Coord, PinType *, PointType *pii);
 bool IsPointOnArc (Coord, Coord, Coord, ArcType *, PointType *pii);

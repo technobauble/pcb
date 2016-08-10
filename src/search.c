@@ -1005,25 +1005,25 @@ IsArcInRectangle (
 bool
 IsPointInPad (Coord X, Coord Y, Coord Radius, PadType *Pad, PointType *pii)
 {
-  // Cirlce Around Point, having radius Radius centered at X, Y.  Despite the
-  // name of this function it checks for the intersection of a pad and a
-  // circle, not a pad and a point.
+  /* Cirlce Around Point, having radius Radius centered at X, Y.  Despite the
+   * name of this function it checks for the intersection of a pad and a
+   * circle, not a pad and a point. */
   Circle circ = { {X, Y}, Radius };
 
-  // Ends of line defining extent of rectangle in one dimension.
-  Point pa = { Pad->Point1.X, Pad->Point1.Y };   // Pad (end) A
-  Point pb = { Pad->Point2.X, Pad->Point2.Y };   // Pad (end) B
+  /* Ends of line defining extent of rectangle in one dimension.  */
+  Point pa = { Pad->Point1.X, Pad->Point1.Y };   /* Pad (end) A */
+  Point pb = { Pad->Point2.X, Pad->Point2.Y };   /* Pad (end) B */
 
-  Coord pt = Pad->Thickness;   // Convenience alias
+  Coord pt = Pad->Thickness;   /* Convenience alias */
 
-  // Point In Intersection As Point (for adapting this fctn interface to
-  // geometry.h interface)
+  /* Point In Intersection As Point (for adapting this fctn interface to
+   * geometry.h interface)  */
   Point piiap;  
 
-  // Handle the case where the pad has 0 thickness.  We treat it as a true
-  // line segment in this case, and return a true result if (X, Y) is within
-  // Radius of that segment.  The intersection point is considered to be
-  // the nearest point on the true segment.
+  /* Handle the case where the pad has 0 thickness.  We treat it as a true
+   * line segment in this case, and return a true result if (X, Y) is within
+   * Radius of that segment.  The intersection point is considered to be
+   * the nearest point on the true segment. */
   assert (Pad->Thickness >= 0);
   if ( Pad->Thickness == 0 ) {
     Point pt = { X, Y };
@@ -1040,7 +1040,7 @@ IsPointInPad (Coord X, Coord Y, Coord Radius, PadType *Pad, PointType *pii)
     }
   }
 
-  // Note that this includes the end caps if the line has square ends
+  /* Note that this includes the end caps if the line has square ends */
   Rectangle rpol = rectangular_part_of_line ((LineType *) Pad, 0);
 
   if ( circle_intersects_rectangle (&circ, &rpol, &piiap) ) {
@@ -1048,13 +1048,13 @@ IsPointInPad (Coord X, Coord Y, Coord Radius, PadType *Pad, PointType *pii)
     return true;
   }
 
-  // For lines with round end caps we have to check those also
+  /* For lines with round end caps we have to check those also  */
   if ( ! TEST_FLAG (SQUAREFLAG, Pad) ) {
-    Circle cac = { pa, (pt + 1) / 2 };   // Cap A Circle
-    Circle cbc = { pb, (pt + 1) / 2 };   // Cap B Circle
-    // Note that piiap (if not NULL) is computed by the first short-circuit
-    // true result here.
-    bool ci = (   // Circles Intersect
+    Circle cac = { pa, (pt + 1) / 2 };   /* Cap A Circle */
+    Circle cbc = { pb, (pt + 1) / 2 };   /* Cap B Circle */
+    /* Note that piiap (if not NULL) is computed by the first short-circuit
+     * true result here.  */
+    bool ci = (   /* Circles Intersect */
         circle_intersects_circle (&cac, &circ, &piiap) ||
         circle_intersects_circle (&cbc, &circ, &piiap) );
     if ( ci ) {
@@ -1179,24 +1179,24 @@ bool
 IsPointOnArc (
     Coord X, Coord Y, Coord Radius, ArcType *arc, PointType *pii )
 {
-  // Currently we can only handle arcs of circles
+  /* Currently we can only handle arcs of circles */
   assert (arc->Width == arc->Height);
 
   Point pt = { X, Y };
 
-  // Convert the arc angles to the conventions used in geometry.h
-  Angle sa, ad;   // Start Angle, Angle Delta
+  /* Convert the arc angles to the conventions used in geometry.h */
+  Angle sa, ad;   /* Start Angle, Angle Delta */
   pcb_to_geometry_angle_range (arc->StartAngle, arc->Delta, &sa, &ad);
 
   Arc sarc = { { { arc->X, arc->Y }, arc->Width }, sa, ad };
 
   Point np = nearest_point_on_arc (pt, &sarc);
 
-  Vec np_pt = vec_from (np, pt);      //  Vector from np to pt
+  Vec np_pt = vec_from (np, pt);      /* Vector from np to pt */
   
-  double m_np_pt = vec_mag (np_pt);   // Magnitude of np-pt
+  double m_np_pt = vec_mag (np_pt);   /* Magnitude of np-pt */
   
-  // Square flags on arcs aren't supported
+  /* Square flags on arcs aren't supported */
   assert (! TEST_FLAG (SQUAREFLAG, arc));
 
   if ( m_np_pt <= Radius + arc->Thickness / 2.0 ) {

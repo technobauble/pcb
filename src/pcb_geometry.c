@@ -1,4 +1,4 @@
-// Implementation of the interface described in pcb_geometry.h.
+/* Implementation of the interface described in pcb_geometry.h.  */
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -12,11 +12,11 @@
 Coord
 pcb_round (double arg)
 {
-  // The point of this is to sort out the underlying type of Coord so we
-  // know what function to call for rounding.  GCC provides a good way of
-  // doing this at compile-time with __builtin_choose_expr(), for other
-  // environments we go by the size of the type on first time through at
-  // run-time (we assume that Coord is a signed integer type).
+  /* The point of this is to sort out the underlying type of Coord so we
+   * know what function to call for rounding.  GCC provides a good way of
+   * doing this at compile-time with __builtin_choose_expr(), for other
+   * environments we go by the size of the type on first time through at
+   * run-time (we assume that Coord is a signed integer type).  */
 
 #ifdef __GNUC__
 
@@ -30,11 +30,11 @@ pcb_round (double arg)
           __builtin_choose_expr (
             __builtin_types_compatible_p (Coord, long long),
             llround (arg),
-            (void) 0 ) ) );  // If we get here we've failed (at compile-time).
+            (void) 0 ) ) );  /* If we get here we've compile-time failed */
 
 #else
 
-  // FIXME: this way needs tested
+  /* FIXME: this way needs tested */
 
   static void *round_func = NULL;
   if ( UNLIKELY (round_func == NULL) ) {
@@ -59,11 +59,11 @@ pcb_round (double arg)
 Coord
 pcb_abs (Coord arg)
 {
-  // The point of this is to sort out the underlying type of Coord so we
-  // know which abs functio to call.  GCC provides a good way of doing this
-  // with __builtin_choose_expr(), for other environments we go by the size
-  // of the type on first time through at run-time (we assume that Coord is
-  // a signed integer type).
+  /* The point of this is to sort out the underlying type of Coord so we
+   * know which abs functio to call.  GCC provides a good way of doing this
+   * with __builtin_choose_expr(), for other environments we go by the size
+   * of the type on first time through at run-time (we assume that Coord is
+   * a signed integer type).  */
 
 #ifdef __GNUC__
   
@@ -77,11 +77,11 @@ pcb_abs (Coord arg)
           __builtin_choose_expr (
             __builtin_types_compatible_p (Coord, long long),
             llabs (arg),
-            (void) 0 ) ) );  // If we get here we've failed (at compile-time).
+            (void) 0 ) ) );  /* If we get here we've compile-time failed */
 
 #else
 
-  // FIXME: this way needs tested
+  /* FIXME: this way needs tested */
 
   static void *abs_func = NULL;
   if ( UNLIKELY (abs_func == NULL) ) {
@@ -133,25 +133,25 @@ nearest_point_on_probably_axis_aligned_line_segment (
 Rectangle
 rectangular_part_of_line (LineType *Line, Coord ged)
 {
-  // This function isn't designed to handle negative growth st the area of
-  // the rectangle is 0 or less.
+  /* This function isn't designed to handle negative growth st the area of
+   * the rectangle is 0 or less.  */
   assert (Line->Thickness / 2 + ged > 0);
 
-  Point   // End points of Line
+  Point   /* End points of Line */
     pa = { Line->Point1.X, Line->Point1.Y },
     pb = { Line->Point2.X, Line->Point2.Y };
   
-  // Vector with direction and mag. of segment, not including end caps
+  /* Vector with direction and mag. of segment, not including end caps */
   Vec pa_pb = vec_from (pa, pb);
   
-  // Orthogonol Vector (rotated CCW 90 degrees in +x towares +y direction)
-  Vec ov = { -pa_pb.y, pa_pb.x };   // Orthogonol Vector (to segment)
+  /* Orthogonol Vector (rotated CCW 90 degrees in +x towares +y direction) */
+  Vec ov = { -pa_pb.y, pa_pb.x };   /* Orthogonol Vector (to segment) */
 
-  // "Thickness" vector.  
+  /* "Thickness" vector */
   Vec tv = vec_scale (ov, Line->Thickness / (2.0 * vec_mag (ov)));
 
-  // Cap vector.  Has magnitude of either thickness / 2.0 or 0, and opposite
-  // direction of pa_pb
+  /* Cap vector.  Has magnitude of either thickness / 2.0 or 0, and opposite
+   * direction of pa_pb */
   Vec cv;
   if ( TEST_FLAG (SQUAREFLAG, Line) ) {
     cv = ((Vec) { -tv.y, tv.x }); 
@@ -160,17 +160,17 @@ rectangular_part_of_line (LineType *Line, Coord ged)
     cv = ((Vec) { 0, 0 });
   }
   
-  // Negatives (other direction) of cv and tv
+  /* Negatives (other direction) of cv and tv */
   Vec ncv = { -cv.x, -cv.y };
   Vec ntv = { -tv.x, -tv.y };
 
-  // Vectors to add ged.  These are used to implement Bloat of find.c
-  Vec ob, cdb, nob, ncdb;   // Orthogonal/cap direction bloat, and negatives
+  /* Vectors to add ged.  These are used to implement Bloat of find.c */
+  Vec ob, cdb, nob, ncdb;   /* Orthogonal/cap direction bloat, and negatives */
   if ( ged != 0 ) {
-    ob   = vec_scale (ov, ((double) ged) / vec_mag (ov));   // Orthogonal 
-    nob  = (Vec) { -ob.x, -ob.y };   // Negative ob (for other side)
-    cdb  = (Vec) { -ob.y,  ob.x};     // Cap-direction bloat
-    ncdb = (Vec) {  ob.y, -ob.x};     // Negative cdb (for other side)
+    ob   = vec_scale (ov, ((double) ged) / vec_mag (ov));   /* Orthogonal */
+    nob  = (Vec) { -ob.x, -ob.y };    /* Negative ob (for other side) */
+    cdb  = (Vec) { -ob.y,  ob.x};     /* Cap-direction bloat */
+    ncdb = (Vec) {  ob.y, -ob.x};     /* Negative cdb (for other side) */
   }
   else {
     ob   = (Vec) { 0, 0 };
