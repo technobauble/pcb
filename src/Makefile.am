@@ -28,7 +28,7 @@ else
 AM_CFLAGS= -DNDEBUG
 endif
 
-PCB_SRCS = \
+PCB_NON_MAIN_SRCS = \
 	action.c \
 	action.h \
 	autoplace.c \
@@ -89,7 +89,6 @@ PCB_SRCS = \
 	lrealpath.c \
 	lrealpath.h \
 	macro.h \
-	main.c \
 	mirror.c \
 	mirror.h \
 	misc.c \
@@ -162,6 +161,9 @@ PCB_SRCS = \
 	hid/common/hid_resource.h \
 	hid/hidint.h 
 
+
+PCB_SRCS = $(PCB_NON_MAIN_SRCS) main.c
+
 EXTRA_pcb_SOURCES = ${DBUS_SRCS} ${GL_SRCS} toporouter.c toporouter.h
 DBUS_SRCS= \
 	dbus-pcbmain.c \
@@ -209,14 +211,16 @@ endif
 pcb_CPPFLAGS = -I$(top_srcdir)
 pcb_SOURCES = ${PCB_SRCS} core_lists.h
 
-TEST_SRCS = \
-	pcb-printf.c	\
-	main-test.c
+TEST_SRCS = $(PCB_NON_MAIN_SRCS) main-test.c
 
+unittest_LDADD = @HIDLIBS@
+unittest_DEPENDENCIES = @HIDLIBS@
 unittest_CPPFLAGS = -I$(top_srcdir) -DPCB_UNIT_TEST
-unittest_SOURCES = ${TEST_SRCS}
+unittest_SOURCES = ${TEST_SRCS} core_lists.h
 check_PROGRAMS = unittest
-check_SCRIPTS = unittest
+# FIXME This isn't a script and I think doesn't need to be listed as such,
+# since it's already mentioned in check_PROGRAMS:
+#check_SCRIPTS = unittest
 TESTS = unittest
 
 # Action, Attribute, and Flag lists.
@@ -341,12 +345,14 @@ dbus-introspect.h : dbus.xml Makefile
 	mv $@.tmp $@
 
 PCB_SRCS+=	${DBUS_SRCS}
+TEST_SRCS+=	${DBUS_SRCS}
 BUILT_SOURCES+=	dbus-introspect.h
 endif
 
 # If we are building with GL support, we need some extra files
 if USE_GL
 PCB_SRCS+=	${GL_SRCS}
+TEST_SRCS+=	${GL_SRCS}
 LIBGTK_SRCS+=	${LIBGTK_GL_SRCS}
 else
 LIBGTK_SRCS+=	${LIBGTK_GDK_SRCS}
