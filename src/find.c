@@ -4316,7 +4316,7 @@ expect_line_arc_intersection (
     gconstpointer pcb_file )
 {
   g_assert_true (
-      LineArcIntersect (fixture->the_line, fixture->the_arc, NULL) );
+      LineArcIntersect (fixture->the_line, fixture->the_arc) );
 }
 
 static void
@@ -4325,7 +4325,7 @@ expect_no_line_arc_intersection (
     gconstpointer pcb_file )
 {
   g_assert_false (
-      LineArcIntersect (fixture->the_line, fixture->the_arc, NULL) );
+      LineArcIntersect (fixture->the_line, fixture->the_arc) );
 }
 
 /* Add Line-Arc Intersection Test Test */
