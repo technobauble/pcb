@@ -1497,7 +1497,8 @@ form_slanted_rectangle (PointType p[4], LineType *l)
 }
 
 /*!
- * \brief Checks if two lines intersect.
+ * \brief Checks if two lines intersect, and also return a point in the
+ * intersection if the pii argument is non-NULL.
  *
  * <pre>
  * From news FAQ:
