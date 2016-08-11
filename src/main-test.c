@@ -1866,22 +1866,81 @@ char *program_directory = 0;
 
 #include "dolists.h"
 
+/*!
+ * \brief Free up memory allocated to the PCB.
+ *
+ * Why bother when we're about to exit ?\n
+ * Because it removes some false positives from heap bug detectors such
+ * as lib dmalloc.
+ */
+void
+pcb_main_uninit (void)
+{
+  int i;
+
+  if (gui->uninit != NULL)
+    gui->uninit (gui);
+
+  hid_uninit ();
+
+  UninitBuffers ();
+
+  FreePCBMemory (PCB);
+  free (PCB);
+  PCB = NULL;
+
+  for (i = 0; i < MAX_LAYER; i++)
+    free (Settings.DefaultLayerName[i]);
+
+  if (Settings.FontFile != NULL)
+    {
+      free (Settings.FontFile);
+      Settings.FontFile = NULL;
+    }
+
+  uninit_strflags_buf ();
+  uninit_strflags_layerlist ();
+
+#define free0(ptr) \
+  do \
+    { \
+      if (ptr != NULL) \
+        { \
+          free (ptr); \
+          ptr = 0; \
+        } \
+    } while (0)
+
+  free0 (pcblibdir);
+  free0 (homedir);
+  free0 (bindir);
+  free0 (exec_prefix);
+  free0 (program_directory);
+  free0 (Settings.MakeProgram);
+  free0 (Settings.GnetlistProgram);
+
+#undef free0
+}
+
+/*!
+ * \brief Main program.
+ *
+ * Init application:
+ *
+ * - make program name available for error handlers
+ * - evaluate special options
+ * - initialize toplevel shell and resources
+ * - create an empty PCB with default symbols
+ * - initialize all other widgets
+ * - update screen and get size of drawing area
+ * - evaluate command-line arguments
+ * - register 'call on exit()' function
+ */
 int
 main (int argc, char *argv[])
 {
   int i;
   
-  /* init application:
-   * - make program name available for error handlers
-   * - evaluate special options
-   * - initialize toplevel shell and resources
-   * - create an empty PCB with default symbols
-   * - initialize all other widgets
-   * - update screen and get size of drawing area
-   * - evaluate command-line arguments
-   * - register 'call on exit()' function
-   */
-
 #include "core_lists.h"
   setbuf (stdout, 0);
   InitPaths (argv[0]);
@@ -1918,8 +1977,6 @@ main (int argc, char *argv[])
     }
   Progname = program_basename;
   
-  gui = hid_find_printer ();
-
   /* Print usage or version if requested.  Then exit.  */  
   if (argc > 1 &&
       (strcmp (argv[1], "-h") == 0 ||
