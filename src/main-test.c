@@ -2103,10 +2103,16 @@ main (int argc, char *argv[])
 
   g_test_init (&argc, &argv, NULL);
 
+  /* This makes all the g_assert_* things except g_assert() and
+   * g_assert_not_reached() non-fatal.  This way all the test results for
+   * tests using those assertions end up in unittest.log, not just everything
+   * up to the first failure.  Note that if a test noticies a problem with
+   * itself and calls g_assert() or g_assert_not_reached() it will still
+   * stop testing at that point.  */
+  g_test_set_nonfatal_assertions ();
+
   find_register_tests ();
   pcb_printf_register_tests ();
   
-  g_test_run ();
-
-  return 0;
+  return g_test_run ();
 }
