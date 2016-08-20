@@ -5121,7 +5121,7 @@ find_register_tests (void)
    * the ones above in that they are so wide relative to their diameter that
    * they completely lack an inside edge -- the end cap circles overlap
    * instead.  Square pads are a convenient way to test this area because
-   * they're * pointy, so they can poke into the area of interest :)  */
+   * they're pointy, so they can poke into the area of interest :)  */
   AAPITT ("18", expect_no_arc_pad_intersection);
   AAPITT ("19", expect_arc_pad_intersection);
   AAPITT ("20", expect_arc_pad_intersection);
