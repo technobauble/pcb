@@ -4268,15 +4268,81 @@ FreeConnectionLookupMemory (void)
 
 #include "file.h"
 
-// Fixture for tests involving exactly one line and one arc.
+/* Fixture for tests involving exactly two lines.  */
+typedef struct {
+   LineType *line1;
+   LineType *line2;
+} LineLineFixture;
+
+static void
+line_line_intersection_tests_fixture_setup (
+    LineLineFixture *fixture,
+    gconstpointer pcb_file )
+{
+  /* Set up a fixture for line-line intersection tests by loading two lines
+   * from the given file.  */
+ 
+  int return_code = LoadPCB ((char *) pcb_file);
+  g_assert (return_code == 0);
+
+  /* Load the lines */
+  fixture->line1 = NULL;
+  fixture->line2 = NULL;
+  COPPERLINE_LOOP (PCB->Data);
+  {
+    if ( fixture->line1 == NULL ) {
+      fixture->line1 = line;
+    }
+    else if ( fixture->line2 == NULL ) {
+      fixture->line2 = line;
+    }
+    else {
+      /* Because test case should not have >2 lines */
+      g_assert_not_reached ();
+    }
+  }
+  ENDALL_LOOP;
+  /* Because test case should not have <2 lines */
+  g_assert (fixture->line1 != NULL && fixture->line2 != NULL);
+}
+
+static void
+expect_line_line_intersection (
+    LineLineFixture *fixture,
+    gconstpointer pcb_file )
+{
+  g_assert_true (
+      LineLineIntersect (fixture->line1, fixture->line2) );
+}
+
+static void
+expect_no_line_line_intersection (
+    LineLineFixture *fixture,
+    gconstpointer pcb_file )
+{
+  g_assert_false (
+      LineLineIntersect (fixture->line1, fixture->line2) );
+}
+
+/* Add Line-Line Intersection Test Test */
+#define ALLITT(case_ending, expectation)                      \
+  g_test_add (                                                \
+      "/line_line_intersection/" case_ending,                 \
+      LineLineFixture,                                        \
+      "test_data/line_line_intersection_" case_ending ".pcb", \
+      line_line_intersection_tests_fixture_setup,             \
+      expectation,                                            \
+      NULL )
+
+/* Fixture for tests involving exactly one line and one arc.  */
 typedef struct {
    ArcType  *the_arc;    /* associated tests involve exactly one arc */
    LineType *the_line;   /* associated tests involve exactly one line */
-} LineArcIntersectionTestsFixture;
+} LineArcFixture;
 
 static void
-line_arc_intersection_tests_fixture_set_up (
-    LineArcIntersectionTestsFixture *fixture,
+line_arc_intersection_tests_fixture_setup (
+    LineArcFixture *fixture,
     gconstpointer pcb_file )
 {
   /* Set up a fixture for line-arc intersection tests by loading one of each
@@ -4301,18 +4367,18 @@ line_arc_intersection_tests_fixture_set_up (
   fixture->the_arc = NULL;
   COPPERARC_LOOP (PCB->Data);
   {
-    /* Because test case should not have >1 line */
+    /* Because test case should not have >1 arc */
     g_assert (fixture->the_arc == NULL);
     fixture->the_arc = arc; 
   }
   ENDALL_LOOP;
-  /* Because test case should not have <1 line */
+  /* Because test case should not have <1 arc */
   g_assert (fixture->the_arc != NULL);
 }
 
 static void
 expect_line_arc_intersection (
-    LineArcIntersectionTestsFixture *fixture,
+    LineArcFixture *fixture,
     gconstpointer pcb_file )
 {
   g_assert_true (
@@ -4321,7 +4387,7 @@ expect_line_arc_intersection (
 
 static void
 expect_no_line_arc_intersection (
-    LineArcIntersectionTestsFixture *fixture,
+    LineArcFixture *fixture,
     gconstpointer pcb_file )
 {
   g_assert_false (
@@ -4332,32 +4398,421 @@ expect_no_line_arc_intersection (
 #define ALAITT(case_ending, expectation)                     \
   g_test_add (                                               \
       "/line_arc_intersection/" case_ending,                 \
-      LineArcIntersectionTestsFixture,                       \
+      LineArcFixture,                                        \
       "test_data/line_arc_intersection_" case_ending ".pcb", \
-      line_arc_intersection_tests_fixture_set_up,            \
+      line_arc_intersection_tests_fixture_setup,             \
       expectation,                                           \
       NULL )
+
+/* Fixture for tests involving exactly one pin and one line.  */
+typedef struct {
+   PinType  *the_pin;    /* associated tests involve exactly one pin */
+   LineType *the_line;   /* associated tests involve exactly one line */
+} PinLineFixture;
+
+static void
+pin_line_intersection_tests_fixture_setup (
+    PinLineFixture *fixture,
+    gconstpointer pcb_file )
+{
+  /* Set up a fixture for pine-line intersection tests by loading one of each
+   * from the given file.  */
+ 
+  int return_code = LoadPCB ((char *) pcb_file);
+  g_assert (return_code == 0);
+
+  /* Load the pin */
+  fixture->the_pin = NULL;
+  ALLPIN_LOOP (PCB->Data);
+  {
+    /* Because test case should not have >1 pin */
+    g_assert (fixture->the_pin == NULL);
+    fixture->the_pin = pin; 
+  }
+  ENDALL_LOOP;
+  /* Because test case should not have <1 pin */
+  g_assert (fixture->the_pin != NULL);
+
+  /* Load the line */
+  fixture->the_line = NULL;
+  COPPERLINE_LOOP (PCB->Data);
+  {
+    /* Because test case should not have >1 line */
+    g_assert (fixture->the_line == NULL);
+    fixture->the_line = line; 
+  }
+  ENDALL_LOOP;
+  /* Because test case should not have <1 line */
+  g_assert (fixture->the_line != NULL);
+}
+
+static void
+expect_pin_line_intersection (
+    PinLineFixture *fixture,
+    gconstpointer pcb_file )
+{
+  g_assert_true (
+      PinLineIntersect (fixture->the_pin, fixture->the_line) );
+}
+
+static void
+expect_no_pin_line_intersection (
+    PinLineFixture *fixture,
+    gconstpointer pcb_file )
+{
+  g_assert_false (
+      PinLineIntersect (fixture->the_pin, fixture->the_line) );
+}
+
+/* Add Pin-Line Intersection Test Test */
+#define APLITT(case_ending, expectation)                     \
+  g_test_add (                                               \
+      "/pin_line_intersection/" case_ending,                 \
+      PinLineFixture,                                        \
+      "test_data/pin_line_intersection_" case_ending ".pcb", \
+      pin_line_intersection_tests_fixture_setup,             \
+      expectation,                                           \
+      NULL )
+
+/* Fixture for tests involving exactly one line and one pad.  */
+typedef struct {
+   LineType  *the_line;   /* associated tests involve exactly one line */
+   PadType *the_pad;      /* associated tests involve exactly one pad */
+} LinePadFixture;
+
+static void
+line_pad_intersection_tests_fixture_setup (
+    LinePadFixture *fixture,
+    gconstpointer pcb_file )
+{
+  /* Set up a fixture for line-pad intersection tests by loading one of each
+   * from the given file.  */
+ 
+  int return_code = LoadPCB ((char *) pcb_file);
+  g_assert (return_code == 0);
+
+  /* Load the line */
+  fixture->the_line = NULL;
+  COPPERLINE_LOOP (PCB->Data);
+  {
+    /* Because test case should not have >1 line */
+    g_assert (fixture->the_line == NULL);
+    fixture->the_line = line; 
+  }
+  ENDALL_LOOP;
+  /* Because test case should not have <1 line */
+  g_assert (fixture->the_line != NULL);
+  
+  /* Load the pad */
+  fixture->the_pad = NULL;
+  ALLPAD_LOOP (PCB->Data);
+  {
+    /* Because test case should not have >1 pad */
+    g_assert (fixture->the_pad == NULL);
+    fixture->the_pad = pad; 
+  }
+  ENDALL_LOOP;
+  /* Because test case should not have <1 pad */
+  g_assert (fixture->the_pad != NULL);
+}
+
+static void
+expect_line_pad_intersection (
+    LinePadFixture *fixture,
+    gconstpointer pcb_file )
+{
+  g_assert_true (
+      LinePadIntersect (fixture->the_line, fixture->the_pad) );
+}
+
+static void
+expect_no_line_pad_intersection (
+    LinePadFixture *fixture,
+    gconstpointer pcb_file )
+{
+  g_assert_false (
+      LinePadIntersect (fixture->the_line, fixture->the_pad) );
+}
+
+/* Add Line-Pad Intersection Test Test */
+#define ALPITT(case_ending, expectation)                     \
+  g_test_add (                                               \
+      "/line_pad_intersection/" case_ending,                 \
+      LinePadFixture,                                        \
+      "test_data/line_pad_intersection_" case_ending ".pcb", \
+      line_pad_intersection_tests_fixture_setup,             \
+      expectation,                                           \
+      NULL )
+
+/* Fixture for tests involving exactly one arc and one pad.  */
+typedef struct {
+   ArcType *the_arc;   /* associated tests involve exactly one arc */
+   PadType *the_pad;    /* associated tests involve exactly one pad */
+} ArcPadFixture;
+
+static void
+arc_pad_intersection_tests_fixture_setup (
+    ArcPadFixture *fixture,
+    gconstpointer pcb_file )
+{
+  /* Set up a fixture for arc-pad intersection tests by loading one of each
+   * from the given file.  */
+ 
+  int return_code = LoadPCB ((char *) pcb_file);
+  g_assert (return_code == 0);
+  
+  /* Load the arc */
+  fixture->the_arc = NULL;
+  COPPERARC_LOOP (PCB->Data);
+  {
+    /* Because test case should not have >1 arc */
+    g_assert (fixture->the_arc == NULL);
+    fixture->the_arc = arc; 
+  }
+  ENDALL_LOOP;
+  /* Because test case should not have <1 arc */
+  g_assert (fixture->the_arc != NULL);
+
+  /* Load the pad */
+  fixture->the_pad = NULL;
+  ALLPAD_LOOP (PCB->Data);
+  {
+    /* Because test case should not have >1 pad */
+    g_assert (fixture->the_pad == NULL);
+    fixture->the_pad = pad; 
+  }
+  ENDALL_LOOP;
+  /* Because test case should not have <1 pad */
+  g_assert (fixture->the_pad != NULL);
+}
+
+static void
+expect_arc_pad_intersection (
+    ArcPadFixture *fixture,
+    gconstpointer pcb_file )
+{
+  g_assert_true (
+      ArcPadIntersect (fixture->the_arc, fixture->the_pad) );
+}
+
+static void
+expect_no_arc_pad_intersection (
+    ArcPadFixture *fixture,
+    gconstpointer pcb_file )
+{
+  g_assert_false (
+      ArcPadIntersect (fixture->the_arc, fixture->the_pad) );
+}
+
+/* Add Arc-Pad Intersection Test Test */
+#define AAPITT(case_ending, expectation)                    \
+  g_test_add (                                              \
+      "/arc_pad_intersection/" case_ending,                 \
+      ArcPadFixture,                                        \
+      "test_data/arc_pad_intersection_" case_ending ".pcb", \
+      arc_pad_intersection_tests_fixture_setup,             \
+      expectation,                                          \
+      NULL )
+
+static void
+bloated_line_line_intersection_tests_fixture_setup (
+    LineLineFixture *fixture,
+    gconstpointer pcb_file )
+{
+  /* Set up a fixture for bloated line-line intersection tests by loading two
+   * lines from the given file and setting the Bloat global.  Note that the
+   * LineLineFixture is reused here since no new (non-global)
+   * data is required.  */
+
+  line_line_intersection_tests_fixture_setup (fixture, pcb_file);
+
+  /* This bloat setting is manually set to produce interesting intersection
+   * changes in the data files used for this test.  If two thingies in the
+   * data file are less than twice this far apart (i.e. less than about
+   * 0.0042 mm apart, an intersection is created.  This assumes that the
+   * internal units are nanometers.  */
+  Bloat = 4200;
+}
+
+/* Add Bloated Line-Line Intersection Test Test.  Note that these use the same
+ * test functions as the line-line intersection tests, but the global context
+ * provided by the fixture is different.  */
+#define ABLLITT(case_ending, expectation)                            \
+  g_test_add (                                                       \
+      "/bloated_line_line_intersection/" case_ending,                \
+      LineLineFixture,                                               \
+      "test_data/bloated_line_line_intersection_" case_ending".pcb", \
+      bloated_line_line_intersection_tests_fixture_setup,            \
+      expectation,                                                   \
+      NULL )
+
+static void
+bloated_line_arc_intersection_tests_fixture_setup (
+    LineArcFixture *fixture,
+    gconstpointer pcb_file )
+{
+  /* Set up a fixture for bloated line-arc intersection tests by loading two
+   * lines from the given file and setting the Bloat global.  Note that the
+   * LineArcFixture is reused here since no new (non-global)
+   * data is required.  */
+
+  line_arc_intersection_tests_fixture_setup (fixture, pcb_file);
+
+  /* This bloat setting is manually set to produce interesting intersection
+   * changes in the data files used for this test.  If two thingies in the
+   * data file are less than twice this far apart (i.e. less than about
+   * 0.0042 mm apart, an intersection is created.  This assumes that the
+   * internal units are nanometers.  */
+  Bloat = 4200;
+}
+
+static void
+bloated_line_arc_intersection_tests_fixture_tear_down (
+    LineArcFixture *fixture,
+    gconstpointer pcb_file )
+{
+  /* Tear down the bloated lin-arc intersection test fixture.  */ 
+
+  /* Restore the default Bloat setting to prevent inter-test effects.  */
+  Bloat = 0.0;
+}
+
+/* Add Bloated Line-Arc Intersection Test Test.  Note that these use the same
+ * test functions as the line-line intersection tests, but the global context
+ * provided by the fixture is different.  */
+#define ABLAITT(case_ending, expectation)                           \
+  g_test_add (                                                      \
+      "/bloated_line_arc_intersection/" case_ending,                \
+      LineArcFixture,                                               \
+      "test_data/bloated_line_arc_intersection_" case_ending".pcb", \
+      bloated_line_arc_intersection_tests_fixture_setup,            \
+      expectation,                                                  \
+      bloated_line_arc_intersection_tests_fixture_tear_down )
 
 void
 find_register_tests (void)
 {
   /* Register all tests defined for this module for execution with g_test */
 
-  ALAITT ("1", expect_line_arc_intersection);
-  ALAITT ("2", expect_line_arc_intersection);
-  ALAITT ("3", expect_line_arc_intersection);
-  ALAITT ("4", expect_line_arc_intersection);
-  ALAITT ("5", expect_line_arc_intersection);
-  ALAITT ("6", expect_line_arc_intersection);
-  ALAITT ("7", expect_line_arc_intersection);
-  ALAITT ("8", expect_line_arc_intersection);
-  ALAITT ("9", expect_line_arc_intersection);
+  /* Add line-line intersection test tests */
+  ALLITT ("1", expect_line_line_intersection);
+  ALLITT ("2", expect_line_line_intersection);
+  ALLITT ("3", expect_line_line_intersection);
+  ALLITT ("4", expect_line_line_intersection);
+  ALLITT ("5", expect_no_line_line_intersection);
+  ALLITT ("6", expect_no_line_line_intersection);
+  ALLITT ("7", expect_no_line_line_intersection);
+  ALLITT ("8", expect_no_line_line_intersection);
 
+  /* Add line-arc intersection test tests */
+  ALAITT ("1",  expect_line_arc_intersection);
+  ALAITT ("2",  expect_line_arc_intersection);
+  ALAITT ("3",  expect_line_arc_intersection);
+  ALAITT ("4",  expect_line_arc_intersection);
+  ALAITT ("5",  expect_line_arc_intersection);
+  ALAITT ("6",  expect_line_arc_intersection);
+  ALAITT ("7",  expect_line_arc_intersection);
+  ALAITT ("8",  expect_line_arc_intersection);
+  ALAITT ("9",  expect_line_arc_intersection);
   ALAITT ("10", expect_no_line_arc_intersection);
   ALAITT ("11", expect_no_line_arc_intersection);
   ALAITT ("12", expect_no_line_arc_intersection);
   ALAITT ("13", expect_no_line_arc_intersection);
   ALAITT ("14", expect_no_line_arc_intersection);
+  
+  /* Add pin-line intersection test tests */
+  // FIXME: add a test that shows the fail in intersection tests for
+  // octagonal pins?  Annoyingly, g_test doesn't look like is has xfail
+  APLITT ("1", expect_pin_line_intersection);
+  APLITT ("2", expect_pin_line_intersection);
+  APLITT ("3", expect_pin_line_intersection);
+  APLITT ("4", expect_pin_line_intersection);
+  APLITT ("5", expect_no_pin_line_intersection);
+  APLITT ("6", expect_no_pin_line_intersection);
+  APLITT ("7", expect_no_pin_line_intersection);
+  APLITT ("8", expect_no_pin_line_intersection);
+
+  /* Add line-pad intersection test tests */
+  ALPITT ("1",  expect_line_pad_intersection);
+  ALPITT ("2",  expect_line_pad_intersection);
+  ALPITT ("3",  expect_line_pad_intersection);
+  ALPITT ("4",  expect_line_pad_intersection);
+  ALPITT ("5",  expect_line_pad_intersection);
+  ALPITT ("6",  expect_line_pad_intersection);
+  ALPITT ("7",  expect_line_pad_intersection);
+  ALPITT ("8",  expect_no_line_pad_intersection);
+  ALPITT ("9",  expect_no_line_pad_intersection);
+  ALPITT ("10", expect_no_line_pad_intersection);
+  ALPITT ("11", expect_no_line_pad_intersection);
+  ALPITT ("12", expect_line_pad_intersection);
+  ALPITT ("13", expect_line_pad_intersection);
+  ALPITT ("14", expect_line_pad_intersection);
+  ALPITT ("15", expect_no_line_pad_intersection);
+  ALPITT ("16", expect_no_line_pad_intersection);
+  ALPITT ("17", expect_no_line_pad_intersection);
+  
+  /* Add arc-pad intersection test tests */
+  /* IMPROVEME: these are somewhat random, should go through and more
+   * carefully test different geometric arrangement, and arcs defined in both
+   * directions.  */
+  AAPITT ("1",  expect_arc_pad_intersection);
+  AAPITT ("2",  expect_arc_pad_intersection);
+  AAPITT ("3",  expect_arc_pad_intersection);
+  AAPITT ("4",  expect_arc_pad_intersection);
+  AAPITT ("5",  expect_arc_pad_intersection);
+  AAPITT ("6",  expect_arc_pad_intersection);
+  AAPITT ("7",  expect_arc_pad_intersection);
+  AAPITT ("8",  expect_no_arc_pad_intersection);
+  AAPITT ("9",  expect_no_arc_pad_intersection);
+  AAPITT ("10", expect_no_arc_pad_intersection);
+  AAPITT ("11", expect_no_arc_pad_intersection);
+  AAPITT ("12", expect_arc_pad_intersection);
+  AAPITT ("13", expect_arc_pad_intersection);
+  AAPITT ("14", expect_arc_pad_intersection);
+  AAPITT ("15", expect_no_arc_pad_intersection);
+  AAPITT ("16", expect_no_arc_pad_intersection);
+  AAPITT ("17", expect_no_arc_pad_intersection);
+
+  /* These test are for "stubby" arcs, which are geometrically distinct from
+   * the ones above in that they are so wide relative to their diameter that
+   * they completely lack an inside edge -- the end cap circles overlap
+   * instead.  Square pads are a convenient way to test this area because
+   * they're * pointy, so they can poke into the area of interest :)  */
+  AAPITT ("18", expect_no_arc_pad_intersection);
+  AAPITT ("19", expect_arc_pad_intersection);
+  AAPITT ("20", expect_arc_pad_intersection);
+
+  /* Add bloated line-line intersection test tests */
+  ABLLITT ("1", expect_line_line_intersection);
+  ABLLITT ("2", expect_line_line_intersection);
+  ABLLITT ("3", expect_line_line_intersection);
+  ABLLITT ("4", expect_no_line_line_intersection);
+  ABLLITT ("5", expect_no_line_line_intersection);
+  ABLLITT ("6", expect_no_line_line_intersection);
+
+  /* Here we relay on symmetry and knowledge of the implementation instead of
+   * explicitly testing line-line intersections under shrink.  */
+
+  /* Add bloated line-arc intersection test tests.  Because the implementation
+   * factors out test of (circular) end caps of both lines and arc, we don't
+   * explicitly test the end points here: they have already been exercised by
+   * the tests for line-line intersections under bloat, and the various
+   * line-end point permutations have been tested for the non-bloated
+   * condition.  */
+  ABLAITT ("1", expect_line_arc_intersection);
+  ABLAITT ("2", expect_line_arc_intersection);
+  ABLAITT ("3", expect_line_arc_intersection);
+  ABLAITT ("4", expect_no_line_arc_intersection);
+  ABLAITT ("5", expect_no_line_arc_intersection);
+  ABLAITT ("6", expect_no_line_arc_intersection);
+  
+  /* Here we relay on symmetry and knowledge of the implementation instead of
+   * explicitly testing line-arc intersections under shrink.  */
+
+  /* Pad intersection tests ultimately use lines for the pads, and pin/via
+   * tests use circles (which have been tested a lot already, since they're
+   * used at the ends of non-square lines). Therefore we now consider the
+   * intersection tests to be pretty well exercised.  */
 }
 
 #endif
