@@ -1933,7 +1933,7 @@ pcb_main_uninit (void)
    * \code
   for (i = 0; i < MAX_LAYER; i++)
     free (Settings.DefaultLayerName[i]);
-
+    
   if (Settings.FontFile != NULL)
     {
       free (Settings.FontFile);
@@ -1943,10 +1943,9 @@ pcb_main_uninit (void)
    * as these are initialized to static strings and freeing them
    * causes segfaults when terminating the program.
    */
+    
+  UnloadFont("all");
 
-  for (i = 0; i <= MAX_FONTPOSITION; i++)
-      free (Settings.Font->Symbol[i].Line);
-  free(Settings.Font);
     
   uninit_strflags_buf ();
   uninit_strflags_layerlist ();
