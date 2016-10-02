@@ -118,7 +118,8 @@ static Coord new_units (PLMeasure m);
 %token	<integer>	INTEGER	CHAR_CONST	/* flags ... */
 %token	<string>	STRING			/* element names ... */
 
-%token	T_FILEVERSION T_PCB T_LAYER T_VIA T_RAT T_LINE T_ARC T_RECTANGLE T_TEXT T_ELEMENTLINE
+%token	T_FILEVERSION T_PCB T_LAYER T_VIA T_RAT T_LINE T_ARC T_RECTANGLE
+%token  T_FONT T_TEXT T_ELEMENTLINE
 %token	T_ELEMENT T_PIN T_PAD T_GRID T_FLAGS T_SYMBOL T_SYMBOLLINE T_CURSOR
 %token	T_ELEMENTARC T_MARK T_GROUPS T_STYLES T_POLYGON T_POLYGON_HOLE T_NETLIST T_NET T_CONN
 %token	T_AREA T_THERMAL T_DRC T_ATTRIBUTE
@@ -134,7 +135,7 @@ static Coord new_units (PLMeasure m);
 parse
 		: parsepcb
 		| parsedata
-		| parsefont
+		| parsesymbols
 		| error { YYABORT; }
 		;
 
@@ -183,7 +184,7 @@ parsepcb
 				}
 				for (i = 0; i < MAX_ALL_LAYER; i++)
 					LayerFlag[i] = false;
-				yyFont = &yyPCB->Font;
+				yyFont = Settings.Font;
 				yyData = yyPCB->Data;
 				yyData->pcb = yyPCB;
 				yyData->LayerN = 0;
@@ -227,7 +228,7 @@ parsepcb
 		    if (yyPCB != NULL)
 		      {
 			/* This case is when we load a footprint with file->open, or from the command line */
-			yyFont = &yyPCB->Font;
+			yyFont = Settings.Font;
 			yyData = yyPCB->Data;
 			yyData->pcb = yyPCB;
 			yyData->LayerN = 0;
@@ -273,11 +274,12 @@ parsedata
 		;
 
 pcbfont
-		: parsefont
-		|
+		: /* Empty */
+        | pcbfont parsesymbols /* Old formats had only symbols */
+		| fontname 
 		;
 
-parsefont
+parsesymbols
 		:
 			{
 				if (!yyFont && !yyPCB)
@@ -286,7 +288,7 @@ parsefont
 					YYABORT;
 				}
                 if (yyPCB) 
-                    yyFont = CreateNewFontInLibrary(&yyPCB->FontLibrary);
+                    yyFont = CreateNewFontInLibrary(&yyPCB->FontLibrary, NULL);
 				yyFont->Valid = false;
 
 			}
@@ -296,6 +298,12 @@ parsefont
 		  		SetFontInfo(yyFont);
 			}
 		;
+
+fontname
+        : T_FONT '(' STRING ')'
+            {
+                yyPCB->DefaultFontName = strdup($3);
+            }
 
 /* %start-doc pcbfile FileVersion
 

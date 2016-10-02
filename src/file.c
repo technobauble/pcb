@@ -415,9 +415,6 @@ real_load_pcb (char *Filename, bool revert)
   oldPCB = PCB;
   PCB = newPCB;
 
-  /* mark the default font invalid to know if the file has one */
-  newPCB->Font.Valid = false;
-
   /* new data isn't added to the undo list */
   if (!ParsePCB (PCB, new_filename))
     {
@@ -434,15 +431,17 @@ real_load_pcb (char *Filename, bool revert)
       /* update cursor confinement and output area (scrollbars) */
       ChangePCBSize (PCB->MaxWidth, PCB->MaxHeight);
 
-      /* enable default font if necessary */
-      if (g_slist_length(PCB->FontLibrary) < 1)
-	{
-	  Message (_
-		   ("File '%s' has no font information, using default font\n"),
-		   new_filename);
-      ChangeFont("Default.pcb_font");
-	} else /* Switch to the font found in the PCB file */
-      ChangeFont(((FontType*)PCB->FontLibrary->data)->Name);
+      if (PCB->DefaultFontName)
+      { /* the file specified a default font */
+        ChangeFont(PCB->DefaultFontName);
+      } else if (g_slist_length(PCB->FontLibrary) > 0)
+	  { /* Switch to the font found in the PCB file */
+        ChangeFont(((FontType*)PCB->FontLibrary->data)->Name);
+	  } else
+      { /* no font specified, and no font in file. Use the system default */        Message (_("File '%s' has no font information, using default font\n"),
+                 new_filename);
+        ChangeFont("Default.pcb_font");
+      }
 
       /* clear 'changed flag' */
       SetChangedFlag (false);
@@ -614,8 +613,10 @@ WritePCBFontData (FILE * FP)
   Cardinal i, j;
   LineType *line;
   FontType *font;
+  if (PCB->DefaultFontName)
+      fprintf(FP, "Font(\"%s\")\n", PCB->DefaultFontName);
 
-  for (font = &PCB->Font, i = 0; i <= MAX_FONTPOSITION; i++)
+  for (font = Settings.Font, i = 0; i <= MAX_FONTPOSITION; i++)
     {
       if (!font->Symbol[i].Valid)
 	continue;
