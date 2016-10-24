@@ -992,6 +992,9 @@ struct drc_violation_st
 #define	UNDO_CLEAR		       0x40000	/*!< Clear/restore to polygons. */
 #define	UNDO_NETLISTCHANGE	       0x80000	/*!< Netlist change. */
 #define UNDO_CHANGESETVIALAYERS        0x100000  /*!< Buried data change. */
+#define UNDO_CHANGEFONT     0x200000 /*!< Font Change. */
+
+>>>>>>> Allow the changing of an object's font to be undone.
 /* ---------------------------------------------------------------------------
  */
 #if (__GNUC__ * 1000 + __GNUC_MINOR__) > 2007
