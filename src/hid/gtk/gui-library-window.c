@@ -609,7 +609,7 @@ create_lib_tree_model (GhidLibraryWindow * library_window)
 				MENU_SUBPATH_COLUMN, rel_path,
 				MENU_NAME_COLUMN,
 				  tok_end == rel_path ?
-				    basename(menu->directory) : tok_start,
+				    g_path_get_basename(menu->directory) : tok_start,
 				MENU_LIBRARY_COLUMN,
 				  saved_ch == '\0' ? menu : NULL,
 				MENU_ENTRY_COLUMN, NULL, -1);
@@ -621,7 +621,8 @@ create_lib_tree_model (GhidLibraryWindow * library_window)
 	tok_start = tok_end;
 	if (*tok_start == '/')
 	  tok_start++;
-	tok_end = strchrnul(tok_start, '/');
+	tok_end = strchr(tok_start, '/');
+    if (!tok_end) tok_end = tok_start + strlen(tok_start);
       }
     while (*tok_start != '\0');
 
@@ -753,8 +754,6 @@ create_lib_treeview (GhidLibraryWindow * library_window)
 
   /* add the treeview to the scrolled window */
   gtk_container_add (GTK_CONTAINER (scrolled_win), libtreeview);
-  /* set directory/footprint treeview of library_window */
-  library_window->libtreeview = GTK_TREE_VIEW (libtreeview);
 
   /* add the scrolled window for directories to the vertical box */
   gtk_box_pack_start (GTK_BOX (vbox), scrolled_win, TRUE, TRUE, 0);
@@ -836,6 +835,7 @@ create_lib_treeview (GhidLibraryWindow * library_window)
   /* add the filter area to the vertical box */
   gtk_box_pack_start (GTK_BOX (vbox), hbox, FALSE, FALSE, 0);
 
+  /* save pointer to libtreeview in library_window */
   library_window->libtreeview = GTK_TREE_VIEW (libtreeview);
 
   return vbox;

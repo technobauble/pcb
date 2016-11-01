@@ -685,9 +685,15 @@ ReleaseMode (void)
 	      return;
 	    }
 	}
-      RestoreUndoSerialNumber ();
-      if (SelectObject ())
-	SetChangedFlag (true);
+        /* Restore the SN so that if we select something the deselect/select combo
+         gets the same SN. */
+        RestoreUndoSerialNumber();
+        if (SelectObject ())
+            SetChangedFlag (true);
+        else
+        /* We didn't select anything new, so, the deselection should get its
+         own SN. */
+            IncrementUndoSerialNumber();
       Note.Hit = 0;
       Note.Moving = 0;
     }
@@ -1480,19 +1486,22 @@ NotifyMode (void)
 			    &Crosshair.AttachedObject.Ptr2,
 			    &Crosshair.AttachedObject.Ptr3);
 
-	    if (Crosshair.AttachedObject.Type != NO_TYPE)
-	      {
-		if (TEST_FLAG (LOCKFLAG, (PolygonType *)
-			       Crosshair.AttachedObject.Ptr2))
-		  {
-		    Message (_("Sorry, the object is locked\n"));
-		    Crosshair.AttachedObject.Type = NO_TYPE;
-		    break;
-		  }
-		else
-		  Crosshair.AttachedObject.State = STATE_SECOND;
-	      }
-	    break;
+          if (Crosshair.AttachedObject.Type == NO_TYPE)
+            {
+              Message (_("The first point of a polygon hole must be on a polygon.\n"));
+              break; /* don't start doing anything if clicked outside of polys */
+            }
+
+          if (TEST_FLAG(LOCKFLAG, (PolygonType *) Crosshair.AttachedObject.Ptr2))
+            {
+              Message (_("Sorry, the object is locked\n"));
+              Crosshair.AttachedObject.Type = NO_TYPE;
+              break;
+            }
+          else
+            Crosshair.AttachedObject.State = STATE_SECOND;
+            /* Fall thru: first click is also the first point of the
+             * poly hole. */
 
             /* second notify, insert new point into object */
           case STATE_SECOND:
@@ -1535,7 +1544,7 @@ NotifyMode (void)
 
 		/* reset state of attached line */
 		memset (&Crosshair.AttachedPolygon, 0, sizeof (PolygonType));
-		Crosshair.AttachedLine.State = STATE_FIRST;
+		Crosshair.AttachedObject.State = STATE_FIRST;
 		addedLines = 0;
 
 		  break;
