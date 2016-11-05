@@ -35,6 +35,8 @@
 
 #include "global.h"
 
+
+long int GetNextObjectID(void);
 void CreateBeLenient (bool);
 
 DataType * CreateNewBuffer (void);

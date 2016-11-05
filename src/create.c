@@ -66,6 +66,11 @@
 static long int ID = 1;
   /*!< Current object ID; incremented after each creation of an object */
 
+long int GetNextObjectID(void)
+{
+  return ID;
+}
+
 static bool be_lenient = false;
 
 /* ----------------------------------------------------------------------

@@ -38,6 +38,7 @@ PCB_SRCS = \
 	box.h \
 	buffer.c \
 	buffer.h \
+    chad.c \
 	change.c \
 	change.h \
 	clip.c \
