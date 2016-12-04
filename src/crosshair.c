@@ -520,10 +520,11 @@ XORDrawMoveOrCopyObject (hidGC gc)
         i = Crosshair.AttachedObject.RubberbandN;
         ptr = Crosshair.AttachedObject.Rubberband;
 
-        while (i)
+        for (; i; ptr++, i--)
           {
             if (!TEST_FLAG (VIAFLAG, ptr->Line) &&
-                TEST_FLAG (RUBBERENDFLAG, ptr->Line))
+                TEST_FLAG (RUBBERENDFLAG, ptr->Line) &&
+                ptr->Layer != NULL)
               {
                 double multiplier;
 
@@ -553,9 +554,6 @@ XORDrawMoveOrCopyObject (hidGC gc)
                 min_multiplier = MIN (min_multiplier, multiplier);
                 max_multiplier = MAX (max_multiplier, multiplier);
               }
-
-            ptr++;
-            i--;
           }
 
 
@@ -685,16 +683,15 @@ XORDrawMoveOrCopyObject (hidGC gc)
   i = Crosshair.AttachedObject.RubberbandN;
   ptr = Crosshair.AttachedObject.Rubberband;
 //  while (i)
-  while (i)
+  for (; i; ptr++, i--)
     {
       PointType *point1, *point2;
 
+      /* this is a rat going to a polygon.  do not draw for rubberband */;
       if (TEST_FLAG (VIAFLAG, ptr->Line))
-	{
-	  /* this is a rat going to a polygon.  do not draw for rubberband */;
-	}
-      else if (TEST_FLAG (RUBBERENDFLAG, ptr->Line))
-//      else
+        continue;
+
+      if (TEST_FLAG (RUBBERENDFLAG, ptr->Line))
 	{
           if (Crosshair.AttachedObject.Type == LINE_TYPE)
             {
@@ -746,9 +743,6 @@ XORDrawMoveOrCopyObject (hidGC gc)
                              ptr->Line->Point2.X + dx,
                              ptr->Line->Point2.Y + dy, ptr->Line->Thickness);
 #endif
-
-      ptr++;
-      i--;
     }
 }
 
