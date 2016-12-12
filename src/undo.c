@@ -1706,8 +1706,11 @@ void AddObjectToChangeFontUndoList(int Type, void *Ptr1, void *Ptr2, void *Ptr3)
 {
   UndoListType *undo;
   TextType *text = (TextType*)Ptr2;
-  undo = GetUndoSlot(UNDO_CHANGEFONT, OBJECT_ID(text), Type);
-  undo->Data.Font = text->Font;
+  if (!Locked)
+  {
+    undo = GetUndoSlot(UNDO_CHANGEFONT, OBJECT_ID(text), Type);
+    undo->Data.Font = text->Font;
+  }
 }
 
 /* ---------------------------------------------------------------------------
