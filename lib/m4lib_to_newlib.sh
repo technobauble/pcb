@@ -197,9 +197,9 @@ first == 1 {
 	comment = a[4];
 
 	# pick out the name of the footprint
-	match (comment, /(.*)\[(.*)\]/, fp);
-	comp = fp[2];
-	comment = a[3] ", " fp[1];
+	match (comment, /\[.*\]/);
+	comp = substr(comment, RSTART+1, RLENGTH-2);
+	comment = a[3] ", " substr(comment, 1, RSTART-1);
 
 	txtcomp = comp;
 	urlcomp = comp;
