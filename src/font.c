@@ -755,11 +755,12 @@ FontSave (int argc, char **argv, Coord Ux, Coord Uy)
   for (ii = lfont->Line; ii != NULL; ii = g_list_next (ii))
     {
       LineType *l = ii->data;
-      int x1 = l->Point1.X;
-      int y1 = l->Point1.Y;
-      int x2 = l->Point2.X;
-      int y2 = l->Point2.Y;
-      int ox, oy, s;
+      Coord x1 = l->Point1.X;
+      Coord y1 = l->Point1.Y;
+      Coord x2 = l->Point2.X;
+      Coord y2 = l->Point2.Y;
+      Coord ox, oy;
+      int s;
 
       s = XYtoSym (x1, y1);
       ox = (s % 16 + 1) * CELL_SIZE;
