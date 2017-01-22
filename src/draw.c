@@ -177,7 +177,6 @@ _draw_pv_name (PinType *pv)
   text.X = box.X1;
   text.Y = box.Y1;
   text.Direction = vert ? 1 : 0;
-  text.Font=NULL;
 
   if (gui->gui)
     doing_pinout++;
@@ -276,7 +275,6 @@ draw_pad_name (PadType *pad)
   text.X = box.X1;
   text.Y = box.Y1;
   text.Direction = vert ? 1 : 0;
-  text.Font = NULL;
 
   gui->graphics->draw_pcb_text (Output.fgGC, &text, 0);
 }
@@ -1380,7 +1378,7 @@ EraseArc (ArcType *Arc)
 void
 EraseText (LayerType *Layer, TextType *Text)
 {
-//  r_delete_entry (Layer->text_tree, (BoxType *) Text);
+  //r_delete_entry (Layer->text_tree, (BoxType *) Text);
   AddPart (Text);
 }
 
