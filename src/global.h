@@ -468,6 +468,8 @@ typedef struct
   struct PCBType *pcb;
   LayerType Layer[MAX_ALL_LAYER];
   int polyClip;
+  POLYAREA *outline;
+  bool outline_valid;
 } DataType;
 
 /*!
