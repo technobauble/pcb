@@ -314,21 +314,21 @@
 #define	ALLLINE_LOOP(top) do	{		\
 	Cardinal		l;			\
 	LayerType *layer = (top)->Layer;		\
-	for (l = 0; l < max_copper_layer + SILK_LAYER; l++, layer++)	\
+	for (l = 0; l < max_copper_layer + EXTRA_LAYERS; l++, layer++)	\
 	{ \
 		LINE_LOOP(layer)
 
 #define ALLARC_LOOP(top) do {		\
 	Cardinal		l;			\
 	LayerType *layer = (top)->Layer;		\
-	for (l =0; l < max_copper_layer + SILK_LAYER; l++, layer++)		\
+	for (l =0; l < max_copper_layer + EXTRA_LAYERS; l++, layer++)		\
 	{ \
 		ARC_LOOP(layer)
 
 #define	ALLPOLYGON_LOOP(top)	do {		\
 	Cardinal		l;			\
 	LayerType *layer = (top)->Layer;		\
-	for (l = 0; l < max_copper_layer + SILK_LAYER; l++, layer++)	\
+	for (l = 0; l < max_copper_layer + EXTRA_LAYERS; l++, layer++)	\
 	{ \
 		POLYGON_LOOP(layer)
 
@@ -380,14 +380,14 @@
 #define	ALLTEXT_LOOP(top)	do {		\
 	Cardinal		l;			\
 	LayerType *layer = (top)->Layer;		\
-	for (l = 0; l < max_copper_layer + SILK_LAYER; l++, layer++)	\
+	for (l = 0; l < max_copper_layer + EXTRA_LAYERS; l++, layer++)	\
 	{ \
 		TEXT_LOOP(layer)
 
 #define	VISIBLELINE_LOOP(top) do	{		\
 	Cardinal		l;			\
 	LayerType *layer = (top)->Layer;		\
-	for (l = 0; l < max_copper_layer + SILK_LAYER; l++, layer++)	\
+	for (l = 0; l < max_copper_layer + EXTRA_LAYERS; l++, layer++)	\
 	{ \
 		if (layer->On)				\
 			LINE_LOOP(layer)
@@ -395,7 +395,7 @@
 #define	VISIBLEARC_LOOP(top) do	{		\
 	Cardinal		l;			\
 	LayerType *layer = (top)->Layer;		\
-	for (l = 0; l < max_copper_layer + SILK_LAYER; l++, layer++)	\
+	for (l = 0; l < max_copper_layer + EXTRA_LAYERS; l++, layer++)	\
 	{ \
 		if (layer->On)				\
 			ARC_LOOP(layer)
@@ -403,7 +403,7 @@
 #define	VISIBLETEXT_LOOP(board) do	{		\
 	Cardinal		l;			\
 	LayerType *layer = (board)->Data->Layer;		\
-	for (l = 0; l < max_copper_layer + SILK_LAYER; l++, layer++)	\
+	for (l = 0; l < max_copper_layer + EXTRA_LAYERS; l++, layer++)	\
 	{ \
                 TEXT_LOOP(layer);                                      \
                   if (TEXT_IS_VISIBLE((board), layer, text))
@@ -411,7 +411,7 @@
 #define	VISIBLEPOLYGON_LOOP(top) do	{	\
 	Cardinal		l;			\
 	LayerType *layer = (top)->Layer;		\
-	for (l = 0; l < max_copper_layer + SILK_LAYER; l++, layer++)	\
+	for (l = 0; l < max_copper_layer + EXTRA_LAYERS; l++, layer++)	\
 	{ \
 		if (layer->On)				\
 			POLYGON_LOOP(layer)
