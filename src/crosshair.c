@@ -1002,6 +1002,11 @@ FitCrosshairIntoGrid (Coord X, Coord Y)
   int ans;
 
   /* limit the crosshair location to the board area */
+  Coord old_x, old_y;
+
+  old_x = Crosshair.X;
+  old_y = Crosshair.Y;
+
   Crosshair.X = CLAMP (X, Crosshair.MinX, Crosshair.MaxX);
   Crosshair.Y = CLAMP (Y, Crosshair.MinY, Crosshair.MaxY);
 
@@ -1046,11 +1051,26 @@ FitCrosshairIntoGrid (Coord X, Coord Y)
   /* The snap_data structure contains all of the information about where we're
    * going to snap to. */
   snap_data.crosshair = &Crosshair;
-  snap_data.nearest_sq_dist =
-    crosshair_sq_dist (&Crosshair, nearest_grid_x, nearest_grid_y);
   snap_data.nearest_is_grid = true;
   snap_data.x = nearest_grid_x;
   snap_data.y = nearest_grid_y;
+#if 0
+  snap_data.nearest_sq_dist = crosshair_sq_dist (&Crosshair, snap_data.x, snap_data.y);
+
+  if (snap_data.nearest_sq_dist > PCB->Grid / 3 * PCB->Grid / 3)
+    {
+      snap_data.x = old_x;
+      snap_data.y = old_y;
+    }
+#endif
+
+  if (labs (nearest_grid_x - Crosshair.X) > PCB->Grid / 3)
+    snap_data.x = old_x;
+
+  if (labs (nearest_grid_y - Crosshair.Y) > PCB->Grid / 3)
+    snap_data.y = old_y;
+
+  snap_data.nearest_sq_dist = crosshair_sq_dist (&Crosshair, snap_data.x, snap_data.y);
 
   ans = NO_TYPE;
   /* if we're not drawing rats, check for elements first */
