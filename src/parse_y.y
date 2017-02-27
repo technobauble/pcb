@@ -132,7 +132,6 @@ static Coord new_units (PLMeasure m);
 
 parse
 		: parsepcb
-		| parsedata
 		| parsefont
 		| error { YYABORT; }
 		;
@@ -250,25 +249,6 @@ parsepcb
 			yyPCB->is_footprint = 1;
 		      }
 		  }
-		;
-
-parsedata
-		:	{
-					/* reset flags for 'used layers';
-					 * init font and data pointers
-					 */
-				int	i;
-
-				if (!yyData || !yyFont)
-				{
-					Message(_("illegal fileformat\n"));
-					YYABORT;
-				}
-				for (i = 0; i < MAX_ALL_LAYER; i++)
-					LayerFlag[i] = false;
-				yyData->LayerN = 0;
-			}
-		 pcbdata
 		;
 
 pcbfont
@@ -752,7 +732,6 @@ pcbdefinition
 		| rats
 		| layer
 		| element
-		| error { YYABORT; }
 		;
 
 via
