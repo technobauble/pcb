@@ -4213,6 +4213,7 @@ hid_lesstif_init ()
   lesstif_graphics_class.draw_grid      = lesstif_draw_grid;
   
   lesstif_graphics_class.draw_pcb_polygon = common_gui_draw_pcb_polygon;
+  lesstif_graphics_class.fill_pcb_pv      = common_gui_fill_pcb_pv;
 
   lesstif_graphics_class.can_draw_in_mask_clear = true;
 
