@@ -898,9 +898,11 @@ void
 ghid_thindraw_pcb_polygon (hidGC gc, PolygonType *poly, const BoxType *clip_box)
 {
   common_thindraw_pcb_polygon (gc, poly, clip_box);
+#if 0
   ghid_set_alpha_mult (gc, 0.25);
   hid_draw_fill_pcb_polygon (gc, poly, clip_box);
   ghid_set_alpha_mult (gc, 1.0);
+#endif
 }
 
 void
@@ -1746,7 +1748,8 @@ fill_board_outline (hidGC gc, const BoxType *drawn_area)
     polygon.BoundingBox = *drawn_area;
   polygon.Flags = NoFlags ();
   SET_FLAG (FULLPOLYFLAG, &polygon);
-  hid_draw_fill_pcb_polygon (gc, &polygon, drawn_area);
+//  hid_draw_fill_pcb_polygon (gc, &polygon, drawn_area);
+  hid_draw_thin_pcb_polygon (gc, &polygon, drawn_area);
   poly_FreeContours (&polygon.NoHoles);
 }
 
