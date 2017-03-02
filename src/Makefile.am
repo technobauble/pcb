@@ -11,9 +11,19 @@ AUTOMAKE_OPTIONS = subdir-objects
 HIDLIST = @HIDLIST@
 noinst_LIBRARIES = @HIDLIBS@
 EXTRA_LIBRARIES = \
-	libgtk.a liblesstif.a libbatch.a \
-	liblpr.a libgerber.a libbom.a libpng.a libps.a libnelma.a \
-	libgcode.a libipcd356.a libgsvit.a
+	libbatch.a \
+	libbom.a \
+	libgcode.a \
+	libgerber.a \
+    libgsvit.a \
+	libgtk.a \
+	libipcd356.a \
+	liblesstif.a \
+	liblpr.a \
+	libnelma.a \
+	libpng.a \
+	libps.a \
+	libstep.a
 
 pcblib_DATA= \
 	default_font \
@@ -235,6 +245,7 @@ BUILT_SOURCES = \
 	hid/nelma/nelma_lists.h \
 	hid/gsvit/gsvit_lists.h \
 	hid/ps/ps_lists.h \
+	hid/step/step_lists.h \
 	parse_y.h \
 	pcb-menu.h \
 	res_parse.h \
@@ -289,6 +300,7 @@ EXTRA_DIST= \
 	$(srcdir)/hid/nelma/hid.conf \
 	$(srcdir)/hid/gsvit/hid.conf \
 	$(srcdir)/hid/ps/hid.conf \
+	$(srcdir)/hid/step/hid.conf \
 	gpcb-menu.res.in \
 	pcb-menu.res.in \
 	gpcb-menu.res.h \
@@ -480,6 +492,20 @@ hid/ps/ps_lists.h : ${LIBPS_SRCS} Makefile
 	$(MKDIR_P) hid/ps
 	true > $@
 	(for f in ${LIBPS_SRCS} ; do cat $(srcdir)/$$f ; done) | grep "^REGISTER" > $@.tmp
+	mv $@.tmp $@
+
+libstep_a_CPPFLAGS = -I$(top_srcdir) -I./hid/step
+LIBSTEP_SRCS = \
+	dolists.h \
+	hid/hidint.h \
+	hid/step/step.c \
+	hid/step/step.h
+libstep_a_SOURCES = ${LIBSTEP_SRCS} hid/step/step_lists.h
+
+hid/step/step_lists.h : ${LIBPS_SRCS} Makefile
+	$(MKDIR_P) hid/step
+	true > $@
+	(for f in ${LIBSTEP_SRCS} ; do cat $(srcdir)/$$f ; done) | grep "^REGISTER" > $@.tmp
 	mv $@.tmp $@
 
 libpng_a_CPPFLAGS = -I$(top_srcdir) -I./hid/png
