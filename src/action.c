@@ -3497,7 +3497,7 @@ ActionRenumber (int argc, char **argv, Coord x, Coord y)
 	      cnt_list = (struct _cnt_list *)realloc (cnt_list, cnt_list_sz);
 	      if (cnt_list == NULL)
 		{
-		  fprintf (stderr, _("realloc failed() in %s\n"), __FUNCTION__);
+		  fprintf (stderr, _("realloc() failed in %s()\n"), __FUNCTION__);
 		  exit (1);
 		}
 	      /* zero out the memory that we added */
@@ -4376,12 +4376,12 @@ ActionMinMaskGap (int argc, char **argv, Coord x, Coord y)
   {
     PIN_LOOP (element);
     {
-      if (!TEST_FLAGS (flags, pin) || ! pin->Mask)
-	continue;
+      if (!TEST_FLAGS (flags, pin) || ! pin->Mask) continue;
 
-	thickness = pin->DrillingHole;
-      if (pin->Thickness > thickness)
-	thickness = pin->Thickness;
+      thickness = pin->DrillingHole;
+      
+      if (pin->Thickness > thickness) thickness = pin->Thickness;
+
       thickness += value;
 
       if (pin->Mask < thickness)
@@ -7255,13 +7255,13 @@ ActionElementList (int argc, char **argv, Coord x, Coord y)
 
   else if (e && DESCRIPTION_NAME(e) && strcmp (DESCRIPTION_NAME(e), footprint) != 0)
     {
-#ifdef DEBUG
-      printf("  ... Footprint on board, but different from footprint loaded.\n");
-#endif
       int er, pr, i;
       Coord mx, my;
       ElementType *pe;
 
+#ifdef DEBUG
+      printf("  ... Footprint on board, but different from footprint loaded.\n");
+#endif
       /* Different footprint, we need to swap them out.  */
       if (LoadFootprint(argc, args, x, y))
 	{
@@ -7558,7 +7558,7 @@ tempfile_unlink (char * name)
 #ifdef DEBUG
     /* SDB says:  Want to keep old temp files for examiniation when debugging */
   return 0;
-#endif
+#else /* DEBUG */
 
 #ifdef HAVE_MKDTEMP
   int e, rc2 = 0;
@@ -7605,7 +7605,7 @@ tempfile_unlink (char * name)
     return -1;
   }
 
-#else
+#else /* HAVE_MKDTEMP */
   int rc = unlink (name);
 
   if (rc != 0) {
@@ -7615,7 +7615,8 @@ tempfile_unlink (char * name)
   }
   free (name);
 
-#endif
+#endif /* HAVE_MKDTEMP */
+#endif /* DEBUG */
 
   return 0;
 }

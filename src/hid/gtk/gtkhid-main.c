@@ -1520,7 +1520,7 @@ Print (int argc, char **argv, Coord x, Coord y)
 
   if (printer == NULL)
     {
-      gui->log (_("Can't find a suitable printer HID"));
+      gui->log (_("Can't find a suitable printer HID\n"));
       return -1;
     }
 
@@ -1530,7 +1530,7 @@ Print (int argc, char **argv, Coord x, Coord y)
       ghid_dialog_print (printer);
     }
   else
-    gui->log (_("Can't print empty layout"));
+    gui->log (_("Can't print empty layout\n"));
 
   return 0;
 }
@@ -1590,7 +1590,7 @@ Export (int argc, char **argv, Coord x, Coord y)
       ghid_dialog_export ();
     }
   else
-    gui->log (_("Can't export empty layout"));
+    gui->log (_("Can't export empty layout\n"));
 
   return 0;
 }
@@ -2140,6 +2140,7 @@ REGISTER_FLAGS (ghid_main_flag_list)
  * footprint libraries.
  */
 #ifdef WIN32
+#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <winreg.h>
 #endif
@@ -2159,7 +2160,7 @@ hid_gtk_init ()
 #endif
 
 #ifdef WIN32
-  tmps = g_win32_get_package_installation_directory (PACKAGE "-" VERSION, NULL);
+  tmps = g_win32_get_package_installation_directory_of_module (NULL);
 #define REST_OF_PATH G_DIR_SEPARATOR_S "share" G_DIR_SEPARATOR_S PACKAGE
 #define REST_OF_CACHE G_DIR_SEPARATOR_S "loaders.cache"
   buffer_size = strlen (tmps) + strlen (REST_OF_PATH) + 1;
@@ -2167,7 +2168,7 @@ hid_gtk_init ()
   snprintf (share_dir, buffer_size, "%s%s", tmps, REST_OF_PATH);
 
   /* Point to our gdk-pixbuf loader cache.  */
-  buffer_size = strlen (bindir) + strlen (REST_OF_CACHE) + 1);
+  buffer_size = strlen (bindir) + strlen (REST_OF_CACHE) + 1;
   loader_cache = (char *)malloc (buffer_size);
   snprintf (loader_cache, buffer_size, "%s%s", bindir, REST_OF_CACHE);
   loader_file = fopen (loader_cache, "r");

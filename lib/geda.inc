@@ -8,6 +8,228 @@
 #   Oct 10 2002
 #
 
+# $1: canonical name
+# $2: name on PCB
+# $3: value
+
+define(`PKG_TO263BASE',
+       `
+	# pad 1,2,3 width (1/100 mil)
+	define(`PADW1',  `4200')
+
+	# pad 1,2,3 length (1/100 mil)
+	define(`PADL1',  `8500')
+
+	# x value for pads 1,3 (1/100 mil)
+	define(`PADX1', `10000')
+
+	# y value for pads 1,2,3 (1/100 mil)
+	define(`PADY1', `21025')
+
+
+	# tab pad width (1/100 mil)
+	# ideally we would be able to have a polygon
+	# pad because the recommendation is a T shape where
+	# the width is 328 mil on the thinner part and 425 mil on the
+	# thicker part
+	define(`PADW2',  `32800')
+	define(`PADW2A', `42500')
+
+	# tab pad length (1/100 mil)
+	#define(`PADL2',  `27500')
+	define(`PADL2',  `21000')
+	define(`PADL2A', `7500')
+
+	# x value for the tab pad (1/100 mil)
+	define(`PADX2', `0')
+
+	# y value for the tab pad (1/100 mil)
+	#define(`PADY2', `-21025')
+	define(`PADY2',  `-10900')
+	define(`PADY2A', `-24150')
+
+	# package width (1/100 mil)
+	define(`PACKW', `40000')
+
+	# package height (1/100 mil)
+	define(`PACKH', `565')
+
+	# y values for drawing the pad.  Recall we draw the pad with an aperture
+	# we need a line segment of length PADL1 - PADW1 so we have end points:
+	# PADY1 +/- 0.5*(PADL1 - PADW1)
+	define(`PY1', `eval(PADY1 + (PADL1 - PADW1)/2)')
+	define(`PY2', `eval(PADY1 - (PADL1 - PADW1)/2)')
+
+	define(`TX1',  `eval(    (PADW2  - PADL2 )/2)')
+	define(`TX2',  `eval( -1*(PADW2  - PADL2 )/2)')
+	define(`TX1A', `eval(    (PADW2A - PADL2A)/2)')
+	define(`TX2A', `eval( -1*(PADW2A - PADL2A)/2)')
+
+	# width of soldermask relief (5 mil on each side)
+	define(`MASKW1',  `eval(PADW1  + 1000)')
+	define(`MASKW2',  `eval(PADL2  + 1000)')
+	define(`MASKW2A', `eval(PADL2A + 1000)')
+
+	# silkscreen width (1/100 mils)
+	define(`SILKW', `1000')
+
+	# clearance to polygons (1/100 mils)
+	define(`PCLEAR', `2000')
+
+	# how much space to leave around the part before the
+	# silk screen (1/100 mils)
+	define(`SILKS', `800')
+
+	# X values for silk on sides and top
+	define(`SX1', `eval(    (PADW2A + 2*SILKS + SILKW)/2)')
+	define(`SX2', `eval( -1*(PADW2A + 2*SILKS + SILKW)/2)')
+
+	# X values for silk on sides and bottom
+	define(`SX1B', `eval(    (PADX1 + PADW1 + SILKS + SILKW/2))')
+
+	define(`SY1', `eval(    (PADY1  + PADL1/2  + SILKS + SILKW/2))')
+	define(`SYM', `eval(    (PADY1  - PADL1/2  - SILKS - SILKW/2))')
+	define(`SY2', `eval(    (PADY2A - PADL2A/2 - SILKS - SILKW/2))')
+
+# Element [SFlags "Desc" "Name" "Value" MX MY TX TY TDir TScale TSFlags]
+Element[ "" "$1" "`$2'" "$3" 0 0 0 0 0 100 ""]
+(
+
+# Pad [rX1 rY1 rX2 rY2 Thickness Clearance Mask "Name" "Number" SFlags]
+
+# the signal pads
+Pad[ -PADX1 PY1 -PADX1 PY2 PADW1 PCLEAR MASKW1 "1"  "1" "square"]
+Pad[      0 PY1      0 PY2 PADW1 PCLEAR MASKW1 "2"  "2" "square"]
+Pad[  PADX1 PY1  PADX1 PY2 PADW1 PCLEAR MASKW1 "3"  "3" "square"]
+
+# the tab pad
+Pad[ TX1  PADY2  TX2  PADY2  PADL2  PCLEAR MASKW2  "4"  "4" "square"]
+Pad[ TX1A PADY2A TX2A PADY2A PADL2A PCLEAR MASKW2A "4"  "4" "square"]
+
+
+# ElementLine[ x1 y1 x2 y2 width]
+# top and upper sides:
+ElementLine[ SX1 SYM  SX1 SY2 SILKW ]
+ElementLine[ SX1 SY2  SX2 SY2 SILKW ]
+ElementLine[ SX2 SY2  SX2 SYM SILKW ]
+
+# bottom and lower sides
+ElementLine[ -SX1B SYM -SX1B SY1 SILKW ]
+ElementLine[ -SX1B SY1  SX1B SY1 SILKW ]
+ElementLine[  SX1B SY1  SX1B SYM SILKW ]
+
+# and the two connecting lines
+ElementLine[ SX2 SYM -SX1B SYM SILKW ]
+ElementLine[ SX1 SYM  SX1B SYM SILKW ]
+
+)')
+
+# Generic Mounting Hole
+#
+# $1: canonical name
+# $2: name on PCB
+# $3: value
+# $4: drill size [mm / 100]
+# $5: pad size [mm / 100]
+# $6: 1 = plated, 0 = not plated
+# $7: 1 = silk surround, 0 = no silk surround
+# $8: 1 = include pad, 0 = just a hole
+# $9: 0 = no vias, 4,6,8 = number of vias
+# $10: fab level:  "L", "N", "M" for least/nom/most material conditions
+# $11: via drill size [mm / 100].  Defaults to 0.5mm
+define(`PKG_MTHOLE_GENERIC',
+       `
+	# machine screw size
+	define(`DRILLSIZE_MM',`eval($4)')
+	define(`PADSIZE_MM',  `eval($5)')
+	define(`PLATEFLAG',   `eval($6)')
+	define(`SILKFLAG',    `eval($7)')
+	define(`PADFLAG',     `eval($8)')
+	define(`VIACNT',      `eval($9)')
+	define(`FABLEVEL',    `$10')
+	define(`VIADRILL_MM', ifelse( `$11'`missing', `missing', 50, $11))
+dnl
+dnl	silkscreen width (1/100 mils)
+dnl
+	define(`SILKW', `1000')
+	define(`SILKW_MM', `eval( (SILKW*254)/10000)')
+dnl
+dnl     annular ring based on fab level -- it would be good if someone had a copy of IPC-2221B to
+dnl     verify that both the top/bottom clearance to polygons and the silk (which marks placement
+dnl     courtyard) are done correctly.
+dnl
+	define(`RING_MM',
+		ifelse( 
+			FABLEVEL, 1, 10,
+			FABLEVEL, 2, 25,
+			FABLEVEL, 3, 50,
+			50
+		)
+	)
+	define(`PADCLEAR_MM', `eval( 100 + 2*RING_MM)')
+        define(`SILKR_MM',    `eval( (PADSIZE_MM + 2*RING_MM + SILKW_MM)/2)')
+	define(`SILKR',       `eval( (SILKR_MM*10000)/254)')
+	define(`HOLEFLAG', `ifelse( 0, PADFLAG,   `hole,thermal(0S)', 0, PLATEFLAG, `hole,thermal(0S)', `thermal(0S)' )')
+	define(`PADSIZE',  `eval((PADSIZE_MM*10000)/254)')
+	define(`PADCLEAR', `eval((PADCLEAR_MM*10000)/254)')
+	define(`PADMASK',  `eval( PADSIZE + 1000)')
+	define(`DRILLSIZE',`eval((DRILLSIZE_MM*10000)/254)')
+	define(`VIADRILL', `eval((VIADRILL_MM*10000)/254)')
+	define(`VIAPAD',   `eval((PADSIZE - DRILLSIZE)/2)')
+dnl
+dnl find coordinates for the supporting vias
+dnl
+	define(`VXY',  `eval((PADSIZE + DRILLSIZE)/4)')
+dnl
+dnl 70/99 = sqrt(0.5) with an error of about -0.005 % which is pretty good
+dnl
+	define(`VXY2', `eval((70*(PADSIZE + DRILLSIZE))/(99*4))')
+dnl
+dnl 30/60 degree needs a 0.5 and sqrt(3)/2
+dnl 97/112 = sqrt(3)/2 with an error of about +0.005 %
+dnl
+	define(`VXY3', `eval((PADSIZE + DRILLSIZE)/8)')
+	define(`VXY4', `eval((97*(PADSIZE + DRILLSIZE))/(112*4))')
+dnl
+dnl Element [SFlags "Desc" "Name" "Value" MX MY TX TY TDir TScale TSFlags]
+dnl
+Element[ "" "$1" "`$2'" "$3" 0 0 SILKR -SILKR 0 100 ""]
+(
+dnl
+# Pin[x, y, thickness, clearance, mask, drilling hole, name,
+#     number, flags.  By default, add a solid connection to the plane
+Pin[ 0 0  PADSIZE  PADCLEAR PADMASK DRILLSIZE "1" "1" "HOLEFLAG"]
+
+ifelse( 1, SILKFLAG,
+	ElementArc[0 0 SILKR SILKR 0 360 SILKW]
+)
+
+ifelse( eval(VIACNT==4 || VIACNT == 8), 1,
+dnl The on-axis vias:
+Pin[  VXY    0 VIAPAD  0 0 VIADRILL "1" "1" ""]
+Pin[ -VXY    0 VIAPAD  0 0 VIADRILL "1" "1" ""]
+Pin[    0  VXY VIAPAD  0 0 VIADRILL "1" "1" ""]
+Pin[    0 -VXY VIAPAD  0 0 VIADRILL "1" "1" ""]
+)
+ifelse( eval(VIACNT==8), 1,
+dnl The 45 degree -axis vias:
+Pin[  VXY2  VXY2 VIAPAD  0 0 VIADRILL "1" "1" ""]
+Pin[ -VXY2  VXY2 VIAPAD  0 0 VIADRILL "1" "1" ""]
+Pin[  VXY2 -VXY2 VIAPAD  0 0 VIADRILL "1" "1" ""]
+Pin[ -VXY2 -VXY2 VIAPAD  0 0 VIADRILL "1" "1" ""]
+)
+ifelse(eval(VIACNT==6), 1,
+Pin[     0   VXY  VIAPAD  0 0 VIADRILL "1" "1" ""]
+Pin[     0  -VXY  VIAPAD  0 0 VIADRILL "1" "1" ""]
+Pin[ -VXY4   VXY3 VIAPAD  0 0 VIADRILL "1" "1" ""]
+Pin[  VXY4   VXY3 VIAPAD  0 0 VIADRILL "1" "1" ""]
+Pin[ -VXY4  -VXY3 VIAPAD  0 0 VIADRILL "1" "1" ""]
+Pin[  VXY4  -VXY3 VIAPAD  0 0 VIADRILL "1" "1" ""]
+)
+)')
+
+# EXTRACT_BEGIN
+
 #
 ##  Dual in-line package, narrow (300 mil)
 #   DIP6 .. DIP64, DIP24N, DIP28N
@@ -571,6 +793,82 @@ define(`PKG_ALF900', `PKG_DIODE_LAY(`$1', `$2', `$3',  900)');
 define(`PKG_ALF1000',`PKG_DIODE_LAY(`$1', `$2', `$3', 1000)');
 
 #
+##  Axial diodes, horizontally mounted, IPC-7251 compliant, 1 is cathode
+#
+# The following are recommendations from IPC-7251
+# The naming convention, here follows the IPC standard.
+# Any additions to this section should follow the IPC naming convention and size.
+# Yes, I know they are very verbose.
+#
+# DIOAD + lead spacing + W + lead width (diameter) + L + body length (axial) + D + body diameter (width) + {A,B,C}
+#
+# A = most material condition
+# B = nominal material condition
+# C = least material condition
+#
+# The base macro accepts the numbers directly (after multiplying by 100) from the IPC
+# standard so they are fairly simple to add.
+
+# $1:  canonical name
+# $2:  name on PCB
+# $3:  value
+# $4:  pad drill diameter [1/100 mm]
+# $5:  pad diameter [1/100 mm]
+# $6:  pad clearance diameter [1/100 mm]
+# $7:  pad center to center [1/100 mm]
+# $8:  courtyard in direction perpendicular to axis of part [1/100 mm]
+# $9:  courtyard in direction parallel to axis of part [1/100 mm]
+# $10: 1 for polarized
+
+# DO-41 package, www.diodes.com/assets/Datasheets/ds28002.pdf for example
+#define(`PKG_DO41_H_M', `PKG_DIOAD1290W87L521D272A(`$1', `$2', `$3')');
+#define(`PKG_DO41_H_N', `PKG_DIOAD1290W87L521D272B(`$1', `$2', `$3')');
+#define(`PKG_DO41_H_L', `PKG_DIOAD1290W87L521D272C(`$1', `$2', `$3')');
+
+
+define(`PKG_DIOAD1290W87L521D272A', `PKG_AXIAL_H_MM100(  `$1', `$2', `$3',  111,   211,  411,  1290,  621,  372, 1)');
+define(`PKG_DO41_H_M',              `PKG_AXIAL_H_MM100(  `$1', `$2', `$3',  111,   211,  411,  1290,  621,  372, 1)');
+define(`PKG_DIOAD1221W87L521D272B', `PKG_AXIAL_H_MM100(  `$1', `$2', `$3',  106,   176,  316,  1221,  571,  322, 1)');
+define(`PKG_DO41_H_N',              `PKG_AXIAL_H_MM100(  `$1', `$2', `$3',  106,   176,  316,  1221,  571,  322, 1)');
+define(`PKG_DIOAD1170W87L521D272C', `PKG_AXIAL_H_MM100(  `$1', `$2', `$3',  101,   161,  261,  1170,  541,  292, 1)');
+define(`PKG_DO41_H_L',              `PKG_AXIAL_H_MM100(  `$1', `$2', `$3',  101,   161,  261,  1170,  541,  292, 1)');
+
+
+
+#
+##  Axial inductors, horizontally mounted, IPC-7251 compliant
+#
+# The following are recommendations from IPC-7251
+# The naming convention, here follows the IPC standard.
+# Any additions to this section should follow the IPC naming convention and size.  
+# Yes, I know they are very verbose.
+#
+# INDAD + lead spacing + W + lead width (diameter) + L + body length (axial) + D + body diameter (width) + {A,B,C}
+#
+# A = most material condition
+# B = nominal material condition
+# C = least material condition
+#
+# The base macro accepts the numbers directly (after multiplying by 100) from the IPC
+# standard so they are fairly simple to add.
+
+# $1:  canonical name
+# $2:  name on PCB
+# $3:  value
+# $4:  pad drill diameter [1/100 mm]
+# $5:  pad diameter [1/100 mm]
+# $6:  pad clearance diameter [1/100 mm]
+# $7:  pad center to center [1/100 mm]
+# $8:  courtyard in direction perpendicular to axis of part [1/100 mm]
+# $9:  courtyard in direction parallel to axis of part [1/100 mm]
+# $10: 1 for polarized
+# perp  x parallel
+# 6.5mm x 12mm body, 0.8 mm max lead.  TDK HLBC series for example
+define(`PKG_INDAD1600W80L1200D650A', `PKG_AXIAL_H_MM100(  `$1', `$2', `$3',  105,   204,  405,  1600,  1300,  750)');
+define(`PKG_INDAD1560W80L1200D650B', `PKG_AXIAL_H_MM100(  `$1', `$2', `$3',  100,   170,  309,  1560,  1250,  700)');
+define(`PKG_INDAD1520W80L1200D650C', `PKG_AXIAL_H_MM100(  `$1', `$2', `$3',   95,   155,  254,  1520,  1220,  670)');
+
+#
 ##  Bottom lead non-polar circular component (typically capacitor)
 #   pin spacing 100 mil and up
 #   RCY100 .. RCY1000
@@ -610,6 +908,38 @@ define(`PKG_RCY900P',  `PKG_RADIAL_CAN(`$1', `$2', `$3', 1800, 1)');
 define(`PKG_RCY1000P', `PKG_RADIAL_CAN(`$1', `$2', `$3', 2000, 1)');
 define(`PKG_RCY1100P', `PKG_RADIAL_CAN(`$1', `$2', `$3', 2200, 1)');
 define(`PKG_RCY1200P', `PKG_RADIAL_CAN(`$1', `$2', `$3', 2400, 1)');
+
+#
+##  Capacitors, radial IPC-7251 compliant
+#
+# The following are recommendations from IPC-7251
+# The naming convention, here follows the IPC standard.
+# Any additions to this section should follow the IPC naming convention and size.
+# Yes, I know they are very verbose.
+#
+# CAPPRD + lead spacing + W + lead width (diameter) + D + body diameter + H + body height + {A,B,C}
+#
+# A = most material condition
+# B = nominal material condition
+# C = least material condition
+#
+# The base macro accepts the numbers directly (after multiplying by 100) from the IPC
+# standard so they are fairly simple to add.
+
+# $1:  canonical name
+# $2:  name on PCB
+# $3:  value
+# $4:  pad drill diameter [1/100 mm]
+# $5:  pad diameter [1/100 mm]
+# $6:  pad clearance diameter [1/100 mm]
+# $7:  pad center to center [1/100 mm]
+# $8:  courtyard radius [1/100 mm]
+# $9:  0 for non polarized, 1 for polarized
+
+# 16x30mm (dia x height), 0.8mm max lead, 7.5mm pitch.  Nippon Chemi-Con GPA series for example
+define(`PKG_CAPPRD750W80D1600H3150A', `PKG_RADIAL_MM100(  `$1', `$2', `$3',   105,    204,    405,    750,   1700,  1)');
+define(`PKG_CAPPRD750W80D1600H3150B', `PKG_RADIAL_MM100(  `$1', `$2', `$3',   100,    170,    309,    750,   1650,  1)');
+define(`PKG_CAPPRD750W80D1600H3150C', `PKG_RADIAL_MM100(  `$1', `$2', `$3',    95,    154,    254,    750,   1620,  1)');
 
 #
 ##  Crystals
@@ -669,6 +999,8 @@ define(`PKG_TO220',  `PKG_TO220LAY(       `$1', `$2', `$3')');
 define(`PKG_TO220S', `PKG_TO220LAY_WIDE(  `$1', `$2', `$3')');
 define(`PKG_TO220W', `PKG_TO220STAND(     `$1', `$2', `$3')');
 define(`PKG_TO220SW',`PKG_TO220STAND_WIDE(`$1', `$2', `$3')');
+
+define(`PKG_TO263',  `PKG_TO263BASE(`$1', `$2', `$3')');
 
 # these are just wrappers around the footprints from to.inc.
 # they are done here to be in a standard format that will
@@ -1199,3 +1531,72 @@ define(`PKG_SC70_6',   `PKG_SMT_TRANSISTOR6( `$1', `$2', `$3', 13, 18)');
 ## Pressure transducer
 define(`PKG_MPAK',     `COMMON_SMT_TRANSISTORX_MIL(`$1', `$2', `$3', 150, 437, 20, `12345')');
 
+## Mounting holes
+
+# IPC-7251 naming convention:
+# MTG + {P=plated, NP=non-plated} + land size + H + hole size + V + #vias + fab level
+# Generic Mounting Hole
+#
+# $1: canonical name
+# $2: name on PCB
+# $3: value
+# $4: drill size [mm / 100]
+# $5: pad size [mm / 100]
+# $6: 1 = plated, 0 = not plated
+# $7: 1 = silk surround, 0 = no silk surround
+# $8: 1 = include pad, 0 = just a hole
+# $9: 0 = no vias, 4,6,8 = number of vias
+# $10: fab level:  "L", "N", "M" for least/nom/most material conditions
+# $11: via drill size [mm / 100].  Defaults to 0.5mm
+
+# see tables in http://blogs.mentor.com/tom-hausherr/blog/tag/pcb-mounting-holes/
+
+# 4-40 machine screw, pan head, plated, loose fit (4" boards and larger)
+define(`PKG_MTGP610H370V6L', `PKG_MTHOLE_GENERIC(`$1', `$2', `$3', 370, 610, 1, 1, 1, 6, 1, 50)');
+define(`PKG_MTGP610H370V6N', `PKG_MTHOLE_GENERIC(`$1', `$2', `$3', 370, 610, 1, 1, 1, 6, 2, 50)');
+define(`PKG_MTGP610H370V6M', `PKG_MTHOLE_GENERIC(`$1', `$2', `$3', 370, 610, 1, 1, 1, 6, 3, 50)');
+
+# 4-40 machine screw, pan head, nonplated, loose fit (4" boards and larger)
+# FIXME -- non-plated is not quite working yet.  Does PCB support a pad that includes
+# the copper but specifies an unplated hole?
+#define(`PKG_MTGNP610H370V6L', `PKG_MTHOLE_GENERIC(`$1', `$2', `$3', 370, 610, 0, 1, 1, 6, 1, 50)');
+#define(`PKG_MTGNP610H370V6N', `PKG_MTHOLE_GENERIC(`$1', `$2', `$3', 370, 610, 0, 1, 1, 6, 2, 50)');
+#define(`PKG_MTGNP610H370V6M', `PKG_MTHOLE_GENERIC(`$1', `$2', `$3', 370, 610, 0, 1, 1, 6, 3, 50)');
+
+# 4-40 machine screw, flat washer, plated, loose fit (4" boards and larger)
+define(`PKG_MTGP1010H370V8L', `PKG_MTHOLE_GENERIC(`$1', `$2', `$3', 370, 1010, 1, 1, 1, 8, 1, 100)');
+define(`PKG_MTGP1010H370V8N', `PKG_MTHOLE_GENERIC(`$1', `$2', `$3', 370, 1010, 1, 1, 1, 8, 2, 100)');
+define(`PKG_MTGP1010H370V8M', `PKG_MTHOLE_GENERIC(`$1', `$2', `$3', 370, 1010, 1, 1, 1, 8, 3, 100)');
+
+# 4-40 machine screw, pan head, plated, tight fit (4" boards and smaller)
+define(`PKG_MTGP570H330V6L', `PKG_MTHOLE_GENERIC(`$1', `$2', `$3', 330, 570, 1, 1, 1, 6, 1, 50)');
+define(`PKG_MTGP570H330V6N', `PKG_MTHOLE_GENERIC(`$1', `$2', `$3', 330, 570, 1, 1, 1, 6, 2, 50)');
+define(`PKG_MTGP570H330V6M', `PKG_MTHOLE_GENERIC(`$1', `$2', `$3', 330, 570, 1, 1, 1, 6, 3, 50)');
+
+# 4-40 machine screw, flat washer, plated, tight fit (4" boards and smaller)
+define(`PKG_MTGP970H330V8L', `PKG_MTHOLE_GENERIC(`$1', `$2', `$3', 330, 970, 1, 1, 1, 8, 1, 100)');
+define(`PKG_MTGP970H330V8N', `PKG_MTHOLE_GENERIC(`$1', `$2', `$3', 330, 970, 1, 1, 1, 8, 2, 100)');
+define(`PKG_MTGP970H330V8M', `PKG_MTHOLE_GENERIC(`$1', `$2', `$3', 330, 970, 1, 1, 1, 8, 3, 100)');
+
+# 6-32 machine screw, pan head, plated, loose fit (4" boards and larger)
+define(`PKG_MTGP730H390V6L', `PKG_MTHOLE_GENERIC(`$1', `$2', `$3', 390, 730, 1, 1, 1, 6, 1, 50)');
+define(`PKG_MTGP730H390V6N', `PKG_MTHOLE_GENERIC(`$1', `$2', `$3', 390, 730, 1, 1, 1, 6, 2, 50)');
+define(`PKG_MTGP730H390V6M', `PKG_MTHOLE_GENERIC(`$1', `$2', `$3', 390, 730, 1, 1, 1, 6, 3, 50)');
+
+# 6-32 machine screw, flat washer, plated, loose fit (4" boards and larger)
+define(`PKG_MTGP1200H390V8L', `PKG_MTHOLE_GENERIC(`$1', `$2', `$3', 390, 1200, 1, 1, 1, 6, 1, 100)');
+define(`PKG_MTGP1200H390V8N', `PKG_MTHOLE_GENERIC(`$1', `$2', `$3', 390, 1200, 1, 1, 1, 6, 2, 100)');
+define(`PKG_MTGP1200H390V8M', `PKG_MTHOLE_GENERIC(`$1', `$2', `$3', 390, 1200, 1, 1, 1, 6, 3, 100)');
+
+# 6-32 machine screw, pan head, plated, tight fit (4" boards and smaller)
+define(`PKG_MTGP700H360V6L', `PKG_MTHOLE_GENERIC(`$1', `$2', `$3', 360, 700, 1, 1, 1, 6, 1, 50)');
+define(`PKG_MTGP700H360V6N', `PKG_MTHOLE_GENERIC(`$1', `$2', `$3', 360, 700, 1, 1, 1, 6, 2, 50)');
+define(`PKG_MTGP700H360V6M', `PKG_MTHOLE_GENERIC(`$1', `$2', `$3', 360, 700, 1, 1, 1, 6, 3, 50)');
+
+# 6-32 machine screw, flat washer, plated, tight fit (4" boards and smaller)
+define(`PKG_MTGP1170H360V8L', `PKG_MTHOLE_GENERIC(`$1', `$2', `$3', 360, 1170, 1, 1, 1, 6, 1, 100)');
+define(`PKG_MTGP1170H360V8N', `PKG_MTHOLE_GENERIC(`$1', `$2', `$3', 360, 1170, 1, 1, 1, 6, 2, 100)');
+define(`PKG_MTGP1170H360V8M', `PKG_MTHOLE_GENERIC(`$1', `$2', `$3', 360, 1170, 1, 1, 1, 6, 3, 100)');
+
+
+# EXTRACT_END

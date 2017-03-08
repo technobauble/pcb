@@ -79,6 +79,7 @@ define(`args',`
 
 include(amp.inc)
 include(amphenol.inc)
+include(aries.inc)
 include(bga.inc)
 include(bourns.inc)
 include(candk.inc)
@@ -101,7 +102,10 @@ include(qfpdj.inc)
 include(resistor_adjust.inc)
 include(rules.inc)
 include(smt.inc)
+include(tdk.inc)
 include(to.inc)
+include(toko.inc)
+include(united_chemicon.inc)
 include(zif.inc)
 
 # if any of these files exist, then include them.  

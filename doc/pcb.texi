@@ -2,7 +2,6 @@
 @comment %**start of header
 @setfilename pcb.info
 @settitle Pcb
-@setcontentsaftertitlepage
 @macro pcb{}
 @code{Pcb}
 @end macro
@@ -27,13 +26,15 @@ END-INFO-DIR-ENTRY
 This file documents how to use Pcb,
 the open source, interactive printed circuit board layout system.
 
-Copyright (C) 1994,1995,1996, 2004 Thomas Nau
+Copyright (C) 1994, 1995, 1996, 2004 Thomas Nau
 
 Copyright (C) 1997, 1998, 1999, 2000, 2001, 2002 harry eaton
 
 Copyright (C) 2003, 2004, 2005, 2006, 2007, 2009 Dan McMahill
 
 Copyright (C) 2004 DJ Delorie
+
+Copyright (C) 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017 PCB Contributors
 
 This program is free software; you may redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -57,6 +58,7 @@ MERCHANT-ABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 @subtitle layout system
 @author harry eaton
 @end titlepage
+@contents
 
 @ifnottex
 @node Top
@@ -94,9 +96,15 @@ board layout system.
 @node Copying
 @unnumbered Copying
 
-Copyright @copyright{} 1994,1995,1996,1997 Thomas Nau
+Copyright @copyright{} 1994, 1995, 1996, 1997 Thomas Nau
 
-Copyright @copyright{} 1998,1999,2000,2001,2002 harry eaton
+Copyright @copyright{} 1998, 1999, 2000, 2001, 2002 harry eaton
+
+Copyright @copyright{} 2003, 2004, 2005, 2006, 2007, 2009 Dan McMahill
+
+Copyright @copyright{} 2004 DJ Delorie
+
+Copyright (C) 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017 PCB Contributors
 
 This program is free software; you may redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -183,6 +191,10 @@ files (and libraries) that can contain whole sub-layouts, metric grids, improved
 user interface, a GNU autoconf/automake based build system, and a host
 of other improvements.
 
+Release 4.0.0 adds a IPC-D-356 netlister, relocate plugin, smartdisperse
+plugin, RenumberBlock and RenumberBuffer plugin, teardrops plugin,
+tooltips in the GTK UI and footprints.
+
 Special thanks goes to:
 @display
 Thomas Nau (who started the project and wrote the early versions).
@@ -197,6 +209,22 @@ Erland Unruh (Erland.Unruh@@malmo.trab.se)
 Albert John FitzPatrick III (ajf_nylorac@@acm.org)
 Boerge Strand (borges@@ifi.uio.no)
 Andre M. Hedrick (hedrick@@Astro.Dyer.Vanderbilt.Edu)
+Anthony Blake (who wrote the toporouter code).
+
+PCB Contributors:
+Peter Clifton, Andrew Poelstra, Markus Hitter, Ben Jackson, Felix Ruoff,
+Sergey Alyoshin, Dima Kogan, Jerome Marchand, Jean Richard, Bob Paddock,
+Milan Prochac, Britton Leo Kerin, Roland Lutz, Charles Parker,
+Jared Casper, Stuart Brorson, aelmahmoudy, Krzysztof Ko@'sciuszkiewicz,
+Wiley E. Hill, Sergey Stepanov, Vladimir Zhbanov, Peter Brett,
+Steven Michalske, Leo B@"arring, Gareth Edwards, Anton Dubniak,
+Kai-Martin Knaak, Keith Packard, Patrick Bernaud, Robert Drehmel,
+Erich Heinzle, Marco Ciampa, Eugene Mikhantiev, Jorge Barros de Abreu,
+Richard Hughes, Eric Brombaugh, Benjamin Bergman, Braddock Gaskill,
+Dan White, Alan Somers, Richard Barlow, Bdale Garbee, Stanislav Brabec,
+Levente Kovacs, Ed Maste, Uwe Hermann, Ivan Stankovic, Peter S. May,
+Igor2, Felix K (kuhlix), rosvall, Martin, Christian Ams@"uss,
+Bert Timmerman.
 @end display
 
 @noindent
@@ -222,8 +250,10 @@ can be set as high as needed.
 @item RS-274X (Gerber) output
 @item NC Drill output
 @item Centroid (X-Y) data output
+@item IPC-D-356 (rev. 0) netlist data output
 @item Postscript and Encapsulated Postscript output
 @item Autorouter
+@item Topological router
 @item Trace optimizer
 @item Rats nest
 @item Design Rule Checker (DRC)
@@ -1922,6 +1952,7 @@ select the desired exporter.
 * bom::                Bill of materials.
 * gcode::              G-code.
 * gerber::             Gerber.
+* ipc-d-356::          IPC-D-356.
 * nelma::              Nelma.
 * scad::               OpenSCAD.
 * png::		       Image.
@@ -2018,6 +2049,12 @@ The final tool path follows the perimeter of all elements:
 @cindex gerber
 
 Produces RS274-X (a.k.a. gerber) photo plot files and Excellon drill files.
+
+@node ipc-d-356
+@subsection IPC-D-356 (ipcd356)
+@cindex ipc-d-356
+
+Produces an IPC-D-356 compliant netlist file for bare board testing.
 
 @node nelma
 @subsection Nelma (nelma)

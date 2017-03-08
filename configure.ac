@@ -1,8 +1,8 @@
 dnl Process this file with autoconf to produce a configure script.
 
-AC_INIT([pcb], [1.99z])
+AC_INIT([pcb], m4_esyscmd([git describe --abbrev=8 --always --tags | awk -F'-' '{printf "%s-%s", $1, $3}']))
 AC_CONFIG_SRCDIR([src/draw.c])
-AC_PREREQ([2.60])
+AC_PREREQ([2.69])
 AM_INIT_AUTOMAKE([1.9])
 AC_GNU_SOURCE
 AC_CONFIG_HEADERS([config.h])
@@ -119,8 +119,32 @@ AH_TEMPLATE([GETTEXT_PACKAGE], [Name of this program's gettext domain])
 AC_DEFINE_UNQUOTED([GETTEXT_PACKAGE], ["$GETTEXT_PACKAGE"])
 AC_SUBST(GETTEXT_PACKAGE)
 
-AM_GNU_GETTEXT_VERSION([0.14])
+AM_GNU_GETTEXT_VERSION([0.19.3])
 AM_GNU_GETTEXT
+
+AC_MSG_CHECKING([if $MSGFMT understands msgctxt (message context)])
+cat > conftest.po <<EOF
+[#]line __oline__ "configure"
+[#]. -- Info tab
+[#]: myfile.c:lineno
+msgctxt "tab"
+msgid "Info"
+msgstr ""
+EOF
+if ($MSGFMT -o conftest.gmo conftest.po >/dev/null; exit) 2>&AS_MESSAGE_LOG_FD
+then
+dnl
+  AC_MSG_RESULT([yes])
+else
+  AC_MSG_RESULT([no])
+  AC_MSG_ERROR([It appears that your gettext tools ($MSGFMT) is too old.
+You should install a newer gettext tools (>= 0.19.3 suggested).  You may
+specify the location of the msgfmt executible with MSGFMT=/path/to/msgfmt
+on the configure command line.
+])
+fi
+rm -f conftest.po conftest.gmo
+
 IT_PROG_INTLTOOL([0.35.0])
 
 AC_C_INLINE
@@ -240,7 +264,8 @@ Alternatively, you can disable building the documentation with
         AC_MSG_ERROR([You have requested a build
 of the documentation.  For this to work, you must have a functional install of
 TeX and LaTeX that includes epsf.tex.  On some linux distributions this is
-part of the texlive-generic-recommended package.
+part of the texlive-generic-recommended package.  On NetBSD this is is part
+of the tex-epsf package.
 Alternatively, you can disable building the documentation with
 --disable-doc.])
    fi
@@ -314,21 +339,6 @@ AS_CASE(["x$enable_toporouter"],[xyes | xno],,
 )
 AC_MSG_RESULT([$enable_toporouter])
 AM_CONDITIONAL([WITH_TOPOROUTER], test $enable_toporouter != no)
-
-if test "x$enable_toporouter" = "xyes"; then
-  this_error_text="
-    You have requested to build with the toporouter.  For this to work you
-    must have the GTS library installed, typically found in packages named
-    'libgts-dev' or similar.
-
-    Alternatively you can disable the toporouter with --disable-toporouter."
-  # Testing for gts.h requires glib.h, which is tested for later. To not take
-  # apart toporouter related stuff and because testing for the library makes
-  # reasonably sure that GTS is available, we omit a test for gts.h.
-  #AC_CHECK_HEADER(gts.h, , AC_MSG_ERROR($this_error_text), glib.h)
-  AC_SEARCH_LIBS(gts_object_class_new, gts, , AC_MSG_ERROR($this_error_text))
-  unset this_error_text
-fi
 
 AC_MSG_CHECKING([whether to enable toporouter output])
 AC_ARG_ENABLE([toporouter-output],
@@ -630,6 +640,7 @@ AC_PATH_PROG(IM_COMPOSITE, composite, notfound)
 AC_PATH_PROG(IM_CONVERT, convert, notfound)
 AC_PATH_PROG(IM_DISPLAY, display, notfound)
 AC_PATH_PROG(IM_MONTAGE, montage, notfound)
+AC_PATH_PROG(XHOST, xhost, notfound)
 missing_magick=""
 test "${IM_ANIMATE}" != "notfound" || missing_magick="${missing_magick} animate"
 test "${IM_COMPARE}" != "notfound" || missing_magick="${missing_magick} compare"
@@ -663,7 +674,7 @@ test $GERBV != notfound || have_test_tools=no
 
 
 AM_CONDITIONAL(HAVE_TEST_TOOLS, test x$have_test_tools = xyes)
-AC_MSG_CHECKING([if all the requried testsuite tools were found])
+AC_MSG_CHECKING([if all the required testsuite tools were found])
 if test x$have_test_tools = xyes ; then
 	AC_MSG_RESULT([yes])
 else
@@ -680,6 +691,10 @@ AC_CHECK_LIB(m, sqrt)
 AC_CHECK_LIB(dl, dlopen)
 AC_CHECK_LIB(xnet, gethostbyname)
 AC_CHECK_LIB(fl, yywrap)
+
+dnl Checks for functions
+AC_CHECK_FUNCS(getline)
+AC_CHECK_FUNCS(strcasestr)
 AC_CHECK_FUNCS(strerror)
 AC_CHECK_FUNCS(regcomp re_comp)
 AC_CHECK_FUNCS(logf expf rint)
@@ -837,58 +852,48 @@ $GTKGLEXT_PKG_ERRORS])]
 done
 
 if test "$need_gdlib" = "yes"; then
-	# Check for gdlib-config for gd (www.boutell.com/gd)
-	AC_PATH_PROG(GDLIB_CONFIG, gdlib-config, no)
-	if test "$GDLIB_CONFIG" = "no"; then
-		AC_MSG_RESULT([Cannot find gdlib-config.
-Make sure it is installed and in your PATH.
-gdlib-config is part of the GD library available from www.boutell.com/gd.
-This is needed for the png HID.  I will look for libgd anyway and maybe
-you will get lucky.
-])
-		if test "$WIN32" != "yes" ; then
-			AC_CHECK_LIB(gd,main,,
-			AC_MSG_ERROR([[You have requested gcode, nelma, or png HIDs  but -lgd could not be found]]))
-		else 
-			AC_CHECK_LIB(bgd,main,,
-			AC_MSG_ERROR([[You have requested gcode, nelma, or png HIDs  but -lbgd could not be found]]))
-		fi
-	else
-		if test "$WIN32" = "yes" ; then
-			GD=bgd
+	# Search for glib
+	PKG_CHECK_MODULES(GDLIB, gdlib,[found_gdlib=yes] , [found_gdlib=no])
+
+	if test "X$found_gdlib" = "Xno"; then
+		# older installs came with gdlib-config and not the .pc file
+		# to work with pkg-config
+		AC_PATH_PROG([GDLIB_CONFIG], [gdlib-config], [notfound])
+		if test "$GDLIB_CONFIG" = "notfound" ; then
+			AC_MSG_ERROR([cannot find gdlib-config.  gdlib
+is required for gcode, nelma, png HIDs 
+You may want to review the following errors
+from $PKG_CONFIG:
+$GDLIB_PKG_ERRORS])
 		else
-			GD=gd
+			AC_MSG_CHECKING([for gdlib cflags])
+			GDLIB_CFLAGS=`${GDLIB_CONFIG} --cflags`
+			AC_MSG_RESULT([$GDLIB_CFLAGS])
+
+			AC_MSG_CHECKING([for gdlib libraries])
+			GDLIB_LIBS=`${GDLIB_CONFIG} --libs`
+			AC_MSG_RESULT([$GDLIB_LIBS])
+
+			AC_MSG_CHECKING([for gdlib ldflags])
+			GDLIB_LDFLAGS=`${GDLIB_CONFIG} --ldflags`
+			AC_MSG_RESULT([$GDLIB_LDFLAGS])
 		fi
-		AC_MSG_CHECKING([for libgd cflags])
-		GD_CFLAGS="`$GDLIB_CONFIG --cflags`"
-		AC_MSG_RESULT([$GD_CFLAGS])
-		AC_MSG_CHECKING([for libgd libs])
-		GD_LIBS="`$GDLIB_CONFIG --ldflags` `$GDLIB_CONFIG --libs` -l${GD}"
-		AC_MSG_RESULT([$GD_LIBS])
 	fi
-   
-	# since some linux systems evidently install gdlib-config but fail to
-	# install the headers (nice), check for the header too and fail if it
-	# is not there.
-	save_CPPFLAGS="$CPPFLAGS"
-	CPPFLAGS="$CPPFLAGS $GD_CFLAGS"
-	AC_CHECK_HEADERS(gd.h)
-	CPPFLASS="$save_CPPFLAGS"
-	case $ac_cv_header_gd_h in
-	     no )
-		AC_MSG_ERROR([
-You evidentally do not have a complete installation of the GD library available from www.boutell.com/gd.
-This is needed for the nelma and/or png HID.
-])
-		;;
-	     * ) ;;
-	esac
-	
-	# Some versions of gd (prior to the expiration of the
-	# patent related to gif compression) do not support
-	# gif output.  Check for that here.
+
 	save_LIBS="$LIBS"
-	LIBS="$save_LIBS $GD_LIBS $X_LIBS"
+	LIBS="$LIBS $GDLIB_LDFLAGS $GDLIB_LIBS"
+
+	# some older installs, Ubuntu Precise for example, leave off the "-lgd" part.
+	# try to see if it needs to be added
+	before_LIBS="$LIBS"
+	AC_SEARCH_LIBS([gdImageCreate],[gd],[],[
+			AC_MSG_ERROR([Unable to figure out how to link gd applications.
+It is likely that your system has a broken gdlib-config or gdlib.pc file used by
+pkg-config.
+])],[])
+	if test "$LIBS" != "${before_LIBS}" ; then
+		GDLIB_LIBS="${GDLIB_LIBS} -lgd"
+	fi
 
 	if test "X$with_gif" = "Xyes" ; then
 		AC_CHECK_FUNCS(gdImageGif)
@@ -1133,8 +1138,8 @@ AC_DEFINE_UNQUOTED([COORD_MAX],[$COORD_MAX],
 
 # ------------- Complete set of CPPFLAGS and LIBS -------------------
 
-CPPFLAGS="$CPPFLAGS $X_CFLAGS $DBUS_CFLAGS $GLIB_CFLAGS $GTK_CFLAGS $GD_CFLAGS $CAIRO_CFLAGS $GTKGLEXT_CFLAGS $GLU_CFLAGS $GL_CFLAGS"
-LIBS="$LIBS $XM_LIBS $DBUS_LIBS $X_LIBS $GLIB_LIBS $GTK_LIBS $DMALLOC_LIBS $GD_LIBS $INTLLIBS $CAIRO_LIBS $GTKGLEXT_LIBS $GLU_LIBS $GL_LIBS"
+CPPFLAGS="$CPPFLAGS $X_CFLAGS $DBUS_CFLAGS $GDLIB_CFLAGS $GLIB_CFLAGS $GTK_CFLAGS $GD_CFLAGS $CAIRO_CFLAGS $GTKGLEXT_CFLAGS $GLU_CFLAGS $GL_CFLAGS"
+LIBS="$LIBS $XM_LIBS $DBUS_LIBS $X_LIBS $GDLIB_LDFLAGS $GDLIB_LIBS $GLIB_LIBS $GTK_LIBS $DMALLOC_LIBS $GD_LIBS $INTLLIBS $CAIRO_LIBS $GTKGLEXT_LIBS $GLU_LIBS $GL_LIBS"
 
 
 # if we have gcc then add -Wall
@@ -1343,8 +1348,14 @@ fi
 dnl testsuite
 AC_CONFIG_FILES(tests/Makefile)
 
+dnl GTS 0.7.6 - http://gts.sourceforge.net/
+AC_CONFIG_FILES(gts/Makefile)
+
 dnl win32 build scripts
 AC_CONFIG_FILES(w32/Makefile)
+
+dnl for building under cygwin
+AC_CONFIG_FILES(win32/Makefile)
 
 AC_OUTPUT
 

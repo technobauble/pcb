@@ -64,15 +64,15 @@ echo "Patching some intltoolize output"
 
 mv po/Makefile.in.in po/Makefile.in.in.orig
 sed \
-	-e 's/^MSGMERGE *=/MSGMERGE = XGETTEXT=\${XGETTEXT} MSGFMT=\${MSGFMT} /g' \
-	-e 's/^GENPOT *=/GENPOT = XGETTEXT=\${XGETTEXT} MSGFMT=\${MSGFMT} /g' \
+	-e 's/^MSGMERGE *=/MSGMERGE = XGETTEXT="\${XGETTEXT}" MSGFMT="\${MSGFMT}" /g' \
+	-e 's/^GENPOT *=/GENPOT = XGETTEXT="\${XGETTEXT}" MSGFMT="\${MSGFMT}" /g' \
 	-e 's/ChangeLog//g' \
 	po/Makefile.in.in.orig > po/Makefile.in.in
 
 # Menu i18n
 echo "
 %.res.h: %.res
-	make -C ../src \$@" >> po/Makefile.in.in
+	\$(MAKE) -C ../src \$@" >> po/Makefile.in.in
 
 rm -f po/Makefile.in.in.orig
 

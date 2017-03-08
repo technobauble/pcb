@@ -1899,8 +1899,6 @@ char *program_directory = 0;
 void
 pcb_main_uninit (void)
 {
-  int i;
-
   if (gui->uninit != NULL)
     gui->uninit (gui);
 
@@ -1912,6 +1910,9 @@ pcb_main_uninit (void)
   free (PCB);
   PCB = NULL;
 
+  /*! 
+   * \warning Please do not free the below variables like:
+   * \code
   for (i = 0; i < MAX_LAYER; i++)
     free (Settings.DefaultLayerName[i]);
 
@@ -1920,6 +1921,10 @@ pcb_main_uninit (void)
       free (Settings.FontFile);
       Settings.FontFile = NULL;
     }
+   * \endcode
+   * as these are initialized to static strings and freeing them
+   * causes segfaults when terminating the program.
+   */
 
   uninit_strflags_buf ();
   uninit_strflags_layerlist ();

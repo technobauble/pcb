@@ -74,7 +74,7 @@ uninstall-local:
 	chmod -R a+w $(DESTDIR)$(PCBLIBDIR)/${NEWLIB}
 	rm -fr $(DESTDIR)$(PCBLIBDIR)/${NEWLIB}
 
-EXTRA_DIST=	${NEWLIB} footprint.pcb ${NEWLIB}.stamp png_diff.sh
+EXTRA_DIST=	${NEWLIB} footprint.pcb ${NEWLIB}.stamp png_diff.sh README-m4libs
 
 if BUILD_PCBLIB_NEWLIB
 DISTCLEANFILES=	${NEWLIB}.stamp
@@ -152,6 +152,7 @@ INC_FILES= \
 	bga.inc \
 	amp.inc \
 	amphenol.inc \
+	aries.inc \
 	bourns.inc \
 	candk.inc \
 	connector.inc \
@@ -173,30 +174,37 @@ INC_FILES= \
 	resistor_adjust.inc \
 	rules.inc \
 	smt.inc \
+	tdk.inc \
 	to.inc \
+	toko.inc \
+	united_chemicon.inc \
 	zif.inc 
 
 DAT_FILES= \
 	qfp.dat
 
-M4_FILES=	${M4_DIST_FILES} amp.m4 bourns.m4 candk.m4 cts.m4 geda.m4 johnstech.m4 minicircuits.m4 nichicon.m4 optek.m4 panasonic.m4
-LIST_FILES=	${LIST_DIST_FILES} amp.list bourns.list candk.list cts.list geda.list johnstech.list minicircuits.list nichicon.list \
-		optek.list panasonic.list
+M4_FILES=	${M4_DIST_FILES} amp.m4 aries.m4 bourns.m4 candk.m4 cts.m4 geda.m4 johnstech.m4 minicircuits.m4 nichicon.m4 \
+		optek.m4 panasonic.m4 tdk.m4 toko.m4 united_chemicon.m4
+LIST_FILES=	${LIST_DIST_FILES} amp.list aries.list bourns.list candk.list cts.list geda.list johnstech.list minicircuits.list nichicon.list \
+		optek.list panasonic.list tdk.list toko.list united_chemicon.list
 
 LIB_FILES= ${COMMON_FILE} ${M4_FILES} ${LIST_FILES} ${INC_FILES} 
 
 EXTRA_DIST+=	ListLibraryContents.sh ${COMMON_FILE} ${M4_DIST_FILES} ${OBSOLETE_LIST_DIST_FILES} \
 		${LIST_DIST_FILES} ${INC_FILES} \
 		${LIBCONTENTS} \
-		${DAT_FILES} gen_list.awk gen_m4.awk gen_geda_m4.awk gen_geda_list.awk
+		${DAT_FILES} gen_list.awk gen_m4.awk 
 
-DISTCLEANFILES+=	${LIBRARYFILENAME} ${LIBRARYFILENAME}.contents amp.m4 amp.list \
+DISTCLEANFILES+=	${LIBRARYFILENAME} ${LIBRARYFILENAME}.contents amp.m4 amp.list aries.m4 aries.list \
 	cts.m4 cts.list bourns.m4 bourns.list \
 	candk.m4 candk.list \
 	geda.m4 geda.list johnstech.m4 johnstech.list minicircuits.m4 minicircuits.list \
 	nichicon.m4 nichicon.list \
 	optek.m4 optek.list \
-	panasonic.m4 panasonic.list
+	panasonic.m4 panasonic.list \
+	tdk.m4 tdk.list \
+	toko.m4 toko.list \
+	united_chemicon.m4 united_chemicon.list
 
 ${LIBRARYFILENAME}: ${COMMON_FILE} ${INC_FILES} ${DAT_FILES} ${M4_FILES} CreateLibrary.sh
 	${SHELL} ./CreateLibrary.sh -I $(srcdir) $@ $(srcdir)/${COMMON_FILE} ${M4_FILES}
@@ -209,6 +217,12 @@ amp.list: amp.inc gen_list.awk
 
 amp.m4: amp.inc gen_m4.awk
 	${AWK} -f $(srcdir)/gen_m4.awk name=amp $(srcdir)/amp.inc > $@
+
+aries.list: aries.inc gen_list.awk
+	${AWK} -f $(srcdir)/gen_list.awk name=aries $(srcdir)/aries.inc > $@
+
+aries.m4: aries.inc gen_m4.awk
+	${AWK} -f $(srcdir)/gen_m4.awk name=aries $(srcdir)/aries.inc > $@
 
 bourns.list: bourns.inc gen_list.awk
 	${AWK} -f $(srcdir)/gen_list.awk name=bourns $(srcdir)/bourns.inc > $@
@@ -258,9 +272,27 @@ panasonic.list: panasonic.inc gen_list.awk
 panasonic.m4: panasonic.inc gen_m4.awk
 	${AWK} -f $(srcdir)/gen_m4.awk name=panasonic $(srcdir)/panasonic.inc > $@
 
-geda.m4: geda.inc gen_geda_m4.awk
-	${AWK} -f $(srcdir)/gen_geda_m4.awk $(srcdir)/geda.inc > $@
+geda.m4: geda.inc gen_m4.awk
+	${AWK} -f $(srcdir)/gen_m4.awk name=geda $(srcdir)/geda.inc > $@
 
-geda.list: geda.inc gen_geda_list.awk
-	${AWK} -f $(srcdir)/gen_geda_list.awk $(srcdir)/geda.inc > $@
+geda.list: geda.inc gen_list.awk
+	${AWK} -f $(srcdir)/gen_list.awk name=geda $(srcdir)/geda.inc > $@
+
+tdk.list: tdk.inc gen_list.awk
+	${AWK} -f $(srcdir)/gen_list.awk name=tdk $(srcdir)/tdk.inc > $@
+
+tdk.m4: tdk.inc gen_m4.awk
+	${AWK} -f $(srcdir)/gen_m4.awk name=tdk $(srcdir)/tdk.inc > $@
+
+toko.list: toko.inc gen_list.awk
+	${AWK} -f $(srcdir)/gen_list.awk name=toko $(srcdir)/toko.inc > $@
+
+toko.m4: toko.inc gen_m4.awk
+	${AWK} -f $(srcdir)/gen_m4.awk name=toko $(srcdir)/toko.inc > $@
+
+united_chemicon.list: united_chemicon.inc gen_list.awk
+	${AWK} -f $(srcdir)/gen_list.awk name=united_chemicon $(srcdir)/united_chemicon.inc > $@
+
+united_chemicon.m4: united_chemicon.inc gen_m4.awk
+	${AWK} -f $(srcdir)/gen_m4.awk name=united_chemicon $(srcdir)/united_chemicon.inc > $@
 

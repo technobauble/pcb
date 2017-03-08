@@ -188,7 +188,7 @@ LibraryEntryType * GetLibraryEntryMemory (LibraryMenuType *);
  static void PopC(void);
 %}
 
-%name-prefix="edif"
+%name-prefix "edif"
 
 %union {
     char* s;
@@ -3889,6 +3889,16 @@ static Context *FindContext(register int cod)
   return (wlk);
 }
 /*
+ *	Parser state variables.
+ */
+static FILE *Input = NULL;		/* input stream */
+static FILE *Error = NULL;		/* error stream */
+static char *InFile;			/* file name on the input stream */
+static long LineNumber;			/* current input line number */
+static ContextCar *CSP = NULL;		/* top of context stack */
+static char yytext[IDENT_LENGTH + 1];	/* token buffer */
+static char CharBuf[IDENT_LENGTH + 1];	/* garbage buffer */
+/*
  *	Token stacking variables.
  */
 #ifdef	DEBUG
@@ -3903,7 +3913,7 @@ static short TokenType[TS_DEPTH];	/* token types */
  *	  Add a token to the debug stack. The passed string and type are
  *	what is to be pushed.
  */
-static Stack(char * str, int typ)
+static int Stack(char * str, int typ)
 {
   /*
    *	Free any previous string, then push.
@@ -3913,13 +3923,14 @@ static Stack(char * str, int typ)
   TokenStack[TSP & TS_MASK] = strcpy((char *)Malloc(strlen(str) + 1),str);
   TokenType[TSP & TS_MASK] = typ;
   TSP += 1;
+  return 0;
 }
 /*
  *	Dump stack:
  *
  *	  This displays the last set of accumulated tokens.
  */
-static DumpStack()
+static int DumpStack()
 {
   /*
    *	Locals.
@@ -3937,16 +3948,16 @@ static DumpStack()
       /*
        *	Get the type name string.
        */
-      if (cxt = FindContext(TokenType[(TSP + i) & TS_MASK]))
+      if ((cxt = FindContext(TokenType[(TSP + i) & TS_MASK])))
         nam = cxt->Name;
-      else if (tok = FindToken(TokenType[(TSP + i) & TS_MASK]))
+      else if ((tok = FindToken(TokenType[(TSP + i) & TS_MASK])))
         nam = tok->Name;
       else switch (TokenType[(TSP + i) & TS_MASK]){
-      	case IDENT:	nam = "IDENT";		break;
-      	case INT:	nam = "INT";		break;
-      	case KEYWORD:	nam = "KEYWORD";	break;
-      	case STR:	nam = "STR";		break;
-      	default:	nam = "?";		break;
+      	case EDIF_TOK_IDENT:    nam = "IDENT";      break;
+      	case EDIF_TOK_INT:      nam = "INT";        break;
+      	case EDIF_TOK_KEYWORD:  nam = "KEYWORD";    break;
+      	case EDIF_TOK_STR:      nam = "STR";        break;
+      	default:                nam = "?";          break;
       }
       /*
        *	Now print the token state.
@@ -3955,20 +3966,11 @@ static DumpStack()
         TokenStack[(TSP + i) & TS_MASK]);
     }
   fprintf(Error,"\n");
+  return 0;
 }
 #else
 #define	Stack(s,t)
 #endif	/* DEBUG */
-/*
- *	Parser state variables.
- */
-static FILE *Input = NULL;		/* input stream */
-static FILE *Error = NULL;		/* error stream */
-static char *InFile;			/* file name on the input stream */
-static long LineNumber;			/* current input line number */
-static ContextCar *CSP = NULL;		/* top of context stack */
-static char yytext[IDENT_LENGTH + 1];	/* token buffer */
-static char CharBuf[IDENT_LENGTH + 1];	/* garbage buffer */
 /*
  *	yyerror:
  *

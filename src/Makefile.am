@@ -72,6 +72,7 @@ PCB_SRCS = \
 	fontmode.c \
 	free_atexit.c \
 	free_atexit.h \
+	getline.c \
 	gettext.h \
 	global.h \
 	heap.c \
@@ -137,6 +138,7 @@ PCB_SRCS = \
 	set.c \
 	set.h \
 	smartdisperse.c \
+	strcasestr.c \
 	strflags.c \
 	strflags.h \
 	teardrops.c \
@@ -203,10 +205,12 @@ pcb_DEPENDENCIES = @HIDLIBS@
 
 if WITH_TOPOROUTER
 PCB_SRCS += toporouter.c toporouter.h
+pcb_LDADD += ../gts/libgts.a
+pcb_DEPENDENCIES += ../gts/libgts.a
 endif
 
 # All these -I$(top_srcdir) in this file are for globalconst.h.
-pcb_CPPFLAGS = -I$(top_srcdir)
+pcb_CPPFLAGS = -I$(top_srcdir) -I$(srcdir)/../gts
 pcb_SOURCES = ${PCB_SRCS} core_lists.h
 
 TEST_SRCS = \
@@ -277,7 +281,12 @@ gpcb-menu.h : gpcb-menu.res
 	sed 's/\\/\\\\/g; s/"/\\"/g; s/^/"/; s/$$/",/' < gpcb-menu.res >> $@
 	echo '0};' >> $@
 
-# Menus i18n
+# Menus i18n.  The .res.h files are used simply to give strings which
+# feed into ../po/pcb.pot for translation.  This is the only place
+# these files are used.  When menu resources are parsed, the strings
+# are translated.  We likely should find a way to not try to copy
+# back to srcdir all the time but it is possible that the gettext/intltool
+# flow can't really deal with getting strings from built sources.
 %.res.h : %.res
 	$(INTLTOOL_EXTRACT) --type=gettext/quoted $^
 	mv -f $@ ${srcdir}/$@ || true

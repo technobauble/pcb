@@ -1,3 +1,36 @@
+/*!
+ * \file src/hid/lesstif/main.c
+ *
+ * \brief The lesstif HID implementation
+ *
+ * <hr>
+ *
+ * <h1><b>Copyright.</b></h1>\n
+ *
+ * PCB, interactive printed circuit board design
+ *
+ * Copyright (C) 1994,1995,1996,1997,1998,2005,2006 Thomas Nau
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ *
+ * Contact addresses for paper mail and Email:
+ * Thomas Nau, Schlehenweg 15, 88471 Baustetten, Germany
+ * Thomas.Nau@rz.uni-ulm.de
+ *
+ */
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -1334,7 +1367,7 @@ Pan (int mode, int x, int y)
 static void
 mod_changed (XKeyEvent * e, int set)
 {
-  switch (XKeycodeToKeysym (display, e->keycode, 0))
+  switch (XkbKeycodeToKeysym (display, e->keycode, 0, e->state & ShiftMask ? 1:0))
     {
     case XK_Shift_L:
     case XK_Shift_R:
@@ -2302,6 +2335,9 @@ lesstif_parse_arguments (int *argc, char ***argv)
     }
 }
 
+/*!
+ * \brief Draw the grid on the lesstif canvas
+ */
 static void
 draw_grid ()
 {
@@ -2313,78 +2349,74 @@ draw_grid ()
   static GC grid_gc = 0;
 
   if (!Settings.DrawGrid)
-    return;
+    return; /* grid hidden */
   if (Vz (PCB->Grid) < MIN_GRID_DISTANCE)
-    return;
+    return; /* zoomed in too far, no grid points */
   if (!grid_gc)
     {
       grid_gc = XCreateGC (display, window, 0, 0);
       XSetFunction (display, grid_gc, GXxor);
       XSetForeground (display, grid_gc, grid_color);
     }
+  /* Find the bounding grid points, all others lay between them, the points
+     could be outside the drawing area, so skip those. */
   if (flip_x)
     {
       x2 = GridFit (Px (0), PCB->Grid, PCB->GridOffsetX);
       x1 = GridFit (Px (view_width), PCB->Grid, PCB->GridOffsetX);
-      if (Vx (x2) < 0)
-	x2 -= PCB->Grid;
-      if (Vx (x1) >= view_width)
-	x1 += PCB->Grid;
+      if (Vx (x2) < 0)    x2 -= PCB->Grid;
+      if (Vx (x1) >= view_width)    x1 += PCB->Grid;
     }
   else
     {
       x1 = GridFit (Px (0), PCB->Grid, PCB->GridOffsetX);
       x2 = GridFit (Px (view_width), PCB->Grid, PCB->GridOffsetX);
-      if (Vx (x1) < 0)
-	x1 += PCB->Grid;
-      if (Vx (x2) >= view_width)
-	x2 -= PCB->Grid;
+      if (Vx (x1) < 0)    x1 += PCB->Grid;
+      if (Vx (x2) >= view_width)    x2 -= PCB->Grid;
     }
   if (flip_y)
     {
       y2 = GridFit (Py (0), PCB->Grid, PCB->GridOffsetY);
       y1 = GridFit (Py (view_height), PCB->Grid, PCB->GridOffsetY);
-      if (Vy (y2) < 0)
-	y2 -= PCB->Grid;
-      if (Vy (y1) >= view_height)
-	y1 += PCB->Grid;
+      if (Vy (y2) < 0)    y2 -= PCB->Grid;
+      if (Vy (y1) >= view_height)    y1 += PCB->Grid;
     }
   else
     {
       y1 = GridFit (Py (0), PCB->Grid, PCB->GridOffsetY);
       y2 = GridFit (Py (view_height), PCB->Grid, PCB->GridOffsetY);
-      if (Vy (y1) < 0)
-	y1 += PCB->Grid;
-      if (Vy (y2) >= view_height)
-	y2 -= PCB->Grid;
+      if (Vy (y1) < 0)    y1 += PCB->Grid;
+      if (Vy (y2) >= view_height)    y2 -= PCB->Grid;
     }
-  n = (x2 - x1) / PCB->Grid + 1;
+  n = (x2 - x1) / PCB->Grid + 1; /* Number of points in one row */
   if (n > npoints)
-    {
+    { /* [n]points are static, reallocate if we need more memory */
       npoints = n + 10;
       points = (XPoint *) realloc (points, npoints * sizeof (XPoint));
     }
   n = 0;
   prevx = 0;
   for (x = x1; x <= x2; x += PCB->Grid)
+  {
+    int temp = Vx (x);
+    points[n].x = temp;
+    if (n)
     {
-      int temp = Vx (x);
-      points[n].x = temp;
-      if (n)
-	{
-	  points[n].x -= prevx;
-	  points[n].y = 0;
-	}
-      prevx = temp;
-      n++;
+      points[n].x -= prevx;
+      points[n].y = 0;
     }
+    prevx = temp;
+    n++;
+  }
   for (y = y1; y <= y2; y += PCB->Grid)
-    {
-      int vy = Vy (y);
-      points[0].y = vy;
-      XDrawPoints (display, pixmap, grid_gc, points, n, CoordModePrevious);
-    }
-}
+  {
+    int vy = Vy (y);
+    points[0].y = vy;
+    /* Draw a row of points. CoordModePrevious makes next point relative to
+       previous point */
+    XDrawPoints (display, pixmap, grid_gc, points, n, CoordModePrevious);
+  }
+} /* end draw_grid */
 
 static void
 mark_delta_to_widget (Coord dx, Coord dy, Widget w)
