@@ -462,6 +462,7 @@ assign_eagle_file_suffix (char *dest, int idx)
     case SL (FAB,       0):      suff = "fab"; break;
     case SL (ASSY,      TOP):    suff = "ast"; break;
     case SL (ASSY,      BOTTOM): suff = "asb"; break;
+    case SL (OUTLINE,   0):      suff = "oln"; break;
 
     default:
       group = GetLayerGroupNumberByNumber(idx);
@@ -517,6 +518,7 @@ assign_hackvana_file_suffix (char *dest, int idx)
     case SL (FAB,       0):      suff = "fab"; break;
     case SL (ASSY,      TOP):    suff = "ast"; break;
     case SL (ASSY,      BOTTOM): suff = "asb"; break;
+    case SL (OUTLINE,   0):      suff = "gml"; break;
 
     default:
       group = GetLayerGroupNumberByNumber(idx);
