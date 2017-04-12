@@ -950,16 +950,16 @@ CursorAction(int argc, char **argv, Coord x, Coord y)
     { "board", PCB->MaxHeight, UNIT_PERCENT },
     { "", 0, 0 }
   };
-  int pan_warp = HID_SC_DO_NOTHING;
+  int pan_warp = HID_MV_DO_NOTHING;
   double dx, dy;
 
   if (argc != 4)
     AFAIL(cursor);
 
   if (strcasecmp (argv[0], "pan") == 0)
-    pan_warp = HID_SC_PAN_VIEWPORT;
+    pan_warp = HID_MV_PAN_VIEWPORT;
   else if (strcasecmp (argv[0], "warp") == 0)
-    pan_warp = HID_SC_WARP_POINTER;
+    pan_warp = HID_MV_WARP_POINTER;
   else
     AFAIL(cursor);
 
@@ -971,7 +971,7 @@ CursorAction(int argc, char **argv, Coord x, Coord y)
     dy = -dy;
 
   EventMoveCrosshair (Crosshair.X + dx, Crosshair.Y + dy);
-  gui->set_crosshair (Crosshair.X, Crosshair.Y, pan_warp);
+  gui->move_viewport (Crosshair.X, Crosshair.Y, pan_warp);
 
   return 0;
 }
@@ -3560,63 +3560,42 @@ lesstif_mod1_is_pressed (void)
 
 extern void lesstif_get_coords (const char *msg, Coord *x, Coord *y);
 
-static void
-lesstif_set_crosshair (int x, int y, int action)
+static void lesstif_move_viewport(int x, int y, int action)
 {
-  if (crosshair_x != x || crosshair_y != y)
-    {
-      lesstif_show_crosshair(0);
-      crosshair_x = x;
-      crosshair_y = y;
-      need_idle_proc ();
-
-      if (mainwind
-	  && !in_move_event
-	  && (x < view_left_x
-	      || x > view_left_x + view_width * view_zoom
-	      || y < view_top_y || y > view_top_y + view_height * view_zoom))
-	{
-	  view_left_x = x - (view_width * view_zoom) / 2;
-	  view_top_y = y - (view_height * view_zoom) / 2;
-	  lesstif_pan_fixup ();
-	}
-
-    }
-
-  if (action == HID_SC_CENTER_IN_VIEWPORT_AND_WARP_POINTER)
-    {
-      fprintf (
-          stderr,
-          "warning:%s:%i: HID_SC_CENTER_IN_VIEWPORT_AND_WARP_POINTER not "
-          "implemented in this HID, using HID_SC_WARP_POINTER instead\n",
-          __FILE__,
-          __LINE__ );
-      action = HID_SC_WARP_POINTER;
-    }
-  if (action == HID_SC_PAN_VIEWPORT)
-    {
-      Window root, child;
-      unsigned int keys_buttons;
-      int pos_x, pos_y, root_x, root_y;
-      XQueryPointer (display, window, &root, &child,
-		     &root_x, &root_y, &pos_x, &pos_y, &keys_buttons);
-      if (flip_x)
-	view_left_x = x - (view_width-pos_x) * view_zoom;
-      else
-	view_left_x = x - pos_x * view_zoom;
-      if (flip_y)
-	view_top_y = y - (view_height-pos_y) * view_zoom;
-      else
-	view_top_y = y - pos_y * view_zoom;
+  if (action == HID_MV_CENTER_IN_VIEWPORT_AND_WARP_POINTER)
+  {
+    fprintf (
+             stderr,
+             "warning:%s:%i: HID_MV_CENTER_IN_VIEWPORT_AND_WARP_POINTER not "
+             "implemented in this HID, using HID_MV_WARP_POINTER instead\n",
+             __FILE__,
+             __LINE__ );
+    action = HID_MV_WARP_POINTER;
+  }
+  if (action == HID_MV_PAN_VIEWPORT)
+  {
+    Window root, child;
+    unsigned int keys_buttons;
+    int pos_x, pos_y, root_x, root_y;
+    XQueryPointer (display, window, &root, &child,
+                   &root_x, &root_y, &pos_x, &pos_y, &keys_buttons);
+    if (flip_x)
+      view_left_x = x - (view_width-pos_x) * view_zoom;
+    else
+      view_left_x = x - pos_x * view_zoom;
+    if (flip_y)
+      view_top_y = y - (view_height-pos_y) * view_zoom;
+    else
+      view_top_y = y - pos_y * view_zoom;
       lesstif_pan_fixup();
-      action = HID_SC_WARP_POINTER;
-    }
-  if (action == HID_SC_WARP_POINTER)
-    {
-      in_move_event ++;
-      XWarpPointer (display, None, window, 0, 0, 0, 0, Vx(x), Vy(y));
-      in_move_event --;
-    }
+      action = HID_MV_WARP_POINTER;
+  }
+  if (action == HID_MV_WARP_POINTER)
+  {
+    in_move_event ++;
+    XWarpPointer (display, None, window, 0, 0, 0, 0, Vx(x), Vy(y));
+    in_move_event --;
+  }
 }
 
 typedef struct
@@ -4133,7 +4112,7 @@ hid_lesstif_init ()
   lesstif_hid.control_is_pressed      = lesstif_control_is_pressed;
   lesstif_hid.mod1_is_pressed         = lesstif_mod1_is_pressed;
   lesstif_hid.get_coords              = lesstif_get_coords;
-  lesstif_hid.set_crosshair           = lesstif_set_crosshair;
+  lesstif_hid.move_viewport           = lesstif_move_viewport;
   lesstif_hid.add_timer               = lesstif_add_timer;
   lesstif_hid.stop_timer              = lesstif_stop_timer;
   lesstif_hid.watch_file              = lesstif_watch_file;

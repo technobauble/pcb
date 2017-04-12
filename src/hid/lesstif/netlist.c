@@ -256,7 +256,8 @@ netnode_browse (Widget w, XtPointer v, XmListCallbackStruct * cbs)
 	    {
 	      int x = (pad->Point1.X + pad->Point2.X) / 2;
 	      int y = (pad->Point1.Y + pad->Point2.Y) / 2;
-	      gui->set_crosshair (x, y, HID_SC_PAN_VIEWPORT);
+        Crosshair.X = x; Crosshair.Y = y;
+	      gui->move_viewport (x, y, HID_MV_PAN_VIEWPORT);
 	      free (ename);
 	      return;
 	    }
