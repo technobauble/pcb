@@ -991,10 +991,11 @@ check_snap_offgrid_line (struct snap_data *snap_data,
  * \brief Recalculates the passed coordinates to fit the current grid
  * setting.
  */
-void
+PointType
 FitCrosshairIntoGrid (Coord X, Coord Y)
 {
   Coord nearest_grid_x, nearest_grid_y;
+  PointType snap_point;
   void *ptr1, *ptr2, *ptr3;
   struct snap_data snap_data;
   int ans;
@@ -1181,7 +1182,8 @@ FitCrosshairIntoGrid (Coord X, Coord Y)
       && TEST_FLAG (AUTODRCFLAG, PCB))
     EnforceLineDRC ();
 
-  gui->set_crosshair (Crosshair.X, Crosshair.Y, HID_SC_DO_NOTHING);
+  snap_point.X = Crosshair.X; snap_point.Y = Crosshair.Y;
+  return snap_point;
 }
 
 /*!
@@ -1195,7 +1197,7 @@ MoveCrosshairAbsolute (Coord X, Coord Y)
   Coord old_x = Crosshair.X;
   Coord old_y = Crosshair.Y;
 
-  FitCrosshairIntoGrid (X, Y);
+  Crosshair.snap(X, Y);
 
   if (Crosshair.X != old_x || Crosshair.Y != old_y)
     {
@@ -1232,6 +1234,29 @@ SetCrosshairRange (Coord MinX, Coord MinY, Coord MaxX, Coord MaxY)
 }
 
 /*!
+ * \brief Draw the crosshair
+ */
+void
+draw_crosshair(Coord x, Coord y)
+{
+  switch(Crosshair.shape){
+  case Dozen_Crosshair_Shape:
+      /* TODO: Draw the dozen shape */
+      /* fall through */
+  case Union_Jack_Crosshair_Shape:
+      /* TODO: Draw the slanted cross */
+      /* fall through */
+  case Basic_Crosshair_Shape: /* Draw the horizontal and vertical lines */
+  default:
+    gui->graphics->draw_line(Crosshair.GC, Crosshair.X, 0,
+                                           Crosshair.X, PCB->MaxHeight);
+    gui->graphics->draw_line(Crosshair.GC,             0, Crosshair.Y,
+                                           PCB->MaxWidth, Crosshair.Y);
+  }
+  
+}
+
+/*!
  * \brief Initializes crosshair stuff.
  *
  * Clears the struct, allocates to graphical contexts.
@@ -1239,14 +1264,21 @@ SetCrosshairRange (Coord MinX, Coord MinY, Coord MaxX, Coord MaxY)
 void
 InitCrosshair (void)
 {
+  /* setup the graphics */
+  Crosshair.GC = gui->graphics->make_gc();
+  gui->graphics->set_color(Crosshair.GC, Settings.CrossColor);
+  gui->graphics->set_line_width(Crosshair.GC, 0);
+  Crosshair.draw = &draw_crosshair;
+  
   /* set initial shape */
   Crosshair.shape = Basic_Crosshair_Shape;
-
+  Crosshair.snap = &FitCrosshairIntoGrid;
+  
   /* set default limits */
   Crosshair.MinX = Crosshair.MinY = 0;
   Crosshair.MaxX = PCB->MaxWidth;
   Crosshair.MaxY = PCB->MaxHeight;
-
+  
   /* clear the mark */
   Marked.status = false;
 }
@@ -1258,4 +1290,86 @@ void
 DestroyCrosshair (void)
 {
   FreePolygonMemory (&Crosshair.AttachedPolygon);
+  if (Crosshair.GC) gui->graphics->destroy_gc(Crosshair.GC);
 }
+
+/* For reference for future implementation
+static void
+draw_slanted_cross (gint x, gint y, gint z)
+{
+  gint x0, y0, x1, y1;
+  
+  x0 = x + (PCB->MaxHeight - y);
+  x0 = MAX(0, MIN (x0, PCB->MaxWidth));
+  x1 = x - y;
+  x1 = MAX(0, MIN (x1, PCB->MaxWidth));
+  y0 = y + (PCB->MaxWidth - x);
+  y0 = MAX(0, MIN (y0, PCB->MaxHeight));
+  y1 = y - x;
+  y1 = MAX(0, MIN (y1, PCB->MaxHeight));
+  glVertex3i (x0, y0, z);
+  glVertex3i (x1, y1, z);
+  
+  x0 = x - (PCB->MaxHeight - y);
+  x0 = MAX(0, MIN (x0, PCB->MaxWidth));
+  x1 = x + y;
+  x1 = MAX(0, MIN (x1, PCB->MaxWidth));
+  y0 = y + x;
+  y0 = MAX(0, MIN (y0, PCB->MaxHeight));
+  y1 = y - (PCB->MaxWidth - x);
+  y1 = MAX(0, MIN (y1, PCB->MaxHeight));
+  glVertex3i (x0, y0, z);
+  glVertex3i (x1, y1, z);
+}
+
+static void
+draw_dozen_cross (gint x, gint y, gint z)
+{
+  gint x0, y0, x1, y1;
+  gdouble tan60 = sqrt (3);
+  
+  x0 = x + (PCB->MaxHeight - y) / tan60;
+  x0 = MAX(0, MIN (x0, PCB->MaxWidth));
+  x1 = x - y / tan60;
+  x1 = MAX(0, MIN (x1, PCB->MaxWidth));
+  y0 = y + (PCB->MaxWidth - x) * tan60;
+  y0 = MAX(0, MIN (y0, PCB->MaxHeight));
+  y1 = y - x * tan60;
+  y1 = MAX(0, MIN (y1, PCB->MaxHeight));
+  glVertex3i (x0, y0, z);
+  glVertex3i (x1, y1, z);
+  
+  x0 = x + (PCB->MaxHeight - y) * tan60;
+  x0 = MAX(0, MIN (x0, PCB->MaxWidth));
+  x1 = x - y * tan60;
+  x1 = MAX(0, MIN (x1, PCB->MaxWidth));
+  y0 = y + (PCB->MaxWidth - x) / tan60;
+  y0 = MAX(0, MIN (y0, PCB->MaxHeight));
+  y1 = y - x / tan60;
+  y1 = MAX(0, MIN (y1, PCB->MaxHeight));
+  glVertex3i (x0, y0, z);
+  glVertex3i (x1, y1, z);
+  
+  x0 = x - (PCB->MaxHeight - y) / tan60;
+  x0 = MAX(0, MIN (x0, PCB->MaxWidth));
+  x1 = x + y / tan60;
+  x1 = MAX(0, MIN (x1, PCB->MaxWidth));
+  y0 = y + x * tan60;
+  y0 = MAX(0, MIN (y0, PCB->MaxHeight));
+  y1 = y - (PCB->MaxWidth - x) * tan60;
+  y1 = MAX(0, MIN (y1, PCB->MaxHeight));
+  glVertex3i (x0, y0, z);
+  glVertex3i (x1, y1, z);
+  
+  x0 = x - (PCB->MaxHeight - y) * tan60;
+  x0 = MAX(0, MIN (x0, PCB->MaxWidth));
+  x1 = x + y * tan60;
+  x1 = MAX(0, MIN (x1, PCB->MaxWidth));
+  y0 = y + x / tan60;
+  y0 = MAX(0, MIN (y0, PCB->MaxHeight));
+  y1 = y - (PCB->MaxWidth - x) / tan60;
+  y1 = MAX(0, MIN (y1, PCB->MaxHeight));
+  glVertex3i (x0, y0, z);
+  glVertex3i (x1, y1, z);
+}
+*/

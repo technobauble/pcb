@@ -720,6 +720,8 @@ typedef struct
   PolygonType AttachedPolygon;
   AttachedObjectType AttachedObject; /*!< Data of attached objects. */
   enum crosshair_shape shape; /*!< Shape of Crosshair. */
+  PointType (*snap)(Coord x, Coord y);
+  void (*draw)(Coord x, Coord y);
 } CrosshairType;
 
 typedef struct

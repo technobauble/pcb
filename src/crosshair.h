@@ -53,6 +53,6 @@ bool MoveCrosshairAbsolute (Coord, Coord);
 void SetCrosshairRange (Coord, Coord, Coord, Coord);
 void InitCrosshair (void);
 void DestroyCrosshair (void);
-void FitCrosshairIntoGrid (Coord, Coord);
-
+PointType FitCrosshairIntoGrid (Coord, Coord);
+void draw_crosshair(Coord, Coord);
 #endif
