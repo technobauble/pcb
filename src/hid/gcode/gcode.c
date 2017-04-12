@@ -1594,11 +1594,6 @@ gcode_calibrate (double xval, double yval)
   CRASH;
 }
 
-static void
-gcode_set_crosshair (int x, int y, int a)
-{
-}
-
 /* *** Miscellaneous ******************************************************* */
 
 #include "dolists.h"
@@ -1623,7 +1618,6 @@ hid_gcode_init ()
   gcode_hid.parse_arguments     = gcode_parse_arguments;
   gcode_hid.set_layer           = gcode_set_layer;
   gcode_hid.calibrate           = gcode_calibrate;
-  gcode_hid.set_crosshair       = gcode_set_crosshair;
 
   gcode_hid.graphics            = &gcode_graphics;
 
