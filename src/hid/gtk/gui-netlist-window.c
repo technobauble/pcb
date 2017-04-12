@@ -282,7 +282,7 @@ node_selection_changed_cb (GtkTreeSelection * selection, gpointer data)
           PinType *pin = (PinType *) conn.ptr2;
           x = pin->X;
           y = pin->Y;
-          gui->set_crosshair (x, y, 0);
+          Crosshair.X = x; Crosshair.Y = y;
           ghid_lead_user_to_location (x, y);
           break;
         }
@@ -291,7 +291,7 @@ node_selection_changed_cb (GtkTreeSelection * selection, gpointer data)
           PadType *pad = (PadType *) conn.ptr2;
           x = pad->Point1.X + (pad->Point2.X - pad->Point1.X) / 2;
           y = pad->Point1.Y + (pad->Point2.Y - pad->Point1.Y) / 2;
-          gui->set_crosshair (x, y, 0);
+          Crosshair.X = x; Crosshair.Y = y;
           ghid_lead_user_to_location (x, y);
           break;
         }

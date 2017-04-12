@@ -649,132 +649,6 @@ ghid_notify_mark_change (bool changes_complete)
   if (changes_complete) ghid_invalidate_all ();
 }
 
-static void
-draw_right_cross (gint x, gint y, gint z)
-{
-  glVertex3i (x, 0, z);
-  glVertex3i (x, PCB->MaxHeight, z);
-  glVertex3i (0, y, z);
-  glVertex3i (PCB->MaxWidth, y, z);
-}
-
-static void
-draw_slanted_cross (gint x, gint y, gint z)
-{
-  gint x0, y0, x1, y1;
-
-  x0 = x + (PCB->MaxHeight - y);
-  x0 = MAX(0, MIN (x0, PCB->MaxWidth));
-  x1 = x - y;
-  x1 = MAX(0, MIN (x1, PCB->MaxWidth));
-  y0 = y + (PCB->MaxWidth - x);
-  y0 = MAX(0, MIN (y0, PCB->MaxHeight));
-  y1 = y - x;
-  y1 = MAX(0, MIN (y1, PCB->MaxHeight));
-  glVertex3i (x0, y0, z);
-  glVertex3i (x1, y1, z);
-
-  x0 = x - (PCB->MaxHeight - y);
-  x0 = MAX(0, MIN (x0, PCB->MaxWidth));
-  x1 = x + y;
-  x1 = MAX(0, MIN (x1, PCB->MaxWidth));
-  y0 = y + x;
-  y0 = MAX(0, MIN (y0, PCB->MaxHeight));
-  y1 = y - (PCB->MaxWidth - x);
-  y1 = MAX(0, MIN (y1, PCB->MaxHeight));
-  glVertex3i (x0, y0, z);
-  glVertex3i (x1, y1, z);
-}
-
-static void
-draw_dozen_cross (gint x, gint y, gint z)
-{
-  gint x0, y0, x1, y1;
-  gdouble tan60 = sqrt (3);
-
-  x0 = x + (PCB->MaxHeight - y) / tan60;
-  x0 = MAX(0, MIN (x0, PCB->MaxWidth));
-  x1 = x - y / tan60;
-  x1 = MAX(0, MIN (x1, PCB->MaxWidth));
-  y0 = y + (PCB->MaxWidth - x) * tan60;
-  y0 = MAX(0, MIN (y0, PCB->MaxHeight));
-  y1 = y - x * tan60;
-  y1 = MAX(0, MIN (y1, PCB->MaxHeight));
-  glVertex3i (x0, y0, z);
-  glVertex3i (x1, y1, z);
-
-  x0 = x + (PCB->MaxHeight - y) * tan60;
-  x0 = MAX(0, MIN (x0, PCB->MaxWidth));
-  x1 = x - y * tan60;
-  x1 = MAX(0, MIN (x1, PCB->MaxWidth));
-  y0 = y + (PCB->MaxWidth - x) / tan60;
-  y0 = MAX(0, MIN (y0, PCB->MaxHeight));
-  y1 = y - x / tan60;
-  y1 = MAX(0, MIN (y1, PCB->MaxHeight));
-  glVertex3i (x0, y0, z);
-  glVertex3i (x1, y1, z);
-
-  x0 = x - (PCB->MaxHeight - y) / tan60;
-  x0 = MAX(0, MIN (x0, PCB->MaxWidth));
-  x1 = x + y / tan60;
-  x1 = MAX(0, MIN (x1, PCB->MaxWidth));
-  y0 = y + x * tan60;
-  y0 = MAX(0, MIN (y0, PCB->MaxHeight));
-  y1 = y - (PCB->MaxWidth - x) * tan60;
-  y1 = MAX(0, MIN (y1, PCB->MaxHeight));
-  glVertex3i (x0, y0, z);
-  glVertex3i (x1, y1, z);
-
-  x0 = x - (PCB->MaxHeight - y) * tan60;
-  x0 = MAX(0, MIN (x0, PCB->MaxWidth));
-  x1 = x + y * tan60;
-  x1 = MAX(0, MIN (x1, PCB->MaxWidth));
-  y0 = y + x / tan60;
-  y0 = MAX(0, MIN (y0, PCB->MaxHeight));
-  y1 = y - (PCB->MaxWidth - x) / tan60;
-  y1 = MAX(0, MIN (y1, PCB->MaxHeight));
-  glVertex3i (x0, y0, z);
-  glVertex3i (x1, y1, z);
-}
-
-static void
-draw_crosshair (render_priv *priv)
-{
-  gint x, y, z;
-  static int done_once = 0;
-  static GdkColor cross_color;
-
-  if (!done_once)
-    {
-      done_once = 1;
-      /* FIXME: when CrossColor changed from config */
-      ghid_map_color_string (Settings.CrossColor, &cross_color);
-    }
-
-  x = gport->crosshair_x;
-  y = gport->crosshair_y;
-  z = 0;
-
-  glEnable (GL_COLOR_LOGIC_OP);
-  glLogicOp (GL_XOR);
-
-  glColor3f (cross_color.red / 65535.,
-             cross_color.green / 65535.,
-             cross_color.blue / 65535.);
-
-  glBegin (GL_LINES);
-
-  draw_right_cross (x, y, z);
-  if (Crosshair.shape == Union_Jack_Crosshair_Shape)
-    draw_slanted_cross (x, y, z);
-  if (Crosshair.shape == Dozen_Crosshair_Shape)
-    draw_dozen_cross (x, y, z);
-
-  glEnd ();
-
-  glDisable (GL_COLOR_LOGIC_OP);
-}
-
 void
 ghid_init_renderer (int *argc, char ***argv, GHidPort *port)
 {
@@ -1024,7 +898,7 @@ ghid_drawing_area_expose_cb (GtkWidget *widget,
   DrawMark (priv->crosshair_gc);
   hidgl_flush_triangles (&buffer);
 
-  draw_crosshair (priv);
+  Crosshair.draw(Crosshair.X, Crosshair.Y);
   hidgl_flush_triangles (&buffer);
 
   draw_lead_user (priv);

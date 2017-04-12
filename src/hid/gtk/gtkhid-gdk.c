@@ -970,125 +970,6 @@ ghid_notify_mark_change (bool changes_complete)
     }
 }
 
-static void
-draw_right_cross (GdkGC *xor_gc, gint x, gint y)
-{
-  GdkWindow *window = gtk_widget_get_window (gport->drawing_area);
-
-  gdk_draw_line (window, xor_gc, x, 0, x, gport->height);
-  gdk_draw_line (window, xor_gc, 0, y, gport->width, y);
-}
-
-static void
-draw_slanted_cross (GdkGC *xor_gc, gint x, gint y)
-{
-  GdkWindow *window = gtk_widget_get_window (gport->drawing_area);
-  gint x0, y0, x1, y1;
-
-  x0 = x + (gport->height - y);
-  x0 = MAX(0, MIN (x0, gport->width));
-  x1 = x - y;
-  x1 = MAX(0, MIN (x1, gport->width));
-  y0 = y + (gport->width - x);
-  y0 = MAX(0, MIN (y0, gport->height));
-  y1 = y - x;
-  y1 = MAX(0, MIN (y1, gport->height));
-  gdk_draw_line (window, xor_gc, x0, y0, x1, y1);
-
-  x0 = x - (gport->height - y);
-  x0 = MAX(0, MIN (x0, gport->width));
-  x1 = x + y;
-  x1 = MAX(0, MIN (x1, gport->width));
-  y0 = y + x;
-  y0 = MAX(0, MIN (y0, gport->height));
-  y1 = y - (gport->width - x);
-  y1 = MAX(0, MIN (y1, gport->height));
-  gdk_draw_line (window, xor_gc, x0, y0, x1, y1);
-}
-
-static void
-draw_dozen_cross (GdkGC *xor_gc, gint x, gint y)
-{
-  GdkWindow *window = gtk_widget_get_window (gport->drawing_area);
-  gint x0, y0, x1, y1;
-  gdouble tan60 = sqrt (3);
-
-  x0 = x + (gport->height - y) / tan60;
-  x0 = MAX(0, MIN (x0, gport->width));
-  x1 = x - y / tan60;
-  x1 = MAX(0, MIN (x1, gport->width));
-  y0 = y + (gport->width - x) * tan60;
-  y0 = MAX(0, MIN (y0, gport->height));
-  y1 = y - x * tan60;
-  y1 = MAX(0, MIN (y1, gport->height));
-  gdk_draw_line (window, xor_gc, x0, y0, x1, y1);
-
-  x0 = x + (gport->height - y) * tan60;
-  x0 = MAX(0, MIN (x0, gport->width));
-  x1 = x - y * tan60;
-  x1 = MAX(0, MIN (x1, gport->width));
-  y0 = y + (gport->width - x) / tan60;
-  y0 = MAX(0, MIN (y0, gport->height));
-  y1 = y - x / tan60;
-  y1 = MAX(0, MIN (y1, gport->height));
-  gdk_draw_line (window, xor_gc, x0, y0, x1, y1);
-
-  x0 = x - (gport->height - y) / tan60;
-  x0 = MAX(0, MIN (x0, gport->width));
-  x1 = x + y / tan60;
-  x1 = MAX(0, MIN (x1, gport->width));
-  y0 = y + x * tan60;
-  y0 = MAX(0, MIN (y0, gport->height));
-  y1 = y - (gport->width - x) * tan60;
-  y1 = MAX(0, MIN (y1, gport->height));
-  gdk_draw_line (window, xor_gc, x0, y0, x1, y1);
-
-  x0 = x - (gport->height - y) * tan60;
-  x0 = MAX(0, MIN (x0, gport->width));
-  x1 = x + y * tan60;
-  x1 = MAX(0, MIN (x1, gport->width));
-  y0 = y + x / tan60;
-  y0 = MAX(0, MIN (y0, gport->height));
-  y1 = y - (gport->width - x) / tan60;
-  y1 = MAX(0, MIN (y1, gport->height));
-  gdk_draw_line (window, xor_gc, x0, y0, x1, y1);
-}
-
-static void
-draw_crosshair (render_priv *priv)
-{
-  GdkWindow *window = gtk_widget_get_window (gport->drawing_area);
-  GtkStyle *style = gtk_widget_get_style (gport->drawing_area);
-  gint x, y;
-  static GdkGC *xor_gc;
-  static GdkColor cross_color;
-
-  if (gport->crosshair_x < 0 || ghidgui->creating || !gport->has_entered)
-    return;
-
-  if (!xor_gc)
-    {
-      xor_gc = gdk_gc_new (window);
-      gdk_gc_copy (xor_gc, style->white_gc);
-      gdk_gc_set_function (xor_gc, GDK_XOR);
-      gdk_gc_set_clip_origin (xor_gc, 0, 0);
-      set_clip (priv, xor_gc);
-      /* FIXME: when CrossColor changed from config */
-      ghid_map_color_string (Settings.CrossColor, &cross_color);
-    }
-
-  gdk_gc_set_foreground (xor_gc, &cross_color);
-
-  x = DRAW_X (gport->crosshair_x);
-  y = DRAW_Y (gport->crosshair_y);
-
-  draw_right_cross (xor_gc, x, y);
-  if (Crosshair.shape == Union_Jack_Crosshair_Shape)
-    draw_slanted_cross (xor_gc, x, y);
-  if (Crosshair.shape == Dozen_Crosshair_Shape)
-    draw_dozen_cross (xor_gc, x, y);
-}
-
 void
 ghid_init_renderer (int *argc, char ***argv, GHidPort *port)
 {
@@ -1149,7 +1030,7 @@ ghid_screen_update (void)
 
   gdk_draw_drawable (window, priv->bg_gc, gport->pixmap,
                      0, 0, 0, 0, gport->width, gport->height);
-  draw_crosshair (priv);
+  Crosshair.draw(Crosshair.X, Crosshair.Y);
 }
 
 gboolean
@@ -1163,7 +1044,7 @@ ghid_drawing_area_expose_cb (GtkWidget *widget,
   gdk_draw_drawable (window, priv->bg_gc, port->pixmap,
                      ev->area.x, ev->area.y, ev->area.x, ev->area.y,
                      ev->area.width, ev->area.height);
-  draw_crosshair (priv);
+  Crosshair.draw(Crosshair.X, Crosshair.Y);
   return FALSE;
 }
 
