@@ -216,11 +216,6 @@ nogui_get_coords (const char *msg, Coord *x, Coord *y)
   CRASH;
 }
 
-static void
-nogui_set_crosshair (int x, int y, int action)
-{
-}
-
 static hidval
 nogui_add_timer (void (*func) (hidval user_data),
 		 unsigned long milliseconds, hidval user_data)
@@ -460,7 +455,6 @@ common_nogui_init (HID *hid)
   hid->control_is_pressed =   nogui_control_is_pressed;
   hid->mod1_is_pressed =      nogui_mod1_is_pressed;
   hid->get_coords =           nogui_get_coords;
-  hid->set_crosshair =        nogui_set_crosshair;
   hid->add_timer =            nogui_add_timer;
   hid->stop_timer =           nogui_stop_timer;
   hid->watch_file =           nogui_watch_file;

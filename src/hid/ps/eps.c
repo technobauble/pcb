@@ -48,7 +48,6 @@ static void eps_fill_rect (hidGC gc, Coord x1, Coord y1, Coord x2, Coord y2);
 static void eps_fill_circle (hidGC gc, Coord cx, Coord cy, Coord radius);
 static void eps_fill_polygon (hidGC gc, int n_coords, Coord *x, Coord *y);
 static void eps_calibrate (double xval, double yval);
-static void eps_set_crosshair (int x, int y, int action);
 /*----------------------------------------------------------------------------*/
 
 typedef struct hid_gc_struct
@@ -648,11 +647,6 @@ eps_calibrate (double xval, double yval)
   CRASH;
 }
 
-static void
-eps_set_crosshair (int x, int y, int action)
-{
-}
-
 void
 hid_eps_init ()
 {
@@ -673,7 +667,6 @@ hid_eps_init ()
   eps_hid.parse_arguments     = eps_parse_arguments;
   eps_hid.set_layer           = eps_set_layer;
   eps_hid.calibrate           = eps_calibrate;
-  eps_hid.set_crosshair       = eps_set_crosshair;
 
   eps_hid.graphics            = &eps_graphics;
 

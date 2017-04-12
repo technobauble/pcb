@@ -885,10 +885,12 @@ CenterDisplay (Coord X, Coord Y, bool warp_pointer)
     notify_crosshair_change (true);
 
   if (warp_pointer)
-    gui->set_crosshair (Crosshair.X, Crosshair.Y,
-                        HID_SC_CENTER_IN_VIEWPORT_AND_WARP_POINTER );
+  {
+    gui->move_viewport (Crosshair.X, Crosshair.Y,
+                        HID_MV_CENTER_IN_VIEWPORT_AND_WARP_POINTER );
+  }
   else
-    gui->set_crosshair (Crosshair.X, Crosshair.Y, HID_SC_CENTER_IN_VIEWPORT);
+    gui->move_viewport (Crosshair.X, Crosshair.Y, HID_MV_CENTER_IN_VIEWPORT);
 
   PCB->Grid = save_grid;
 }

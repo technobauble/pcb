@@ -1816,11 +1816,6 @@ png_calibrate (double xval, double yval)
   CRASH;
 }
 
-static void
-png_set_crosshair (int x, int y, int a)
-{
-}
-
 #include "dolists.h"
 
 void
@@ -1843,7 +1838,6 @@ hid_png_init ()
   png_hid.parse_arguments     = png_parse_arguments;
   png_hid.set_layer           = png_set_layer;
   png_hid.calibrate           = png_calibrate;
-  png_hid.set_crosshair       = png_set_crosshair;
 
   png_hid.graphics            = &png_graphics;
 

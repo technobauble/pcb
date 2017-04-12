@@ -1025,11 +1025,6 @@ nelma_calibrate(double xval, double yval)
 	CRASH;
 }
 
-static void
-nelma_set_crosshair(int x, int y, int a)
-{
-}
-
 /* *** Miscellaneous ******************************************************* */
 
 #include "dolists.h"
@@ -1054,7 +1049,6 @@ hid_nelma_init()
   nelma_hid.parse_arguments     = nelma_parse_arguments;
   nelma_hid.set_layer           = nelma_set_layer;
   nelma_hid.calibrate           = nelma_calibrate;
-  nelma_hid.set_crosshair       = nelma_set_crosshair;
 
   nelma_hid.graphics            = &nelma_graphics;
 

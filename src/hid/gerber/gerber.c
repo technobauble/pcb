@@ -60,7 +60,6 @@ static void gerber_draw_rect (hidGC gc, Coord x1, Coord y1, Coord x2, Coord y2);
 static void gerber_fill_circle (hidGC gc, Coord cx, Coord cy, Coord radius);
 static void gerber_fill_rect (hidGC gc, Coord x1, Coord y1, Coord x2, Coord y2);
 static void gerber_calibrate (double xval, double yval);
-static void gerber_set_crosshair (int x, int y, int action);
 static void gerber_fill_polygon (hidGC gc, int n_coords, Coord *x, Coord *y);
 
 /*----------------------------------------------------------------------------*/
@@ -1312,11 +1311,6 @@ gerber_calibrate (double xval, double yval)
   CRASH;
 }
 
-static void
-gerber_set_crosshair (int x, int y, int action)
-{
-}
-
 void
 hid_gerber_init ()
 {
@@ -1336,7 +1330,6 @@ hid_gerber_init ()
   gerber_hid.parse_arguments     = gerber_parse_arguments;
   gerber_hid.set_layer           = gerber_set_layer;
   gerber_hid.calibrate           = gerber_calibrate;
-  gerber_hid.set_crosshair       = gerber_set_crosshair;
 
   gerber_hid.graphics            = &gerber_graphics;
 

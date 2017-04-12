@@ -1516,11 +1516,6 @@ ps_calibrate (double xval, double yval)
   ps_calibrate_1 (xval, yval, 0);
 }
 
-static void
-ps_set_crosshair (int x, int y, int action)
-{
-}
-
 #include "dolists.h"
 
 HID ps_hid;
@@ -1533,7 +1528,6 @@ void ps_ps_init (HID *hid)
   hid->parse_arguments    = ps_parse_arguments;
   hid->set_layer          = ps_set_layer;
   hid->calibrate          = ps_calibrate;
-  hid->set_crosshair      = ps_set_crosshair;
 }
 
 void ps_ps_graphics_init (HID_DRAW *graphics)

@@ -512,30 +512,23 @@ typedef enum
 
     void (*get_coords) (const char *msg_, Coord *x_, Coord *y_);
 
-    void (*set_crosshair) (int x_, int y_, int cursor_action_);
-      /*!< Sets the crosshair, which may differ from the pointer
-       * depending on grid and pad snap.
-       *
-       * \note Note that the HID is responsible for hiding, showing,
-       * redrawing, etc. The core just tells it what coordinates it's
-       * actually using.
-       *
-       * \note Note that this routine may need to know what "pcb units"
-       * are so it can display them in mm or mils accordingly.
-       *
-       * If \c cursor_action_ is set, the cursor or screen may be
+    void (*move_viewport) (int x, int y, int action);
+      /*!< Change the position of the viewport.
+       *       
+       * If \c action is set, the cursor or screen may be
        * adjusted so that the cursor and the crosshair are at the same
        * point on the screen.
        */
-#define HID_SC_DO_NOTHING                          0
+#define HID_MV_DO_NOTHING                          0
+    
+#define HID_MV_WARP_POINTER	                       1
+    
+#define HID_MV_PAN_VIEWPORT                        2
+    
+#define HID_MV_CENTER_IN_VIEWPORT                  3
+    
+#define HID_MV_CENTER_IN_VIEWPORT_AND_WARP_POINTER 4
 
-#define HID_SC_WARP_POINTER	                       1
-
-#define HID_SC_PAN_VIEWPORT                        2
-
-#define HID_SC_CENTER_IN_VIEWPORT                  3
-
-#define HID_SC_CENTER_IN_VIEWPORT_AND_WARP_POINTER 4
 
       hidval (*add_timer) (void (*func) (hidval user_data_),
 			   unsigned long milliseconds_, hidval user_data_);

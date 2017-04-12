@@ -264,11 +264,6 @@ batch_get_coords (const char *msg, Coord *x, Coord *y)
 {
 }
 
-static void
-batch_set_crosshair (int x, int y, int action)
-{
-}
-
 static hidval
 batch_add_timer (void (*func) (hidval user_data),
 		 unsigned long milliseconds, hidval user_data)
@@ -353,7 +348,6 @@ hid_batch_init ()
   batch_hid.control_is_pressed    = batch_control_is_pressed;
   batch_hid.mod1_is_pressed       = batch_mod1_is_pressed;
   batch_hid.get_coords            = batch_get_coords;
-  batch_hid.set_crosshair         = batch_set_crosshair;
   batch_hid.add_timer             = batch_add_timer;
   batch_hid.stop_timer            = batch_stop_timer;
   batch_hid.watch_file            = batch_watch_file;
