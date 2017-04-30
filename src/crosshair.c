@@ -1230,11 +1230,7 @@ FitCrosshairIntoGrid (Coord X, Coord Y)
       && Crosshair.AttachedLine.State != STATE_FIRST
       && TEST_FLAG (AUTODRCFLAG, PCB))
     EnforceLineDRC ();
-<<<<<<< HEAD
 
-  //gui->set_crosshair (Crosshair.X, Crosshair.Y, HID_SC_DO_NOTHING);
-=======
->>>>>>> 08d6a7e3... Update crosshair.c with SnapSpecType
 }
 
 SnapType
@@ -1358,6 +1354,11 @@ SetCrosshairRange (Coord MinX, Coord MinY, Coord MaxX, Coord MaxY)
   FitCrosshairIntoGrid (Crosshair.X, Crosshair.Y);
 }
 
+/*
+ * Define snaps
+ */
+
+/* Wrapper around the old snapping routine */
 static SnapSpecType default_snap = {
   "Default Snap",               // Name
   &FitCrosshairIntoGridWrapper, // Function pointer
@@ -1365,6 +1366,29 @@ static SnapSpecType default_snap = {
   1000,                         // priority
   500000,                       // radius
   0                             // object type
+};
+
+/* Snap to the grid */
+SnapType
+snap_grid(Coord x, Coord y, Coord r)
+{
+  SnapType snap;
+  snap.obj_type = 0; // would be grid if there was a grid type
+  snap.loc.X = GridFit (x, PCB->Grid, PCB->GridOffsetX);
+  snap.loc.Y = GridFit (y, PCB->Grid, PCB->GridOffsetY);
+  snap.distsq = square(x-snap.loc.X)+square(y-snap.loc.Y);
+  if (snap.distsq < square(r)) snap.valid = true;
+  else snap.valid = false;
+  return snap;
+}
+
+static SnapSpecType grid_snap = {
+  "Snap to Grid",  // Name
+  &snap_grid,      // Function pointer
+  true,            // enabled
+  0,               // priority
+  100000,          // radius (nm)
+  0                // object type
 };
 
 /*!
