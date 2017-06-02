@@ -21,9 +21,9 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * Contact addresses for paper mail and Email:
  * Thomas Nau, Schlehenweg 15, 88471 Baustetten, Germany
@@ -2351,7 +2351,7 @@ draw_grid ()
   if (!Settings.DrawGrid)
     return; /* grid hidden */
   if (Vz (PCB->Grid) < MIN_GRID_DISTANCE)
-    return; /* zoomed in too far, no grid points */
+    return; /* zoomed out too far, points too close together */
   if (!grid_gc)
     {
       grid_gc = XCreateGC (display, window, 0, 0);

@@ -1,30 +1,56 @@
-/*
- *                            COPYRIGHT
+/*!
+ * \file src/hid/gtk/gui-command-window.c
  *
- *  PCB, interactive printed circuit board design
- *  Copyright (C) 1994,1995,1996 Thomas Nau
+ * \brief Provides a command entry window for the GTK UI.
  *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2 of the License, or
- *  (at your option) any later version.
+ * This file was written by Bill Wilson for the PCB Gtk port.
  *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
+ * gui-command-window.c provides two interfaces for getting user input
+ * for executing a command.
  *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * As the Xt PCB was ported to Gtk, the traditional user entry in the
+ * status line window presented some focus problems which require that
+ * there can be no menu key shortcuts that might be a key the user would
+ * type in.  It also requires a coordinating flag so the drawing area
+ * won't grab focus while the command entry is up.
+ *
+ * I thought the interface should be cleaner, so so I made an alternate
+ * command window interface which works better I think as a gui interface.
+ * The user must focus onto the command window, but since it's a separate
+ * window, there's no confusion.  It has the restriction that objects to
+ * be operated on must be selected, but that actually seems a better user
+ * interface than one where typing into one location requires the user to
+ * be careful about which object might be under the cursor somewhere else.
+ *
+ * In any event, both interfaces are here to work with.
+ *
+ * <hr>
+ *
+ * <h1><b>Copyright.</b></h1>\n
+ *
+ * PCB, interactive printed circuit board design
+ *
+ * Copyright (C) 1994,1995,1996 Thomas Nau
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  *  Contact addresses for paper mail and Email:
  *  Thomas Nau, Schlehenweg 15, 88471 Baustetten, Germany
  *  Thomas.Nau@rz.uni-ulm.de
- *
  */
 
-/* This file written by Bill Wilson for the PCB Gtk port */
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -46,30 +72,12 @@ static gchar *command_entered;
 static GMainLoop *loop;
 
 
-/* gui-command-window.c provides two interfaces for getting user input
-|  for executing a command.
-|
-|  As the Xt PCB was ported to Gtk, the traditional user entry in the
-|  status line window presented some focus problems which require that
-|  there can be no menu key shortcuts that might be a key the user would
-|  type in.  It also requires a coordinating flag so the drawing area
-|  won't grab focus while the command entry is up.
-|
-|  I thought the interface should be cleaner, so so I made an alternate
-|  command window interface which works better I think as a gui interface.
-|  The user must focus onto the command window, but since it's a separate
-|  window, there's no confusion.  It has the restriction that objects to
-|  be operated on must be selected, but that actually seems a better user
-|  interface than one where typing into one location requires the user to
-|  be careful about which object might be under the cursor somewhere else.
-|
-|  In any event, both interfaces are here to work with.
-*/
-
-
-  /* When using a command window for command entry, provide a quick and
-     |  abbreviated reference to available commands.
-     |  This is currently just a start and can be expanded if it proves useful.
+/*!
+ * \brief When using a command window for command entry, provide a quick
+ * and abbreviated reference to available commands.
+ *
+ * This is currently just a start and can be expanded if it proves
+ * useful.
    */
 static gchar *command_ref_text[] = {
   N_("Common commands easily accessible via the gui may not be included here.\n"),
@@ -133,13 +141,17 @@ static gchar *command_ref_text[] = {
 };
 
 
-  /* Put an allocated string on the history list and combo text list
-     |  if it is not a duplicate.  The history_list is just a shadow of the
-     |  combo list, but I think is needed because I don't see an api for reading
-     |  the combo strings.  The combo box strings take "const gchar *", so the
-     |  same allocated string can go in both the history list and the combo list.
-     |  If removed from both lists, a string can be freed.
-   */
+/*!
+ * \brief Put an allocated string on the history list and combo text
+ * list if it is not a duplicate.
+ *
+ * The history_list is just a shadow of the combo list, but I think is
+ * needed because I don't see an api for reading the combo strings.
+ * The combo box strings take "const gchar *", so the same allocated
+ * string can go in both the history list and the combo list.
+ *
+ * If removed from both lists, a string can be freed.
+ */
 static void
 command_history_add (gchar * cmd)
 {
@@ -187,13 +199,16 @@ command_history_add (gchar * cmd)
 }
 
 
-  /* Called when user hits "Enter" key in command entry.  The action to take
-     |  depends on where the combo box is.  If it's in the command window, we can
-     |  immediately execute the command and carry on.  If it's in the status
-     |  line hbox, then we need stop the command entry g_main_loop from running
-     |  and save the allocated string so it can be returned from
-     |  ghid_command_entry_get()
-   */
+/*!
+ * \brief Called when user hits "Enter" key in command entry.
+ *
+ * The action to take depends on where the combo box is.
+ * If it's in the command window, we can immediately execute the command
+ * and carry on.
+ * If it's in the status line hbox, then we need stop the command
+ * entry g_main_loop from running and save the allocated string so it
+ * can be returned from ghid_command_entry_get()
+ */
 static void
 command_entry_activate_cb (GtkWidget * widget, gpointer data)
 {
@@ -219,15 +234,20 @@ command_entry_activate_cb (GtkWidget * widget, gpointer data)
     }
 }
 
-  /* Create the command_combo_box.  Called once, either by
-     |  ghid_command_window_show() or ghid_command_entry_get().  Then as long as
-     |  ghidgui->use_command_window is TRUE, the command_combo_box will live
-     |  in a command window vbox or float if the command window is not up.
-     |  But if ghidgui->use_command_window is FALSE, the command_combo_box
-     |  will live in the status_line_hbox either shown or hidden. 
-     |  Since it's never destroyed, the combo history strings never need
-     |  rebuilding and history is maintained if the combo box location is moved.
-   */
+/*!
+ * \brief Create the command_combo_box.
+ *
+ * Called once, either by ghid_command_window_show() or
+ * ghid_command_entry_get().
+ * Then as long as ghidgui->use_command_window is TRUE, the
+ * command_combo_box will live in a command window vbox or float if the
+ * command window is not up.
+ * But if ghidgui->use_command_window is FALSE, the command_combo_box
+ * will live in the status_line_hbox either shown or hidden.
+ * Since it's never destroyed, the combo history strings never need
+ * rebuilding and history is maintained if the combo box location is
+ * moved.
+ */
 static void
 command_combo_box_entry_create (void)
 {
@@ -245,16 +265,29 @@ command_combo_box_entry_create (void)
 }
 
 static void
-command_window_close_cb (void)
+command_window_disconnect_combobox ()
 {
   if (command_window)
-    {
-      gtk_container_remove (GTK_CONTAINER (combo_vbox),	/* Float it */
-			    ghidgui->command_combo_box);
-      gtk_widget_destroy (command_window);
-    }
+  {
+    gtk_container_remove (GTK_CONTAINER (combo_vbox),	/* Float it */
+                          ghidgui->command_combo_box);
+  }
   combo_vbox = NULL;
-  command_window = NULL;
+}
+
+static void
+command_window_close_cb (GtkWidget * widget, gpointer data)
+{
+  command_window_disconnect_combobox();
+  gtk_widget_destroy (command_window);
+}
+
+static gboolean
+command_window_delete_event_cb (GtkWidget * widget, GdkEvent * event,
+                                gpointer data)
+{
+  command_window_disconnect_combobox();
+  return FALSE;
 }
 
 static void
@@ -263,10 +296,11 @@ command_destroy_cb (GtkWidget * widget, gpointer data)
   command_window = NULL;
 }
 
-  /* If ghidgui->use_command_window toggles, the config code calls
-     |  this to ensure the command_combo_box is set up for living in the
-     |  right place.
-   */
+/*!
+ * \brief If ghidgui->use_command_window toggles, the config code calls
+ * this to ensure the command_combo_box is set up for living in the
+ * right place.
+ */
 void
 ghid_command_use_command_window_sync (void)
 {
@@ -285,16 +319,17 @@ ghid_command_use_command_window_sync (void)
          |  so we can pack it back into the status line hbox.  If the window
          |  wasn't up, the command_combo_box was already floating.
        */
-      command_window_close_cb ();
+      if(command_window)  command_window_close_cb (NULL, NULL);
       gtk_widget_hide (ghidgui->command_combo_box);
       gtk_box_pack_start (GTK_BOX (ghidgui->status_line_hbox),
 			  ghidgui->command_combo_box, FALSE, FALSE, 0);
     }
 }
 
-  /* If ghidgui->use_command_window is TRUE this will get called from
-     |  ActionCommand() to show the command window.
-   */
+/*!
+ * \brief If ghidgui->use_command_window is TRUE this will get called
+ * from ActionCommand() to show the command window.
+ */
 void
 ghid_command_window_show (gboolean raise)
 {
@@ -309,7 +344,9 @@ ghid_command_window_show (gboolean raise)
     }
   command_window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
   g_signal_connect (G_OBJECT (command_window), "destroy",
-		    G_CALLBACK (command_destroy_cb), NULL);
+                    G_CALLBACK (command_destroy_cb), NULL);
+  g_signal_connect (G_OBJECT (command_window), "delete-event",
+                    G_CALLBACK (command_window_delete_event_cb), NULL);
   gtk_window_set_title (GTK_WINDOW (command_window), _("PCB Command Entry"));
   gtk_window_set_wmclass (GTK_WINDOW (command_window), "PCB_Command", "PCB");
   gtk_window_set_resizable (GTK_WINDOW (command_window), FALSE);
@@ -369,10 +406,13 @@ command_escape_cb (GtkWidget * widget, GdkEventKey * kev, gpointer data)
 }
 
 
-  /* This is the command entry function called from ActionCommand() when
-     |  ghidgui->use_command_window is FALSE.  The command_combo_box is already
-     |  packed into the status line label hbox in this case.
-   */
+/*!
+ * \brief This is the command entry function called from ActionCommand()
+ * when ghidgui->use_command_window is FALSE.
+ *
+ * The command_combo_box is already packed into the status line label
+ * hbox in this case.
+ */
 gchar *
 ghid_command_entry_get (gchar * prompt, gchar * command)
 {
@@ -460,12 +500,6 @@ ghid_handle_user_command (gboolean raise)
 	  /* copy new comand line to save buffer */
 	  g_free (previous);
 	  previous = g_strdup (command);
-	  hid_parse_command (command);
-	  g_free (command);
-	}
-      else if (previous)
-	{
-	  command = g_strdup (previous);
 	  hid_parse_command (command);
 	  g_free (command);
 	}

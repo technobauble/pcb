@@ -21,9 +21,9 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * Contact addresses for paper mail and Email:
  *
@@ -2615,7 +2615,7 @@ AttributeRemoveFromList(AttributeListType *list, char *name)
       {
 	free (list->List[i].name);
 	free (list->List[i].value);
-	for (j=i; j<list->Number-i; j++)
+	for (j=i; j<list->Number-1; j++)
 	  list->List[j] = list->List[j+1];
 	list->Number --;
       }
