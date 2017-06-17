@@ -102,7 +102,7 @@ SetLineSize (Coord Size)
     {
       Settings.LineThickness = Size;
       if (TEST_FLAG (AUTODRCFLAG, PCB))
-	FitCrosshairIntoGrid (Crosshair.X, Crosshair.Y);
+	MoveCrosshairAbsolute (Crosshair.X, Crosshair.Y);
     }
 }
 
