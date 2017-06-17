@@ -6375,7 +6375,7 @@ ActionUndo (int argc, char **argv, Coord x, Coord y)
 		  Crosshair.AttachedLine.Point1.Y =
 		    Crosshair.AttachedLine.Point2.Y = ptr2->Point2.Y;
 		}
-	      FitCrosshairIntoGrid (Crosshair.X, Crosshair.Y);
+	      MoveCrosshairAbsolute(Crosshair.X, Crosshair.Y);
 	      AdjustAttachedObjects ();
 	      if (--addedLines == 0)
 		{
