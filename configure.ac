@@ -314,7 +314,7 @@ done
 
 AC_MSG_CHECKING([for which gui to use])
 AC_ARG_WITH([gui],
-[  --with-gui=	          Specify the GUI to use: batch gtk lesstif [[default=gtk]]],
+[  --with-gui=	          Specify the GUI to use: batch gtk lessgtk lesstif [[default=gtk]]],
 [],
 [with_gui=gtk]
 )
@@ -376,6 +376,7 @@ AC_ARG_ENABLE([dbus],
 [],[
 	case " $with_gui " in
 		*\ gtk\ *)     enable_dbus=yes ;;
+		*\ lessgtk\ *) enable_dbus=yes ;;
 		*\ lesstif\ *) enable_dbus=yes ;;
 		* )            enable_dbus=no ;;
 	esac
@@ -387,9 +388,10 @@ AM_CONDITIONAL(WITH_DBUS, test x$enable_dbus = xyes)
 if test "x$enable_dbus" = "xyes"; then
 	case " $with_gui " in
 		*\ gtk\ *) ;;
+		*\ lessgtk\ *) ;;
 		*\ lesstif\ *) ;;
 		* ) AC_MSG_ERROR([DBUS enabled but only works with a mainloop capable GUI HID.
-Either do not use --enable-dbus or enable the gtk or lesstif GUI HID.])
+Either do not use --enable-dbus or enable the gtk, lessgtk or lesstif GUI HID.])
 	esac
 	
 	PKG_CHECK_MODULES(DBUS, dbus-1 >= 0.61,
@@ -765,7 +767,7 @@ for e in $HIDLIST; do
 	esac
         ;;
 
-      gtk )
+      gtk|lessgtk )
 	# Check for pkg-config
 	AC_PATH_PROG(PKG_CONFIG, pkg-config, no)
 	if test "$PKG_CONFIG" = "no"; then
