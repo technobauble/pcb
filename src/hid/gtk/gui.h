@@ -175,6 +175,8 @@ typedef struct
 
   /* The output viewport
    */
+extern const char cursor_position_format[];
+extern const char cursor_position_relative_format[];
 typedef struct
 {
   GtkWidget *top_window,	/* toplevel widget              */

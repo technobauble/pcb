@@ -725,6 +725,84 @@ grid_units_button_cb (GtkWidget * widget, gpointer data)
     hid_actionl ("SetUnits", "mm", NULL);
 }
 
+const char cursor_position_format[] = N_("%m+%-mS %-mS");
+const char cursor_position_relative_format[] =
+                                          N_("%m+r %-mS; phi %-.1f; %-mS %-mS");
+
+/*!
+ * \brief The two following callbacks are used to keep the absolute
+ * and relative cursor labels from growing and shrinking as you
+ * move the cursor around.
+ */
+static void
+absolute_label_size_req_cb (GtkWidget * widget, 
+			    GtkRequisition *req, gpointer data)
+{
+  static int grid_units = -1;
+  static Coord pcb_max_width = -1, pcb_max_height = -1;
+//  GtkWidget * widget = ghidgui->cursor_position_absolute_label;
+ 
+  /* If grid units or PCB size is changed */
+  if (grid_units != Settings.grid_unit->index ||
+      pcb_max_width != PCB->MaxWidth ||
+      pcb_max_height != PCB->MaxHeight) {
+    GtkRequisition requisition;
+    gchar * str;
+
+    grid_units = Settings.grid_unit->index;
+    pcb_max_width = PCB->MaxWidth;
+    pcb_max_height = PCB->MaxHeight;
+
+    /* Calculate new maximum required widget size */
+    str = pcb_g_strdup_printf (_(cursor_position_format),
+                                Settings.grid_unit->allow,
+                                pcb_max_width, pcb_max_height);
+
+    ghid_label_set_markup (widget, str);
+    g_free (str);
+    /* Reset previous size request */
+    gtk_widget_set_size_request (widget, -1, -1);
+    gtk_widget_size_request (widget, &requisition);
+    gtk_widget_set_size_request (widget, requisition.width, requisition.height);
+    ghid_set_cursor_position_labels();
+  }
+}
+
+static void
+relative_label_size_req_cb (GtkWidget * widget, 
+			    GtkRequisition *req, gpointer data)
+{
+  static int grid_units = -1;
+  static Coord pcb_max_width = -1, pcb_max_height = -1;
+//  GtkWidget * widget = ghidgui->cursor_position_relative_label;
+
+  /* If grid units or PCB size is changed */
+  if (grid_units != Settings.grid_unit->index ||
+      pcb_max_width != PCB->MaxWidth ||
+      pcb_max_height != PCB->MaxHeight) {
+    GtkRequisition requisition;
+    gchar * str;
+
+    grid_units = Settings.grid_unit->index;
+    pcb_max_width = PCB->MaxWidth;
+    pcb_max_height = PCB->MaxHeight;
+
+    /* Calculate new maximum required widget size */
+    str = pcb_g_strdup_printf (_(cursor_position_relative_format),
+                         Settings.grid_unit->allow,
+                         (Coord) Distance (0, 0, pcb_max_width, pcb_max_height),
+                         -180.0, -pcb_max_width, -pcb_max_height);
+
+    ghid_label_set_markup (widget, str);
+    g_free (str);
+    /* Reset previous size request */
+    gtk_widget_set_size_request (widget, -1, -1);
+    gtk_widget_size_request (widget, &requisition);
+    gtk_widget_set_size_request (widget, requisition.width, requisition.height);
+    ghid_set_cursor_position_labels();
+  }
+}
+
 static void
 make_cursor_position_labels (GtkWidget * hbox, GHidPort * port)
 {
@@ -753,6 +831,9 @@ make_cursor_position_labels (GtkWidget * hbox, GHidPort * port)
   label = gtk_label_new ("");
   gtk_container_add (GTK_CONTAINER (frame), label);
   ghidgui->cursor_position_absolute_label = label;
+  g_signal_connect (G_OBJECT (label), "size-request",
+		    G_CALLBACK (absolute_label_size_req_cb), NULL);
+
 
   /* The relative cursor position label
    */
@@ -760,9 +841,12 @@ make_cursor_position_labels (GtkWidget * hbox, GHidPort * port)
   gtk_box_pack_end (GTK_BOX (hbox), frame, FALSE, TRUE, 0);
   gtk_container_set_border_width (GTK_CONTAINER (frame), 0);
   gtk_frame_set_shadow_type (GTK_FRAME (frame), GTK_SHADOW_ETCHED_OUT);
-  label = gtk_label_new ("");
+  label = gtk_label_new (" __.__  __.__ ");
   gtk_container_add (GTK_CONTAINER (frame), label);
   ghidgui->cursor_position_relative_label = label;
+  g_signal_connect (G_OBJECT (label), "size-request",
+		    G_CALLBACK (relative_label_size_req_cb), NULL);
+
 }
 
 /*!
