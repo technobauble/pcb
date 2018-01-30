@@ -43,7 +43,7 @@ desktop_in_files = pcb.desktop.in
 desktop_DATA = $(desktop_in_files:.desktop.in=.desktop)
 
 @INTLTOOL_XML_RULE@
-appdatadir = $(datadir)/appdata
+appdatadir = $(datadir)/metainfo
 appdata_DATA = $(appdata_in_files:.xml.in=.xml)
 appdata_in_files = pcb.appdata.xml.in
 
@@ -60,14 +60,6 @@ xml_DATA = $(xml_in_files:.xml.in=.xml)
 kdedatadir=@KDEDATADIR@
 mimelnkdir = $(kdedatadir)/mimelnk
 applicationdir = $(mimelnkdir)/application
-
-application_in_files = \
-	x-pcb-layout.desktop.in \
-	x-pcb-footprint.desktop.in \
-	x-pcb-netlist.desktop.in \
-	x-gerber.desktop.in \
-	x-excellon.desktop.in
-application_DATA = $(application_in_files:.desktop.in=.desktop)
 
 install_icon_exec = \
 	$(SETENV) GTK_UPDATE_ICON_CACHE_BIN="@GTK_UPDATE_ICON_CACHE_BIN@" \
@@ -100,7 +92,7 @@ endif
 	$(install_icon_exec) -u $(theme_icons)
 
 MAINTAINERCLEANFILES = *.log core FILE *~ Makefile.in
-DISTCLEANFILES = $(xml_DATA) $(appdata_DATA) $(application_DATA) $(desktop_DATA)
+DISTCLEANFILES = $(xml_DATA) $(appdata_DATA) $(desktop_DATA)
 EXTRA_DIST = $(mime_icon_files) $(mime_icon_sources) \
              $(appdata_in_files) $(appdata_DATA) \
              $(xml_in_files) $(xml_DATA) \

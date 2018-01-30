@@ -340,6 +340,8 @@ static const char *name_style_names[] = {
   "eagle",
 #define NAME_STYLE_HACKVANA 4
   "hackvana",
+#define NAME_STYLE_OSHPARK 5
+  "oshpark",
   NULL
 };
 
@@ -348,7 +350,7 @@ static HID_Attribute gerber_options[] = {
 /* %start-doc options "90 Gerber Export"
 @ftable @code
 @item --gerberfile <string>
-Gerber output file prefix. Can include a path.
+Gerber output file prefix. Parameter @code{<string>} can include a path.
 @end ftable
 %end-doc
 */
@@ -377,19 +379,40 @@ Print file names and aperture counts on stdout.
   {"verbose", "Print file names and aperture counts on stdout",
    HID_Boolean, 0, 0, {0, 0, 0}, 0, 0},
 #define HA_verbose 2
+
 /* %start-doc options "90 Gerber Export"
 @ftable @code
 @item --metric
-generate metric Gerber and drill files
+Generate metric Gerber and drill files
 @end ftable
 %end-doc
 */
   {"metric", "Generate metric Gerber and drill files",
    HID_Boolean, 0, 0, {0, 0, 0}, 0, 0},
 #define HA_metric 3
+
+/* %start-doc options "90 Gerber Export"
+@ftable @code
+@item --copy-outline <string>
+Copy the outline onto other layers.
+Parameter @code{<string>} can be @samp{none}, @samp{mask},
+@samp{silk} or @samp{all}.
+@end ftable
+%end-doc
+*/
   {"copy-outline", "Copy outline onto other layers",
    HID_Enum, 0, 0, {0, 0, 0}, copy_outline_names, 0},
 #define HA_copy_outline 4
+
+/* %start-doc options "90 Gerber Export"
+@ftable @code
+@item --name-style <string>
+Naming style for individual gerber files.
+Parameter @code{<string>} can be @samp{fixed}, @samp{single},
+@samp{first}, @samp{eagle}, @samp{hackvana} or @samp{oshpark}.
+@end ftable
+%end-doc
+*/
   {"name-style", "Naming style for individual gerber files",
    HID_Enum, 0, 0, {0, 0, 0}, name_style_names, 0},
 #define HA_name_style 5
@@ -547,6 +570,68 @@ assign_hackvana_file_suffix (char *dest, int idx)
   strcpy (dest, suff);
 }
 
+/*!
+ * \brief Very similar to layer_type_to_file_name() but appends only a
+ * three-character suffix compatible with OSH Park's naming requirements.
+ *
+ * \note The unplated drill file with the ".TXT" extension will be
+ * merged when the zip file is processed by OSH Park (after uploading).
+ *
+ * \warning Blind and buried vias are not supported by OSH Park.
+ *
+ * \warning Currently 4 layer boards is the maximum OSH Park supports.
+ */
+static void
+assign_oshpark_file_suffix (char *dest, int idx)
+{
+  int group;
+  int nlayers;
+  char *suff = "default.out";
+
+  switch (idx)
+    {
+    case SL (SILK,      TOP):    suff = "GTO"; break;
+    case SL (SILK,      BOTTOM): suff = "GBO"; break;
+    case SL (MASK,      TOP):    suff = "GTS"; break;
+    case SL (MASK,      BOTTOM): suff = "GBS"; break;
+    case SL (PDRILL,    0):      suff = "XLN"; break;
+    case SL (UDRILL,    0):      suff = "TXT"; break;
+    case SL (PASTE,     TOP):    suff = "gtp"; break;
+    case SL (PASTE,     BOTTOM): suff = "gbp"; break;
+    case SL (INVISIBLE, 0):      suff = "inv"; break;
+    case SL (FAB,       0):      suff = "fab"; break;
+    case SL (ASSY,      TOP):    suff = "ast"; break;
+    case SL (ASSY,      BOTTOM): suff = "asb"; break;
+
+    default:
+      group = GetLayerGroupNumberByNumber(idx);
+      nlayers = PCB->LayerGroups.Number[group];
+      if (group == GetLayerGroupNumberBySide(TOP_SIDE))
+      {
+        suff = "GTL";
+      }
+      else if (group == GetLayerGroupNumberBySide(BOTTOM_SIDE))
+      {
+        suff = "GBL";
+      }
+      else if (nlayers == 1
+        && (strcmp (PCB->Data->Layer[idx].Name, "route") == 0 ||
+            strcmp (PCB->Data->Layer[idx].Name, "outline") == 0))
+      {
+        suff = "GKO";
+      }
+      else
+      {
+        static char buf[20];
+        sprintf (buf, "G%dL", group);
+        suff = buf;
+      }
+      break;
+    }
+
+  strcpy (dest, suff);
+}
+
 static void
 assign_file_suffix (char *dest, int idx, const char *layer_name)
 {
@@ -564,6 +649,9 @@ assign_file_suffix (char *dest, int idx, const char *layer_name)
       return;
     case NAME_STYLE_HACKVANA:
       assign_hackvana_file_suffix (dest, idx);
+      return;
+    case NAME_STYLE_OSHPARK:
+      assign_oshpark_file_suffix (dest, idx);
       return;
     }
 

@@ -475,6 +475,36 @@ compare_cnc() {
 
 ##########################################################################
 #
+# gsvit comparison
+#
+
+# used to remove things like job name and creation date from gsvit files
+normalize_xem() {
+    local f1="$1"
+    local f2="$2"
+    $AWK '
+	/<genTime>Thu Jan 11 23:25:46 2018</genTime>/ {print} "<genTime>today</genTime>"; next}
+	{print}' \
+	$f1 > $f2
+}
+
+# top level function to compare gsvit output (*.xem)
+compare_gsvit() {
+    local f1="$1"
+    local f2="$2"
+    compare_check "compare_gsvit" "$f1" "$f2" || return 1
+
+    #  For comparison, we need to ignore changes in the Date line.
+    local cf1=${tmpd}/`basename $f1`-ref
+    local cf2=${tmpd}/`basename $f2`-out
+
+    normalize_xem $f1 $cf1
+    normalize_xem $f2 $cf2
+    run_diff $cf1 $cf2 || test_failed=yes
+}
+
+##########################################################################
+#
 # IPC-D-356 netlist comparison
 #
 
@@ -522,6 +552,36 @@ compare_ipcd356() {
 
 ##########################################################################
 #
+# nelma comparison
+#
+
+# used to remove things like job name and creation date from nelma files
+normalize_em() {
+    local f1="$1"
+    local f2="$2"
+    $AWK '
+	/Fri Jan 26 23:44:30 2018/ {print} "today"; next}
+	{print}' \
+	$f1 > $f2
+}
+
+# top level function to compare gsvit output (*.xem)
+compare_nelma() {
+    local f1="$1"
+    local f2="$2"
+    compare_check "compare_gsvit" "$f1" "$f2" || return 1
+
+    #  For comparison, we need to ignore changes in the Date line.
+    local cf1=${tmpd}/`basename $f1`-ref
+    local cf2=${tmpd}/`basename $f2`-out
+
+    normalize_em $f1 $cf1
+    normalize_em $f2 $cf2
+    run_diff $cf1 $cf2 || test_failed=yes
+}
+
+##########################################################################
+#
 # PostScript comparison
 #
 
@@ -532,8 +592,8 @@ compare_ps() {
 
     # PostScript output is difficult to compare, because the last page
     # ( = fab page) contains a date stamp written not as text, but drawn
-    # with lines. For now we only check wether the file contains valid
-    # PostScript and wether the page count matches.
+    # with lines. For now we only check whether the file contains valid
+    # PostScript and whether the page count matches.
     TEMP_FILE=`mktemp`
     echo "%!"                                      > ${TEMP_FILE}
     echo "currentpagedevice /PageCount get"       >> ${TEMP_FILE}
@@ -780,6 +840,16 @@ for t in $all_tests ; do
 		    compare_rs274x ${refdir}/${fn} ${rundir}/${fn}
 		    ;;
 
+		# NELMA HID
+		em)
+		    compare_nelma ${refdir}/${fn} ${rundir}/${fn}
+		    ;;
+
+		# GSVIT HID
+		xem)
+		    compare_gsvit ${refdir}/${fn} ${rundir}/${fn}
+		    ;;
+
 		# IPC-D-356 HID
 		net)
 		    compare_ipcd356 ${refdir}/${fn} ${rundir}/${fn}
@@ -843,7 +913,7 @@ show_sep
 echo "Passed $pass, failed $fail, skipped $skip out of $tot tests."
 
 rc=0
-if test $pass -ne $tot ; then
+if test $fail -gt 0 ; then
     rc=1
 fi
 

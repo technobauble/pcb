@@ -68,6 +68,16 @@
 #    cnc -- Excellon drill file
 #    gbx -- RS274-X (Gerber) file
 #
+# GSVIT
+#
+#    png -- Portable network graphics (PNG) file
+#    xem -- Import file for numerical analysis package
+#
+# NELMA
+#
+#    png -- Portable network graphics (PNG) file
+#    em  -- Import file for numerical analysis package
+#
 # PS
 #
 #    ps  -- PostScript file
@@ -119,11 +129,11 @@ hid_bom4 | bom_general.pcb | bom | --xy-in-mm | |  bom:bom_general.bom xy:bom_ge
 # --iso-tool-plunge <num>        Isolation milling feedrate when plunging into
 #                                the material.
 # --iso-tool-feedrate <num>      Isolation milling feedrate.
-# --predrill                     Wether to pre-drill all drill spots with the
+# --predrill                     Whether to pre-drill all drill spots with the
 #                                isolation milling tool.
 # --drill-depth <num>            Drilling depth.
 # --drill-feedrate <num>         Drilling feedrate.
-# --drill-mill                   Wether to produce drill holes equal or bigger
+# --drill-mill                   Whether to produce drill holes equal or bigger
 #                                than the milling tool diameter with the milling
 #                                tool.
 # --outline-mill-depth <num>     Milling depth when milling the outline.
@@ -131,7 +141,7 @@ hid_bom4 | bom_general.pcb | bom | --xy-in-mm | |  bom:bom_general.bom xy:bom_ge
 # --outline-mill-plunge <num>    Outline milling feedrate when plunging into
 #                                the material.
 # --outline-mill-feedrate <num>  Outline milling feedrate.
-# --advanced-gcode               Wether to produce G-code for advanced interpreters.
+# --advanced-gcode               Whether to produce G-code for advanced interpreters.
 hid_gcode1 | gcode_oneline.pcb | gcode | | | gcode:gcode_oneline-0.8890.drill.gcode gcode:gcode_oneline-bottom.gcode gcode:gcode_oneline-outline.gcode gcode:gcode_oneline-top.gcode
 hid_gcode2 | gcode_oneline.pcb | gcode | --basename out.gcode | | gcode:out-0.8890.drill.gcode gcode:out-bottom.gcode gcode:out-outline.gcode gcode:out-top.gcode
 hid_gcode3 | gcode_oneline.pcb | gcode | --dpi 1200 | | gcode:gcode_oneline-0.8890.drill.gcode gcode:gcode_oneline-bottom.gcode gcode:gcode_oneline-outline.gcode gcode:gcode_oneline-top.gcode
@@ -163,6 +173,19 @@ hid_gerber4 | buried.pcb | gerber | --gerberfile buried | | gbx:buried.bottom.gb
 #
 ######################################################################
 # ---------------------------------------------
+# gsvit export HID
+# ---------------------------------------------
+######################################################################
+#
+# Produces one XML file and a png file for every layer group.
+#
+hid_gsvit1 | gsvit_board.pcb | gsvit | --basename gsvit_board --dpi 1000 | | png:gsvit_board.top.png
+hid_gsvit2 | gsvit_board.pcb | gsvit | --basename gsvit_board --dpi 1000 | | png:gsvit_board.bottom.png
+hid_gsvit3 | gsvit_board.pcb | gsvit | --basename gsvit_board --dpi 1000 | | png:gsvit_board.outline.png
+hid_gsvit4 | gsvit_board.pcb | gsvit | --basename gsvit_board --dpi 1000 | | xem:gsvit_board.xem
+#
+######################################################################
+# ---------------------------------------------
 # IPC-D-356 export HID
 # ---------------------------------------------
 ######################################################################
@@ -170,6 +193,19 @@ hid_gerber4 | buried.pcb | gerber | --gerberfile buried | | gbx:buried.bottom.gb
 # Produces one netlist file.
 #
 hid_ipcd3561 | ipcd356_board.pcb | IPC-D-356 | --netlistfile ipcd356_board.net | | net:ipcd356_board.net
+#
+######################################################################
+# ---------------------------------------------
+# nelma export HID
+# ---------------------------------------------
+######################################################################
+#
+# Produces one em file and a png file for every layer group.
+#
+hid_nelma1 | nelma_board.pcb | nelma | --basename nelma_board --dpi 100 --copper-height 100 --substrate-height 2000 --substrate-epsilon 4.000 | | png:nelma_board.top.png
+hid_nelma2 | nelma_board.pcb | nelma | --basename nelma_board --dpi 100 --copper-height 100 --substrate-height 2000 --substrate-epsilon 4.000 | | png:nelma_board.bottom.png
+hid_nelma3 | nelma_board.pcb | nelma | --basename nelma_board --dpi 100 --copper-height 100 --substrate-height 2000 --substrate-epsilon 4.000 | | png:nelma_board.outline.png
+hid_nelma4 | nelma_board.pcb | nelma | --basename nelma_board --dpi 100 --copper-height 100 --substrate-height 2000 --substrate-epsilon 4.000 | | em:nelma_board.em
 #
 ######################################################################
 # ---------------------------------------------

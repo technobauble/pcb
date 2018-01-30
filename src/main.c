@@ -39,6 +39,11 @@
 #ifdef HAVE_STRING_H
 #include <string.h>
 #endif
+
+#if defined(ENABLE_NLS) && defined(HAVE_LOCALE_H)
+#include <locale.h>
+#endif
+
 #include <signal.h>
 #include <unistd.h>
 #include <sys/stat.h>
@@ -1065,6 +1070,22 @@ Minimum polygon area.
   RSET (IsleArea, MIL_TO_COORD(100) * MIL_TO_COORD(100), "minimum polygon area", 0),
 
 
+/* %start-doc options "5 Sizes"
+@ftable @code
+@item --paste-adjust <num>
+Adjust pad thickness in paste layer. Default value is @code{0}.
+Shrinking the pads is done with a negative amount.
+
+Example:
+@example
+pcb -x gerber --paste-adjust -0.07mm filename.pcb
+@end example
+@end ftable
+%end-doc
+*/
+  CSET (PasteAdjust, MIL_TO_COORD(0), "paste-adjust", "Adjustment to pad thickness in paste layer in 1/100 mil"),
+
+
 /* %start-doc options "1 General Options"
 @ftable @code
 @item --backup-interval
@@ -1543,12 +1564,12 @@ If set, all found connections are reset before a new component is scanned.
        "If set, all found connections are reset before a new component is scanned"),
 
 /* %start-doc options "1 General Options"
- * @ftable @code
- * @item --auto-buried-vias
- * Enables automatically created vias (during line moves and layer switch) to be buriad/blind vias
- * @end ftable
- * %end-doc
- * */
+@ftable @code
+@item --auto-buried-vias
+Enables automatically created vias (during line moves and layer switch) to be buriad/blind vias
+@end ftable
+%end-doc
+*/
   BSET (AutoBuriedVias, 0, "auto-buried-vias",
        "Enables automatically created vias to be buriad/blind vias"),
 

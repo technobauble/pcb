@@ -110,12 +110,28 @@ If needed you can obtain the number of commits with commands like:</p>
   ./utils/git2cl -O > ChangeLog
 </pre>
 <li>
-<p>Commit and push doc/pcb-texi, NEWS and ChangeLog:</p>
+<p>Update the <b>&lt;releases&gt;</b> section of the application data in:
+data/pcb.appdata.xml.in<br>
+Add a section similar to the example below, in <u>reverse</u> order
+(<u>latest</u> on top), and edit for the correct version, date of
+release and description.</p>
 <pre>
-  git add doc/pcb.texi NEWS ChangeLog
+​    &lt;release version="4.0.2" date="2017-09-03"&gt;
+​      &lt;description&gt;
+​        &lt;p&gt;Bug fix release&lt;/p&gt;
+​      &lt;/description&gt;
+​    &lt;/release&gt;
+​​</pre>
+<li>
+<p>Commit and push data/pcb.appdata.xml.in, doc/pcb-texi, NEWS and
+ChangeLog:</p>
+<pre>
+  git add data/pcb.appdata.xml.in doc/pcb.texi NEWS ChangeLog
   git commit -m &lt;message&gt;
   git push origin pcb-4.0.1
 </pre>
+Please note that these files can be committed in seperate commits as
+well.
 <li>
 <p>Create the release tarball with:</p>
 <pre>
@@ -153,12 +169,12 @@ If needed you can obtain the number of commits with commands like:</p>
   pcb-4.0.1-README.txt and pcb-4.0.1.cksum files.
   <li>Click on "Upload".
   <li>Click on the information icon right of "pcb-4.0.1.tar.gz" to bring
-  up a form to edit the file details and check the tick boxes for all
-  the platforms, change the text for the "download button" to
-  "pcb-4.0.1.tar.gz" and click "Save".
+  up a form to edit the file details, and check the tick boxes for all
+  the platforms to "default download" for "pcb-4.0.1.tar.gz" and
+  click "Save".
   <li>In a similar fashion, remove these settings from the previous
-  release tarball by clicking "Deselect all" to un-tick all the tick
-  boxes, and click "Save".
+  release tarball (if needed) by clicking "Deselect all" to un-tick all
+  the tick boxes, and click "Save".
 </ol>
 <li>
 <p>Update the web pages.<br>
@@ -182,7 +198,7 @@ for this release.
 <p>Add a tag at the HEAD of the release branch:</p>
 <pre>
   git tag -a -m &lt;msg&gt; &lt;tagname&gt; &lt;SHA1 hash&gt;
-  git push --tags
+  git push origin --tags
 </pre>
 <li>
 <p>Return to your regularly scheduled trunk development and add a tag at
@@ -190,7 +206,7 @@ the branch point:</p>
 <pre>
   git checkout master
   git tag -a -m &lt;msg&gt; &lt;tagname&gt; &lt;SHA1 hash&gt;
-  git push --tags
+  git push origin --tags
 </pre>
 <li>
 <p>If this is a bug fix release, then simply make desired changes to the
