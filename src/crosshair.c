@@ -1125,6 +1125,28 @@ snap_to_pins_pads(Coord x, Coord y, Coord r)
       break;
     case PAD_TYPE:
       pad = (PadType *)p2;
+      // for the record, I hate this:
+      if ((Crosshair.AttachedObject.Type == LINEPOINT_TYPE) ||
+          (Crosshair.AttachedObject.Type == ARCPOINT_TYPE) ||
+          (Settings.Mode == LINE_MODE) || (Settings.Mode == ARC_MODE))
+      {
+        LayerType *desired_layer;
+        Cardinal   desired_group;
+        bool same_layer = false;
+        if (Crosshair.AttachedObject.Type == NO_TYPE)
+          desired_layer = CURRENT;
+        else
+          desired_layer = (LayerType *)Crosshair.AttachedObject.Ptr1;
+        desired_group = GetLayerGroupNumberBySide(
+                   TEST_FLAG (ONSOLDERFLAG, pad) ? BOTTOM_SIDE : TOP_SIDE);
+        GROUP_LOOP( PCB->Data, desired_group);
+        {
+          if (layer == desired_layer) { same_layer = true; break; }
+        }
+        END_LOOP;
+        if (!same_layer) break;
+      }
+      // --end hate--
       snap.loc.X = pad->Point1.X + (pad->Point2.X - pad->Point1.X) / 2;
       snap.loc.Y = pad->Point1.Y + (pad->Point2.Y - pad->Point1.Y) / 2;
       snap.valid = true;
