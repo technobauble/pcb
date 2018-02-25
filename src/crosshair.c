@@ -1351,3 +1351,34 @@ DestroyCrosshair (void)
 {
   FreePolygonMemory (&Crosshair.AttachedPolygon);
 }
+static const char move_crosshair_syntax[] = N_("MoveCrosshair([+/-] X, [+/-] Y[, units])");
+
+static const char move_crosshair_help[] = N_("Move the crosshair to the specified position");
+static int
+move_crosshair_action (int argc, char **argv, Coord x, Coord y)
+{
+  bool absolute;
+  Coord xx, yy;
+  char *units = "mm";
+  if (argc < 2){
+    return -1;
+  } else if (argc == 3) {
+    units = argv[2];
+  }
+ 
+  xx = GetValue(argv[0], units, &absolute);
+  if (!absolute) xx += Crosshair.X;
+  yy = GetValue(argv[1], units, &absolute);
+  if (!absolute) yy += Crosshair.Y;
+  Message("Moving crosshair to %f, %f mm\n", xx/1.e6, yy/1.e6);
+  MoveCrosshairAbsolute(xx, yy);
+  notify_crosshair_change(true);
+  return 0;
+}
+
+static HID_Action crosshair_action_list[] =
+{
+  {"MoveCrosshair", NULL, move_crosshair_action, move_crosshair_help, move_crosshair_syntax}
+};
+
+REGISTER_ACTIONS (crosshair_action_list)
