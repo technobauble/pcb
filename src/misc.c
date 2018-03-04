@@ -167,12 +167,20 @@ GetValueEx (const char *val, const char *units, bool * absolute, UnitList extra_
       if (sscanf (val, "%lf%n", &value, &n) < 1)
         return 0;
     }
+  
+  /* If we didn't get a unit passed to us, then we need to check the input 
+   * for one. n has the number of bytes consumed by scanf, so, this points
+   * units to the end of the number in the val string. */
   if (!units && n > 0)
     units = val + n;
 
+  /* skip any possible spaces between the number and the unit characters */
   while (units && *units == ' ')
     units ++;
-    
+  
+  /* If it was a number without a unit, then we should be pointed at the null
+   * terminator. Otherwise, there's more to the string, presumably a unit, so,
+   * we should try to figure out what unit it is. */
   if (units && *units)
     {
       int i;
