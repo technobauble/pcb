@@ -1038,7 +1038,7 @@ NotifyMode (void)
 	  }
 	if ((via = CreateNewVia (PCB->Data, Note.X, Note.Y,
 				 Settings.ViaThickness, 2 * Settings.Keepaway,
-				 0, Settings.ViaDrillingHole, NULL,
+				 Settings.ViaSolderMaskClearance, Settings.ViaDrillingHole, NULL,
 				 NoFlags ())) != NULL)
 	  {
 	    AddObjectToCreateUndoList (VIA_TYPE, via, via, via);
