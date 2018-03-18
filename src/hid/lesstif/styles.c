@@ -49,7 +49,7 @@ static int n;
 
 typedef enum
 {
-  SSthick, SSdiam, SShole, SSkeep,
+  SSthick, SSdiam, SShole, SSkeep, SSviamask,
   SSNUM
 } StyleValues;
 
@@ -87,7 +87,7 @@ static StyleButtons *style_button_list = 0;
 static int num_style_buttons = 0;
 
 static char *value_names[] = {
-  "Thickness", "Diameter", "Hole", "Keepaway"
+  "Thickness", "Diameter", "Hole", "Keepaway", "ViaMask"
 };
 
 static int RouteStylesChanged (int argc, char **argv, Coord x, Coord y);
@@ -112,6 +112,7 @@ update_values ()
   update_one_value (SSdiam, Settings.ViaThickness);
   update_one_value (SShole, Settings.ViaDrillingHole);
   update_one_value (SSkeep, Settings.Keepaway);
+  update_one_value (SSviamask, Settings.ViaSolderMaskClearance);
   local_update = 0;
   lesstif_update_status_line ();
 }
@@ -176,6 +177,9 @@ style_value_cb (Widget w, int i, void *cbs)
       break;
     case SSkeep:
       Settings.Keepaway = n;
+      break;
+    case SSviamask:
+      Settings.ViaSolderMaskClearance = n;
       break;
     }
   update_style_buttons ();
@@ -252,6 +256,7 @@ style_set_cb (Widget w, int i, XmToggleButtonCallbackStruct * cbs)
   PCB->RouteStyle[i].Diameter = Settings.ViaThickness;
   PCB->RouteStyle[i].Hole = Settings.ViaDrillingHole;
   PCB->RouteStyle[i].Keepaway = Settings.Keepaway;
+  PCB->RouteStyle[i].ViaMask = Settings.ViaSolderMaskClearance;
   update_style_buttons ();
 }
 
@@ -270,6 +275,7 @@ style_selected (Widget w, int i, XmToggleButtonCallbackStruct * cbs)
   SetViaSize (style->Diameter, true);
   SetViaDrillingHole (style->Hole, true);
   SetKeepawayWidth (style->Keepaway);
+  SetViaSolderMaskClearance(style->ViaMask);
   if (style_dialog)
     {
       for (j = 0; j < NUM_STYLES; j++)
