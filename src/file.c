@@ -167,22 +167,23 @@ static int LoadNewlibFootprintsFromDir(char *path, char *toppath, bool recursive
 int
 PCBFileVersionNeeded (void)
 {
+
+  STYLE_LOOP(PCB);
+  if(style->ViaMask != 0)
+    return PCB_FILE_VERSION_VSM_STYLES;
+  END_LOOP;
+
+  VIA_LOOP (PCB->Data);
+  if ((via->BuriedFrom != 0) || (via->BuriedTo != 0))
+    return PCB_FILE_VERSION_BURIED_VIAS;
+  END_LOOP;
+
   ALLPOLYGON_LOOP (PCB->Data);
   {
     if (polygon->HoleIndexN > 0)
       return PCB_FILE_VERSION_HOLES;
   }
   ENDALL_LOOP;
-
-  VIA_LOOP (PCB->Data);
-    if ((via->BuriedFrom != 0) || (via->BuriedTo != 0))
-      return PCB_FILE_VERSION_BURIED_VIAS;
-  END_LOOP;
-  
-  STYLE_LOOP(PCB);
-    if(style->ViaMask != 0)
-      return PCB_FILE_VERSION_VSM_STYLES;
-  END_LOOP;
 
   return PCB_FILE_VERSION_BASELINE;
 }
