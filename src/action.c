@@ -4344,7 +4344,9 @@ static const char minmaskgap_help[] =
 
 Checks all specified pins and/or pads, and increases the mask if
 needed to ensure a minimum distance between the pin or pad edge and
-the mask edge.
+the mask edge. This action only affects objects with non-zero mask values. To
+set the size of the mask, use the ChangeClearSize action with the mask layer
+enabled.
 
 %end-doc */
 
