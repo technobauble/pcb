@@ -762,6 +762,7 @@ absolute_label_size_req_cb (GtkWidget * widget,
     g_free (str);
     /* Reset previous size request */
     gtk_widget_set_size_request (widget, -1, -1);
+	gtk_label_set_line_wrap(GTK_LABEL(widget), TRUE);
     gtk_widget_size_request (widget, &requisition);
     gtk_widget_set_size_request (widget, requisition.width, requisition.height);
     ghid_set_cursor_position_labels();
@@ -797,6 +798,7 @@ relative_label_size_req_cb (GtkWidget * widget,
     g_free (str);
     /* Reset previous size request */
     gtk_widget_set_size_request (widget, -1, -1);
+	gtk_label_set_line_wrap(GTK_LABEL(widget), TRUE);
     gtk_widget_size_request (widget, &requisition);
     gtk_widget_set_size_request (widget, requisition.width, requisition.height);
     ghid_set_cursor_position_labels();
