@@ -1319,7 +1319,7 @@ NotifyMode (void)
 				    Crosshair.AttachedLine.Point1.X,
 				    Crosshair.AttachedLine.Point1.Y,
 				    Settings.ViaThickness,
-				    2 * Settings.Keepaway, 0,
+				    2 * Settings.Keepaway, Settings.ViaSolderMaskClearance,
 				    Settings.ViaDrillingHole, NULL,
 				    NoFlags (), layer_from, layer_to)) != NULL)
 		{
