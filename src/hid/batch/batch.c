@@ -44,6 +44,7 @@
 #include <unistd.h>
 
 #include "global.h"
+#include "crosshair.h"
 #include "hid.h"
 #include "data.h"
 #include "misc.h"
@@ -95,6 +96,7 @@ PCBChanged (int argc, char **argv, Coord x, Coord y)
     }
   else
     prompt = "no-board";
+  crosshair_update_range();
   return 0;
 }
 
@@ -186,7 +188,7 @@ batch_parse_arguments (int *argc, char ***argv)
 }
 
 static void
-batch_invalidate_lr (int l, int r, int t, int b)
+batch_invalidate_lr (Coord l, Coord r, Coord t, Coord b)
 {
 }
 

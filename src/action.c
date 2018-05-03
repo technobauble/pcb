@@ -6070,7 +6070,6 @@ ActionNew (int argc, char **argv, Coord x, Coord y)
       PCB->Name = name;
 
       ResetStackAndVisibility ();
-      SetCrosshairRange (0, 0, PCB->MaxWidth, PCB->MaxHeight);
       CenterDisplay (PCB->MaxWidth / 2, PCB->MaxHeight / 2, false);
       Redraw ();
 
@@ -6196,7 +6195,7 @@ ActionPasteBuffer (int argc, char **argv, Coord x, Coord y)
 	  if (sbufnum)
 	    {
 	      RotateBuffer (PASTEBUFFER, (BYTE) atoi (sbufnum));
-	      SetCrosshairRangeToBuffer ();
+        crosshair_update_range();
 	    }
 	  break;
 

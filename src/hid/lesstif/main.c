@@ -438,6 +438,7 @@ PCBChanged (int argc, char **argv, Coord x, Coord y)
       stdarg (XmNtitle, cp ? cp + 1 : PCB->Filename);
       XtSetValues (appwidget, args, n);
     }
+  crosshair_update_range();
   return 0;
 }
 
@@ -787,17 +788,27 @@ static const char command_help[] =
 /* %start-doc actions Command
 
 The command window allows the user to manually enter actions to be
-executed.  Action syntax can be done one of two ways:
+executed.
+Action syntax can be done one of two ways:
 
 @itemize @bullet
 
 @item
 Follow the action name by an open parenthesis, arguments separated by
-commas, end with a close parenthesis.  Example: @code{Abc(1,2,3)}
+commas, end with a close parenthesis.
+Example:
+
+@example
+@code{Abc(1,2,3)}
+@end example
 
 @item
-Separate the action name and arguments by spaces.  Example: @code{Abc
-1 2 3}.
+Separate the action name and arguments by spaces.
+Example:
+
+@example
+@code{Abc 1 2 3}
+@end example
 
 @end itemize
 
@@ -805,18 +816,19 @@ The first option allows you to have arguments with spaces in them,
 but the second is more ``natural'' to type for most people.
 
 Note that action names are not case sensitive, but arguments normally
-are.  However, most actions will check for ``keywords'' in a case
+are.
+However, most actions will check for ``keywords'' in a case
 insensitive way.
 
-There are three ways to finish with the command window.  If you press
-the @code{Enter} key, the command is invoked, the window goes away,
-and the next time you bring up the command window it's empty.  If you
-press the @code{Esc} key, the window goes away without invoking
+There are three ways to finish with the command window.
+If you press the @code{Enter} key, the command is invoked, the window
+goes away, and the next time you bring up the command window it's empty.
+If you press the @code{Esc} key, the window goes away without invoking
 anything, and the next time you bring up the command window it's
-empty.  If you change focus away from the command window (i.e. click
-on some other window), the command window goes away but the next time
-you bring it up it resumes entering the command you were entering
-before.
+empty.
+If you change focus away from the command window (i.e. click on some
+other window), the command window goes away but the next time you bring
+it up it resumes entering the command you were entering before.
 
 %end-doc */
 
@@ -2339,8 +2351,8 @@ lesstif_parse_arguments (int *argc, char ***argv)
 /*!
  * \brief Draw the grid on the lesstif canvas
  */
-static void
-draw_grid ()
+void
+lesstif_draw_grid (BoxType * region)
 {
   static XPoint *points = 0;
   static int npoints = 0;
@@ -2630,7 +2642,7 @@ idle_proc (XtPointer dummy)
 	}
       DrawBackgroundImage();
       hid_expose_callback (&lesstif_hid, &region, 0);
-      draw_grid ();
+      lesstif_graphics.draw_grid (&region);
       lesstif_use_mask (HID_MASK_OFF);
       show_crosshair (0); /* To keep the drawn / not drawn info correct */
       XSetFunction (display, my_gc, GXcopy);
@@ -2966,7 +2978,7 @@ lesstif_need_idle_proc ()
 }
 
 static void
-lesstif_invalidate_lr (int l, int r, int t, int b)
+lesstif_invalidate_lr (Coord l, Coord r, Coord t, Coord b)
 {
   if (!window)
     return;
@@ -4175,6 +4187,8 @@ hid_lesstif_init ()
   lesstif_graphics.fill_polygon        = lesstif_fill_polygon;
   lesstif_graphics.fill_rect           = lesstif_fill_rect;
 
+  lesstif_graphics.draw_grid           = lesstif_draw_grid;
+  
   lesstif_graphics.draw_pcb_polygon    = common_gui_draw_pcb_polygon;
 
   hid_register_hid (&lesstif_hid);

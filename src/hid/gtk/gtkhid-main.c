@@ -1114,7 +1114,7 @@ N_("Tell the user about this version of PCB.");
 
 /* %start-doc actions About
 
-This just pops up a dialog telling the user which version of
+This just pops up an about dialog telling the user which version of
 @code{pcb} they're running.
 
 %end-doc */
@@ -1231,6 +1231,7 @@ PCBChanged (int argc, char **argv, Coord x, Coord y)
   ghid_port_ranges_scale ();
   ghid_zoom_view_fit ();
   ghid_sync_with_new_layout ();
+  crosshair_update_range();
   return 0;
 }
 
@@ -1256,6 +1257,53 @@ LibraryChanged (int argc, char **argv, Coord x, Coord y)
 
 /* ---------------------------------------------------------------------- */
 
+static const char command_syntax[] =
+"Command()";
+
+static const char command_help[] =
+"Displays the command line input window.";
+
+/* %start-doc actions Command
+
+The command window allows the user to manually enter actions to be
+executed.
+Action syntax can be done one of two ways:
+
+@itemize @bullet
+
+@item
+Follow the action name by an open parenthesis, arguments separated by
+commas, end with a close parenthesis.
+Example:
+
+@example
+@code{Abc(1,2,3)}
+@end example
+
+@item
+Separate the action name and arguments by spaces.
+Example:
+
+@example
+@code{Abc 1 2 3}
+@end example
+
+@end itemize
+
+The first option allows you to have arguments with spaces in them,
+but the second is more ``natural'' to type for most people.
+
+Note that action names are not case sensitive, but arguments normally
+are.  However, most actions will check for ``keywords'' in a case
+insensitive way.
+
+@code{Esc} closes the command window if pressed while the command window has 
+focus. If you press the @code{Esc} key, the window goes away without invoking
+anything, and the next time you bring up the command window it resumes
+entering the command you were entering before.
+
+%end-doc */
+
 static int
 Command (int argc, char **argv, Coord x, Coord y)
 {
@@ -1264,6 +1312,26 @@ Command (int argc, char **argv, Coord x, Coord y)
 }
 
 /* ---------------------------------------------------------------------- */
+
+static const char load_syntax[] =
+"Load(Layout|LayoutToBuffer|ElementToBuffer|Netlist|Revert,filename)";
+
+static const char load_help[] =
+N_("Load layout data from a user-selected file.");
+
+/* %start-doc actions Load
+
+This action is invoked by typing Load() in the command
+entry dialog.
+This action is a GUI front-end to the core's @code{LoadFrom}
+action (@pxref{LoadFrom Action}).
+If you happen to pass a filename, like @code{LoadFrom}, then
+@code{LoadFrom} is called directly.
+Else this action opens a file chooser dialog window.
+The user is to select a filename to load, and then that layout
+file is loaded into pcb.
+
+%end-doc */
 
 static int
 Load (int argc, char **argv, Coord x, Coord y)
@@ -1580,6 +1648,21 @@ PrintCalibrate (int argc, char **argv, Coord x, Coord y)
 
 /* ------------------------------------------------------------ */
 
+static const char export_syntax[] =
+"Export()\n";
+
+static const char export_help[] =
+N_("Open the Export dialog window.");
+
+/* %start-doc actions Export
+
+This action is invoked by typing Export() in the command
+entry dialog.
+
+@noindent This action opens the Export dialog window.
+
+%end-doc */
+
 static int
 Export (int argc, char **argv, Coord x, Coord y)
 {
@@ -1596,6 +1679,22 @@ Export (int argc, char **argv, Coord x, Coord y)
 }
 
 /* ------------------------------------------------------------ */
+
+static const char benchmark_syntax[] =
+"Benchmark()\n";
+
+static const char benchmark_help[] =
+N_("Report the amount of redraws per second.");
+
+/* %start-doc actions Benchmark
+
+This action is invoked by typing Benchmark() in the command
+entry dialog.
+
+@noindent This action reports the number of redraws per second on the command
+line interface.
+
+%end-doc */
 
 static int
 Benchmark (int argc, char **argv, Coord x, Coord y)
@@ -2073,6 +2172,29 @@ ImportGUI (int argc, char **argv, Coord x, Coord y)
 }
 
 /* ------------------------------------------------------------ */
+
+static const char busy_syntax[] =
+"Busy()\n";
+
+static const char busy_help[] =
+N_("Show a busy cursor.");
+
+/* %start-doc actions Busy
+
+This action is invoked by the program when there is a waiting state for
+the user.
+
+@noindent This action shows a "watch" like cursor graphic to indicate
+the pcb program is chewing on a task taking significant time.
+
+@noindent The cursor graphic is reset when the task is finished.
+
+When invoked by the user from the command entry window (no program task
+running) the cursor graphic is reset when the user enters a coordinate
+(left mouse button click).
+
+%end-doc */
+
 static int
 Busy (int argc, char **argv, Coord x, Coord y)
 {
@@ -2082,26 +2204,24 @@ Busy (int argc, char **argv, Coord x, Coord y)
 
 HID_Action ghid_main_action_list[] = {
   {"About", 0, About, about_help, about_syntax},
-  {"Benchmark", 0, Benchmark},
-  {"Busy", 0, Busy},
+  {"Benchmark", 0, Benchmark, benchmark_help, benchmark_syntax},
+  {"Busy", 0, Busy, busy_help, busy_syntax},
   {"Center", N_("Click on a location to center"), Center, center_help, center_syntax},
-  {"Command", 0, Command},
+  {"Command", 0, Command, command_help, command_syntax},
   {"Cursor", 0, CursorAction, cursor_help, cursor_syntax},
   {"DoWindows", 0, DoWindows, dowindows_help, dowindows_syntax},
-  {"Export", 0, Export},
+  {"Export", 0, Export, export_help, export_syntax},
   {"GetXY", 0, GetXY, getxy_help, getxy_syntax},
   {"ImportGUI", 0, ImportGUI, importgui_help, importgui_syntax},
   {"LayerGroupsChanged", 0, LayerGroupsChanged},
   {"LibraryChanged", 0, LibraryChanged},
-  {"Load", 0, Load},
+  {"Load", 0, Load, load_help, load_syntax},
   {"Pan", 0, PanAction, pan_help, pan_syntax},
   {"PCBChanged", 0, PCBChanged},
   {"PointCursor", 0, PointCursor},
   {"Popup", 0, Popup, popup_help, popup_syntax},
-  {"Print", 0, Print,
-   print_help, print_syntax},
-  {"PrintCalibrate", 0, PrintCalibrate,
-   printcalibrate_help, printcalibrate_syntax},
+  {"Print", 0, Print, print_help, print_syntax},
+  {"PrintCalibrate", 0, PrintCalibrate, printcalibrate_help, printcalibrate_syntax},
   {"RouteStylesChanged", 0, RouteStylesChanged},
   {"Save", 0, Save, save_help, save_syntax},
   {"Scroll", N_("Click on a place to scroll"), ScrollAction, scroll_help, scroll_syntax},
@@ -2254,6 +2374,8 @@ hid_gtk_init ()
   ghid_graphics.fill_circle         = ghid_fill_circle;
   ghid_graphics.fill_polygon        = ghid_fill_polygon;
   ghid_graphics.fill_rect           = ghid_fill_rect;
+  
+  ghid_graphics.draw_grid           = ghid_draw_grid;
 
   ghid_graphics.draw_pcb_polygon    = common_gui_draw_pcb_polygon;
 

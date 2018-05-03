@@ -170,7 +170,11 @@ top_srcdir=${top_srcdir:-.}
 #
 # by default we will be running it from $(srcdir)/runs/testname
 # so we need to look 3 levels up and then down to src
-PCB=${PCB:-../../../src/pcbtest.sh}
+if test "X${WIN32}" = "Xyes" ; then
+	PCB=${PCB:-../../../src/pcbtest.bat}
+else
+	PCB=${PCB:-../../../src/pcbtest.sh}
+fi
 
 # The gerbv executible 
 GERBV=${GERBV:-gerbv}
@@ -483,7 +487,7 @@ normalize_xem() {
     local f1="$1"
     local f2="$2"
     $AWK '
-	/<genTime>Thu Jan 11 23:25:46 2018</genTime>/ {print} "<genTime>today</genTime>"; next}
+	/<genTime>.*</genTime>/ {print "<genTime>today</genTime>" }; next}
 	{print}' \
 	$f1 > $f2
 }
@@ -559,8 +563,10 @@ compare_ipcd356() {
 normalize_em() {
     local f1="$1"
     local f2="$2"
+    # an example .em header has:
+    # /* Made with PCB Nelma export HID *//* Wed Apr 11 12:25:23 2018
     $AWK '
-	/Fri Jan 26 23:44:30 2018/ {print} "today"; next}
+	/Made with PCB Nelma export HID/ {print"/* PCB Nelma Export *//* today"; next}
 	{print}' \
 	$f1 > $f2
 }
@@ -913,7 +919,7 @@ show_sep
 echo "Passed $pass, failed $fail, skipped $skip out of $tot tests."
 
 rc=0
-if test $fail -gt 0 ; then
+if test $fail -ne 0 ; then
     rc=1
 fi
 
