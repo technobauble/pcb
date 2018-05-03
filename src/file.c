@@ -2143,7 +2143,7 @@ CheckPCB (char *filename)
   return 1;
 }
 
-#define PCB_FILE_VERSION_IMPLEMENTED 20160729
+#define PCB_FILE_VERSION_IMPLEMENTED 20170218
 
 bool
 CheckPCBVersion (unsigned long current, unsigned long minimal)
