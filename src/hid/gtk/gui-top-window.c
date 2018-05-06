@@ -757,12 +757,12 @@ absolute_label_size_req_cb (GtkWidget * widget,
     str = pcb_g_strdup_printf (_(cursor_position_format),
                                 Settings.grid_unit->allow,
                                 pcb_max_width, pcb_max_height);
-
+    
+    gtk_label_set_line_wrap(GTK_LABEL(widget), TRUE);
     ghid_label_set_markup (widget, str);
     g_free (str);
     /* Reset previous size request */
     gtk_widget_set_size_request (widget, -1, -1);
-	gtk_label_set_line_wrap(GTK_LABEL(widget), TRUE);
     gtk_widget_size_request (widget, &requisition);
     gtk_widget_set_size_request (widget, requisition.width, requisition.height);
     ghid_set_cursor_position_labels();
@@ -794,11 +794,11 @@ relative_label_size_req_cb (GtkWidget * widget,
                          (Coord) Distance (0, 0, pcb_max_width, pcb_max_height),
                          -180.0, -pcb_max_width, -pcb_max_height);
 
+    gtk_label_set_line_wrap(GTK_LABEL(widget), TRUE);
     ghid_label_set_markup (widget, str);
     g_free (str);
     /* Reset previous size request */
     gtk_widget_set_size_request (widget, -1, -1);
-	gtk_label_set_line_wrap(GTK_LABEL(widget), TRUE);
     gtk_widget_size_request (widget, &requisition);
     gtk_widget_set_size_request (widget, requisition.width, requisition.height);
     ghid_set_cursor_position_labels();
