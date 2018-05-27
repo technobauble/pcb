@@ -1,5 +1,5 @@
 # PCB default font (2016)
-Font("Default") (
+Font( "Default" ) (
 Symbol(' ' 18)
 (
 )
