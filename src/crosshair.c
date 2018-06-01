@@ -885,6 +885,11 @@ MoveCrosshairAbsolute (Coord X, Coord Y)
   
   gui->set_crosshair (Crosshair.X, Crosshair.Y, HID_SC_DO_NOTHING);
 
+  if (Settings.Mode == LINE_MODE
+      && Crosshair.AttachedLine.State != STATE_FIRST
+      && TEST_FLAG (AUTODRCFLAG, PCB))
+    EnforceLineDRC ();
+  
   if (Crosshair.X != old_x || Crosshair.Y != old_y)
     {
       Coord new_x = Crosshair.X;
@@ -985,7 +990,7 @@ static SnapSpecType grid_snap = {
   &snap_to_grid,   // Function pointer
   true,            // enabled
   0,               // priority
-  100000,          // radius (nm)
+  10000000,        // radius (nm)
   0                // object type
 };
 
@@ -1079,7 +1084,7 @@ snap_to_elements(Coord x, Coord y, Coord r)
 static SnapSpecType element_snap = {
   "Snap to elements",       // Name
   &snap_to_elements,        // Function pointer
-  true,                     // enabled
+  false,                     // enabled
   10,                       // priority
   1000000,                  // radius (nm)
   0                         // object type
@@ -1180,11 +1185,6 @@ snap_to_lines(Coord x, Coord y, Coord r)
   }
   
   snap.distsq = square(snap.loc.X - x) + square(snap.loc.Y - y);
-  
-  if (Settings.Mode == LINE_MODE
-      && Crosshair.AttachedLine.State != STATE_FIRST
-      && TEST_FLAG (AUTODRCFLAG, PCB))
-    EnforceLineDRC ();
   
   return snap;
 }
