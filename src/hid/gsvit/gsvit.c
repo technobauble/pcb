@@ -96,15 +96,17 @@ struct color_struct {
   unsigned int r, g, b;
 };
 
-struct hid_gc_struct {
-  HID *me_pointer;
+
+typedef struct gsvit_gc_struct {
+  struct hid_gc_struct hid_gc; /* parent */
   EndCapStyle cap;
   Coord width;
   unsigned char r, g, b;
   int erase;
   struct color_struct *color;
   gdImagePtr brush;
-};
+} * gsvitGC;
+
 
 struct gsvit_net_layer {
   GList *Line;
@@ -178,6 +180,8 @@ static struct color_struct* color_array[0x100];
 static HID gsvit_hid;
 
 static HID_DRAW gsvit_graphics;
+
+static HID_DRAW_CLASS gsvit_graphics_class;
 
 static struct color_struct *black = NULL, *white = NULL;
 
@@ -1380,14 +1384,17 @@ gsvit_set_layer (const char *name, int group, int empty)
 static hidGC 
 gsvit_make_gc (void)
 {
-  hidGC rv = (hidGC) malloc (sizeof (struct hid_gc_struct));
-  rv->me_pointer = &gsvit_hid;
-  rv->cap = Trace_Cap;
-  rv->width = 1;
-  rv->color = (struct color_struct *) malloc (sizeof (*rv->color));
-  rv->color->r = rv->color->g = rv->color->b = 0;
-  rv->color->c = 0;
-  return rv;
+  hidGC gc = (hidGC) calloc (1, sizeof(struct gsvit_gc_struct));
+  gsvitGC gsvit_gc = (gsvitGC) gc;
+  gc->hid = &gsvit_hid;
+
+  gsvit_gc->cap = Trace_Cap;
+  gsvit_gc->width = 1;
+  gsvit_gc->color = (struct color_struct *) malloc (sizeof (*gsvit_gc->color));
+  gsvit_gc->color->r = gsvit_gc->color->g = gsvit_gc->color->b = 0;
+  gsvit_gc->color->c = 0;
+
+  return gc;
 }
 
 
@@ -1408,6 +1415,8 @@ gsvit_use_mask (enum mask_mode mode)
 static void 
 gsvit_set_color (hidGC gc, const char *name)
 {
+  gsvitGC gsvit_gc = (gsvitGC)gc;
+
   if (gsvit_im == NULL) {
     return;
   }
@@ -1417,20 +1426,20 @@ gsvit_set_color (hidGC gc, const char *name)
   }
 
   if (!strcmp(name, "drill")) {
-    gc->color = black;
-    gc->erase = 0;
+    gsvit_gc->color = black;
+    gsvit_gc->erase = 0;
     return;
   }
 
   if (!strcmp(name, "erase")) {
     /*! \todo Should be background, not white. */
-    gc->color = white;
-    gc->erase = 1;
+    gsvit_gc->color = white;
+    gsvit_gc->erase = 1;
     return;
   }
 
-  gc->color = black;
-  gc->erase = 0;
+  gsvit_gc->color = black;
+  gsvit_gc->erase = 0;
   return;
 }
 
@@ -1438,14 +1447,18 @@ gsvit_set_color (hidGC gc, const char *name)
 static void
 gsvit_set_line_cap (hidGC gc, EndCapStyle style)
 {
-  gc->cap = style;
+  gsvitGC gsvit_gc = (gsvitGC)gc;
+
+  gsvit_gc->cap = style;
 }
 
 
 static void
 gsvit_set_line_width (hidGC gc, Coord width)
 {
-  gc->width = width;
+  gsvitGC gsvit_gc = (gsvitGC)gc;
+
+  gsvit_gc->width = width;
 }
 
 
@@ -1466,9 +1479,10 @@ gsvit_set_draw_faded (hidGC gc, int faded)
 static void
 use_gc (hidGC gc)
 {
+  gsvitGC gsvit_gc = (gsvitGC)gc;
   int need_brush = 0;
 
-  if (gc->me_pointer != &gsvit_hid) {
+  if (gc->hid != &gsvit_hid) {
     fprintf (stderr, "Fatal: GC from another HID passed to gsvit HID\n");
     abort ();
   }
@@ -1477,41 +1491,41 @@ use_gc (hidGC gc)
     need_brush = 1;
   }
 
-  if (linewidth != gc->width) {
+  if (linewidth != gsvit_gc->width) {
     /* Make sure the scaling doesn't erase lines completely */
 /*
-    if (SCALE (gc->width) == 0 && gc->width > 0)
+    if (SCALE (gsvit_gc->width) == 0 && gc->width > 0)
       gdImageSetThickness (im, 1);
     else
  */
-    gdImageSetThickness (gsvit_im, pcb_to_gsvit (gc->width));
-    linewidth = gc->width;
+    gdImageSetThickness (gsvit_im, pcb_to_gsvit (gsvit_gc->width));
+    linewidth = gsvit_gc->width;
     need_brush = 1;
   }
 
-  if (lastbrush != gc->brush || need_brush) {
+  if (lastbrush != gsvit_gc->brush || need_brush) {
     static void *bcache = 0;
     hidval bval;
     char name[256];
     char type;
     int r;
 
-    switch (gc->cap) {
+    switch (gsvit_gc->cap) {
       case Round_Cap:
       case Trace_Cap:
         type = 'C';
-        r = pcb_to_gsvit (gc->width / 2);
+        r = pcb_to_gsvit (gsvit_gc->width / 2);
         break;
       default:
         case Square_Cap:
-          r = pcb_to_gsvit(gc->width);
+          r = pcb_to_gsvit(gsvit_gc->width);
           type = 'S';
           break;
     }
-    sprintf (name, "#%.2x%.2x%.2x_%c_%d", gc->color->r, gc->color->g, gc->color->b, type, r);
+    sprintf (name, "#%.2x%.2x%.2x_%c_%d", gsvit_gc->color->r, gsvit_gc->color->g, gsvit_gc->color->b, type, r);
 /*
     if (hid_cache_color(0, name, &bval, &bcache)) {
-      gc->brush = (gdImagePtr) bval.ptr;
+      gsvit_gc->brush = (gdImagePtr) bval.ptr;
     }
     else {
  */
@@ -1519,40 +1533,40 @@ use_gc (hidGC gc)
       int bg, fg;
 
       if (type == 'C')
-        gc->brush = gdImageCreate (2 * r + 1, 2 * r + 1);
+        gsvit_gc->brush = gdImageCreate (2 * r + 1, 2 * r + 1);
       else
-        gc->brush = gdImageCreate (r + 1, r + 1);
+        gsvit_gc->brush = gdImageCreate (r + 1, r + 1);
 
-      bg = gdImageColorAllocate (gc->brush, 255, 255, 255);
+      bg = gdImageColorAllocate (gsvit_gc->brush, 255, 255, 255);
       if (hashColor != gdBrushed) {
 /*
         printf ("hash:%d\n",hashColor);
  */
-        fg = gdImageColorAllocate (gc->brush, color_array[hashColor]->r,color_array[hashColor]->g,color_array[hashColor]->b);
+        fg = gdImageColorAllocate (gsvit_gc->brush, color_array[hashColor]->r,color_array[hashColor]->g,color_array[hashColor]->b);
       }
       else {
-        fg = gdImageColorAllocate (gc->brush, gc->color->r, gc->color->g, gc->color->b);
+        fg = gdImageColorAllocate (gsvit_gc->brush, gsvit_gc->color->r, gsvit_gc->color->g, gsvit_gc->color->b);
       }
-      gdImageColorTransparent (gc->brush, bg);
+      gdImageColorTransparent (gsvit_gc->brush, bg);
 
       /* If we shrunk to a radius/box width of zero, then just use a
        * single pixel to draw with.
        */
       if (r == 0) {
-        gdImageFilledRectangle (gc->brush, 0, 0, 0, 0, fg);
+        gdImageFilledRectangle (gsvit_gc->brush, 0, 0, 0, 0, fg);
       }  
       else {
         if (type == 'C')
-          gdImageFilledEllipse (gc->brush, r, r, 2 * r, 2 * r, fg);
+          gdImageFilledEllipse (gsvit_gc->brush, r, r, 2 * r, 2 * r, fg);
         else
-          gdImageFilledRectangle (gc->brush, 0, 0, r, r, fg);
+          gdImageFilledRectangle (gsvit_gc->brush, 0, 0, r, r, fg);
       }
-      bval.ptr = gc->brush;
+      bval.ptr = gsvit_gc->brush;
       hid_cache_color (1, name, &bval, &bcache);
     }
 
-    gdImageSetBrush (gsvit_im, gc->brush);
-    lastbrush = gc->brush;
+    gdImageSetBrush (gsvit_im, gsvit_gc->brush);
+    lastbrush = gsvit_gc->brush;
   }
 }
 
@@ -1560,22 +1574,24 @@ use_gc (hidGC gc)
 static void
 gsvit_draw_rect (hidGC gc, Coord x1, Coord y1, Coord x2, Coord y2)
 {
+  gsvitGC gsvit_gc = (gsvitGC)gc;
   use_gc (gc);
 
   gdImageRectangle (gsvit_im, pcb_to_gsvit (x1), pcb_to_gsvit (y1),
-    pcb_to_gsvit (x2), pcb_to_gsvit (y2), gc->color->c);
+    pcb_to_gsvit (x2), pcb_to_gsvit (y2), gsvit_gc->color->c);
 }
 
 
 static void
 gsvit_fill_rect (hidGC gc, Coord x1, Coord y1, Coord x2, Coord y2)
 {
+  gsvitGC gsvit_gc = (gsvitGC)gc;
   use_gc (gc);
   gdImageSetThickness (gsvit_im, 0);
   linewidth = 0;
 
   gdImageFilledRectangle (gsvit_im, pcb_to_gsvit (x1), pcb_to_gsvit (y1),
-    pcb_to_gsvit (x2), pcb_to_gsvit (y2), gc->color->c);
+    pcb_to_gsvit (x2), pcb_to_gsvit (y2), gsvit_gc->color->c);
 }
 
 
@@ -1792,8 +1808,10 @@ get_drill (double diameter_inches, Coord radius)
 static void
 gsvit_draw_line (hidGC gc, Coord x1, Coord y1, Coord x2, Coord y2)
 {
+  gsvitGC gsvit_gc = (gsvitGC)gc;
+
   if (x1 == x2 && y1 == y2) {
-    Coord w = gc->width / 2;
+    Coord w = gsvit_gc->width / 2;
     gsvit_fill_rect (gc, x1 - w, y1 - w, x1 + w, y1 + w);
     return;
   }
@@ -1812,6 +1830,7 @@ gsvit_draw_line (hidGC gc, Coord x1, Coord y1, Coord x2, Coord y2)
 static void
 gsvit_draw_arc (hidGC gc, Coord cx, Coord cy, Coord width, Coord height, Angle start_angle, Angle delta_angle)
 {
+  //gsvitGC gsvit_gc = (gsvitGC)gc;
   Angle sa, ea;
 
   /* In gdImageArc, 0 degrees is to the right and +90 degrees is down.
@@ -1839,7 +1858,7 @@ gsvit_draw_arc (hidGC gc, Coord cx, Coord cy, Coord width, Coord height, Angle s
     cx, cy, width, height, start_angle, delta_angle, sa, ea);
   printf("gdImageArc (%p, %d, %d, %d, %d, %d, %d, %d)\n",
     im, SCALE_X (cx), SCALE_Y (cy), SCALE (width), SCALE (height), sa, ea,
-    gc->color->c);
+    gsvit_gc->color->c);
 #endif
   use_gc (gc);
   gdImageSetThickness (gsvit_im, 0);
@@ -1852,6 +1871,7 @@ gsvit_draw_arc (hidGC gc, Coord cx, Coord cy, Coord width, Coord height, Angle s
 static void
 gsvit_fill_circle (hidGC gc, Coord cx, Coord cy, Coord radius)
 {
+  //gsvitGC gsvit_gc = (gsvitGC)gc;
   use_gc (gc);
 
   gdImageSetThickness (gsvit_im, 0);
@@ -1875,6 +1895,7 @@ gsvit_fill_circle (hidGC gc, Coord cx, Coord cy, Coord radius)
 static void
 gsvit_fill_polygon (hidGC gc, int n_coords, Coord *x, Coord *y)
 {
+  //gsvitGC gsvit_gc = (gsvitGC)gc;
   int i;
   gdPoint *points;
 
@@ -1956,6 +1977,7 @@ gsvit_draw_pcb_line (hidGC gc, LineType *line)
 void
 gsvit_fill_pcb_polygon (hidGC gc, PolygonType *poly, const BoxType *clip_box)
 {
+
   /* Hijack the fill_pcb_polygon function to get *poly, then proceed
    * with the default handler.
    */
@@ -2041,31 +2063,33 @@ hid_gsvit_init ()
 
   gsvit_hid.graphics            = &gsvit_graphics;
 
-  gsvit_graphics.make_gc        = gsvit_make_gc;
-  gsvit_graphics.destroy_gc     = gsvit_destroy_gc;
-  gsvit_graphics.use_mask       = gsvit_use_mask;
-  gsvit_graphics.set_color      = gsvit_set_color;
-  gsvit_graphics.set_line_cap   = gsvit_set_line_cap;
-  gsvit_graphics.set_line_width = gsvit_set_line_width;
-  gsvit_graphics.set_draw_xor   = gsvit_set_draw_xor;
-  gsvit_graphics.set_draw_faded = gsvit_set_draw_faded;
-  gsvit_graphics.draw_line      = gsvit_draw_line;
-  gsvit_graphics.draw_arc       = gsvit_draw_arc;
-  gsvit_graphics.draw_rect      = gsvit_draw_rect;
-  gsvit_graphics.fill_circle    = gsvit_fill_circle;
-  gsvit_graphics.fill_polygon   = gsvit_fill_polygon;
-  gsvit_graphics.fill_rect      = gsvit_fill_rect;
+  gsvit_graphics_class.make_gc        = gsvit_make_gc;
+  gsvit_graphics_class.destroy_gc     = gsvit_destroy_gc;
+  gsvit_graphics_class.use_mask       = gsvit_use_mask;
+  gsvit_graphics_class.set_color      = gsvit_set_color;
+  gsvit_graphics_class.set_line_cap   = gsvit_set_line_cap;
+  gsvit_graphics_class.set_line_width = gsvit_set_line_width;
+  gsvit_graphics_class.set_draw_xor   = gsvit_set_draw_xor;
+  gsvit_graphics_class.set_draw_faded = gsvit_set_draw_faded;
+  gsvit_graphics_class.draw_line      = gsvit_draw_line;
+  gsvit_graphics_class.draw_arc       = gsvit_draw_arc;
+  gsvit_graphics_class.draw_rect      = gsvit_draw_rect;
+  gsvit_graphics_class.fill_circle    = gsvit_fill_circle;
+  gsvit_graphics_class.fill_polygon   = gsvit_fill_polygon;
+  gsvit_graphics_class.fill_rect      = gsvit_fill_rect;
 
   /* Hijack these functions because what is passed to fill_polygon is a
    * series of polygons (for holes,...).
    */
-  gsvit_graphics.draw_pcb_line = gsvit_draw_pcb_line;
-  gsvit_graphics.draw_pcb_arc = gsvit_draw_pcb_arc;
-  gsvit_graphics.draw_pcb_polygon = gsvit_fill_pcb_polygon;
+  gsvit_graphics_class.draw_pcb_line = gsvit_draw_pcb_line;
+  gsvit_graphics_class.draw_pcb_arc = gsvit_draw_pcb_arc;
+  gsvit_graphics_class.draw_pcb_polygon = gsvit_fill_pcb_polygon;
 
-  gsvit_graphics.fill_pcb_polygon = gsvit_fill_pcb_polygon;
-  gsvit_graphics.fill_pcb_pad = gsvit_fill_pcb_pad;
-  gsvit_graphics.fill_pcb_pv = gsvit_fill_pcb_pv;
+  gsvit_graphics_class.fill_pcb_polygon = gsvit_fill_pcb_polygon;
+  gsvit_graphics_class.fill_pcb_pad = gsvit_fill_pcb_pad;
+  gsvit_graphics_class.fill_pcb_pv = gsvit_fill_pcb_pv;
+
+  gsvit_graphics.klass = &gsvit_graphics_class;
 
   hid_register_hid (&gsvit_hid);
 
