@@ -2644,7 +2644,7 @@ idle_proc (XtPointer dummy)
 	}
       DrawBackgroundImage();
       hid_expose_callback (&lesstif_hid, &region, 0);
-      lesstif_graphics.draw_grid (&region);
+      lesstif_graphics_class.draw_grid (&region);
       lesstif_use_mask (HID_MASK_OFF);
       show_crosshair (0); /* To keep the drawn / not drawn info correct */
       XSetFunction (display, my_gc, GXcopy);

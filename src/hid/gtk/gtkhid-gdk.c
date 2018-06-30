@@ -855,7 +855,7 @@ redraw_region (GdkRectangle *rect)
   /* Draw all of the PCB stuff, elements, traces, etc. */
   hid_expose_callback (&ghid_hid, &region, 0);
   
-  ghid_graphics.draw_grid (&region);
+  ghid_graphics_class.draw_grid (&region);
 
   /* In some cases we are called with the crosshair still off */
   if (priv->attached_invalidate_depth == 0)
