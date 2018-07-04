@@ -2263,6 +2263,7 @@ REGISTER_FLAGS (ghid_main_flag_list)
 
 HID ghid_hid;
 HID_DRAW ghid_graphics;
+struct hid_draw_class_st ghid_graphics_class;
 
 void
 hid_gtk_init ()
@@ -2308,15 +2309,14 @@ hid_gtk_init ()
 
   memset (&ghid_hid, 0, sizeof (HID));
   memset (&ghid_graphics, 0, sizeof (HID_DRAW));
+  memset (&ghid_graphics_class, 0, sizeof (HID_DRAW_CLASS));
 
   common_nogui_init (&ghid_hid);
-  common_draw_helpers_init (&ghid_graphics);
 
   ghid_hid.struct_size              = sizeof (HID);
   ghid_hid.name                     = "gtk";
   ghid_hid.description              = "Gtk - The Gimp Toolkit";
   ghid_hid.gui                      = 1;
-  ghid_hid.poly_after               = 1;
 
   ghid_hid.get_export_options       = ghid_get_export_options;
   ghid_hid.do_export                = ghid_do_export;
@@ -2325,7 +2325,6 @@ hid_gtk_init ()
   ghid_hid.invalidate_all           = ghid_invalidate_all;
   ghid_hid.notify_crosshair_change  = ghid_notify_crosshair_change;
   ghid_hid.notify_mark_change       = ghid_notify_mark_change;
-  ghid_hid.set_layer                = ghid_set_layer;
 
   ghid_hid.calibrate                = ghid_calibrate;
   ghid_hid.shift_is_pressed         = ghid_shift_is_pressed;
@@ -2361,25 +2360,34 @@ hid_gtk_init ()
   ghid_hid.notify_save_pcb          = ghid_notify_save_pcb;
   ghid_hid.notify_filename_changed  = ghid_notify_filename_changed;
 
-  ghid_hid.graphics                 = &ghid_graphics;
+  common_nogui_graphics_class_init (&ghid_graphics_class);
+  common_draw_helpers_class_init (&ghid_graphics_class);
 
-  ghid_graphics.make_gc             = ghid_make_gc;
-  ghid_graphics.destroy_gc          = ghid_destroy_gc;
-  ghid_graphics.use_mask            = ghid_use_mask;
-  ghid_graphics.set_color           = ghid_set_color;
-  ghid_graphics.set_line_cap        = ghid_set_line_cap;
-  ghid_graphics.set_line_width      = ghid_set_line_width;
-  ghid_graphics.set_draw_xor        = ghid_set_draw_xor;
-  ghid_graphics.draw_line           = ghid_draw_line;
-  ghid_graphics.draw_arc            = ghid_draw_arc;
-  ghid_graphics.draw_rect           = ghid_draw_rect;
-  ghid_graphics.fill_circle         = ghid_fill_circle;
-  ghid_graphics.fill_polygon        = ghid_fill_polygon;
-  ghid_graphics.fill_rect           = ghid_fill_rect;
-  
-  ghid_graphics.draw_grid           = ghid_draw_grid;
+  ghid_graphics_class.set_layer      = ghid_set_layer;
+  ghid_graphics_class.make_gc        = ghid_make_gc;
+  ghid_graphics_class.destroy_gc     = ghid_destroy_gc;
+  ghid_graphics_class.use_mask       = ghid_use_mask;
+  ghid_graphics_class.set_color      = ghid_set_color;
+  ghid_graphics_class.set_line_cap   = ghid_set_line_cap;
+  ghid_graphics_class.set_line_width = ghid_set_line_width;
+  ghid_graphics_class.set_draw_xor   = ghid_set_draw_xor;
+  ghid_graphics_class.draw_line      = ghid_draw_line;
+  ghid_graphics_class.draw_arc       = ghid_draw_arc;
+  ghid_graphics_class.draw_rect      = ghid_draw_rect;
+  ghid_graphics_class.fill_circle    = ghid_fill_circle;
+  ghid_graphics_class.fill_polygon   = ghid_fill_polygon;
+  ghid_graphics_class.fill_rect      = ghid_fill_rect;
 
-  ghid_graphics.draw_pcb_polygon    = common_gui_draw_pcb_polygon;
+  ghid_graphics_class.draw_grid      = ghid_draw_grid;
+
+  ghid_graphics_class.draw_pcb_polygon = common_gui_draw_pcb_polygon;
+
+  ghid_graphics_class.gui = true;
+
+  ghid_graphics.klass = &ghid_graphics_class;
+  ghid_graphics.poly_after = true;
+  common_nogui_graphics_init (&ghid_graphics);
+  common_draw_helpers_init (&ghid_graphics);
 
   hid_register_hid (&ghid_hid);
 #include "gtk_lists.h"

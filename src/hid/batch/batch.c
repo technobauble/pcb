@@ -1,38 +1,3 @@
-/*!
- * \file src/hid/batch/batch.c
- *
- * \brief This is a text-line "batch" HID, which exists for scripting
- * and non-GUI needs.
- *
- * <hr>
- *
- * <h1><b>Copyright.</b></h1>\n
- *
- * PCB, interactive printed circuit board design
- *
- * Copyright (C) 2006 DJ Delorie
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
- *
- * Contact addresses for paper mail and Email:
- * Thomas Nau, Schlehenweg 15, 88471 Baustetten, Germany
- * Thomas.Nau@rz.uni-ulm.de
- *
- * <hr>
- */
-
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -44,7 +9,6 @@
 #include <unistd.h>
 
 #include "global.h"
-#include "crosshair.h"
 #include "hid.h"
 #include "data.h"
 #include "misc.h"
@@ -62,10 +26,9 @@
 #include <dmalloc.h>
 #endif
 
-typedef struct hid_gc_struct
-{
-  int nothing_interesting_here;
-} hid_gc_struct;
+/* This is a text-line "batch" HID, which exists for scripting and
+   non-GUI needs.  */
+
 
 static HID_Attribute *
 batch_get_export_options (int *n_ret)
@@ -96,7 +59,6 @@ PCBChanged (int argc, char **argv, Coord x, Coord y)
     }
   else
     prompt = "no-board";
-  crosshair_update_range();
   return 0;
 }
 
@@ -188,7 +150,7 @@ batch_parse_arguments (int *argc, char ***argv)
 }
 
 static void
-batch_invalidate_lr (Coord l, Coord r, Coord t, Coord b)
+batch_invalidate_lr (int l, int r, int t, int b)
 {
 }
 
@@ -361,15 +323,16 @@ batch_show_item (void *item)
 
 static HID batch_hid;
 static HID_DRAW batch_graphics;
+static HID_DRAW_CLASS batch_graphics_class;
 
 void
 hid_batch_init ()
 {
   memset (&batch_hid, 0, sizeof (HID));
   memset (&batch_graphics, 0, sizeof (HID_DRAW));
+  memset (&batch_graphics_class, 0, sizeof (HID_DRAW_CLASS));
 
   common_nogui_init (&batch_hid);
-  common_draw_helpers_init (&batch_graphics);
 
   batch_hid.struct_size           = sizeof (HID);
   batch_hid.name                  = "batch";
@@ -381,7 +344,6 @@ hid_batch_init ()
   batch_hid.parse_arguments       = batch_parse_arguments;
   batch_hid.invalidate_lr         = batch_invalidate_lr;
   batch_hid.invalidate_all        = batch_invalidate_all;
-  batch_hid.set_layer             = batch_set_layer;
   batch_hid.calibrate             = batch_calibrate;
   batch_hid.shift_is_pressed      = batch_shift_is_pressed;
   batch_hid.control_is_pressed    = batch_control_is_pressed;
@@ -397,21 +359,27 @@ hid_batch_init ()
   batch_hid.attribute_dialog      = batch_attribute_dialog;
   batch_hid.show_item             = batch_show_item;
 
-  batch_hid.graphics              = &batch_graphics;
+  common_nogui_graphics_class_init (&batch_graphics_class);
+  common_draw_helpers_class_init (&batch_graphics_class);
 
-  batch_graphics.make_gc          = batch_make_gc;
-  batch_graphics.destroy_gc       = batch_destroy_gc;
-  batch_graphics.use_mask         = batch_use_mask;
-  batch_graphics.set_color        = batch_set_color;
-  batch_graphics.set_line_cap     = batch_set_line_cap;
-  batch_graphics.set_line_width   = batch_set_line_width;
-  batch_graphics.set_draw_xor     = batch_set_draw_xor;
-  batch_graphics.draw_line        = batch_draw_line;
-  batch_graphics.draw_arc         = batch_draw_arc;
-  batch_graphics.draw_rect        = batch_draw_rect;
-  batch_graphics.fill_circle      = batch_fill_circle;
-  batch_graphics.fill_polygon     = batch_fill_polygon;
-  batch_graphics.fill_rect        = batch_fill_rect;
+  batch_graphics_class.set_layer      = batch_set_layer;
+  batch_graphics_class.make_gc        = batch_make_gc;
+  batch_graphics_class.destroy_gc     = batch_destroy_gc;
+  batch_graphics_class.use_mask       = batch_use_mask;
+  batch_graphics_class.set_color      = batch_set_color;
+  batch_graphics_class.set_line_cap   = batch_set_line_cap;
+  batch_graphics_class.set_line_width = batch_set_line_width;
+  batch_graphics_class.set_draw_xor   = batch_set_draw_xor;
+  batch_graphics_class.draw_line      = batch_draw_line;
+  batch_graphics_class.draw_arc       = batch_draw_arc;
+  batch_graphics_class.draw_rect      = batch_draw_rect;
+  batch_graphics_class.fill_circle    = batch_fill_circle;
+  batch_graphics_class.fill_polygon   = batch_fill_polygon;
+  batch_graphics_class.fill_rect      = batch_fill_rect;
+
+  batch_graphics.klass = &batch_graphics_class;
+  common_nogui_graphics_init (&batch_graphics);
+  common_draw_helpers_init (&batch_graphics);
 
   hid_register_hid (&batch_hid);
 #include "batch_lists.h"

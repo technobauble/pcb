@@ -15,6 +15,7 @@
 #include "error.h"
 #include "draw.h"
 #include "pcb-printf.h"
+#include "draw_funcs.h"
 
 #include "hid.h"
 #include "hid_draw.h"
@@ -34,15 +35,20 @@
 static int ps_set_layer (const char *name, int group, int empty);
 static void use_gc (hidGC gc);
 
-typedef struct hid_gc_struct
+typedef struct ps_gc_struct
 {
-  HID *me_pointer;
+  struct hid_gc_struct hid_gc; /* Parent */
+
   EndCapStyle cap;
   Coord width;
   unsigned char r, g, b;
   int erase;
   int faded;
-} hid_gc_struct;
+} *psGC;
+
+HID ps_hid;
+static HID_DRAW ps_graphics;
+static HID_DRAW_CLASS ps_graphics_class;
 
 static const char *medias[] = {
   "A0", "A1", "A2", "A3", "A4", "A5",
@@ -688,13 +694,13 @@ ps_hid_export_to_file (FILE * the_file, HID_Attr_Val * options)
 
       global.doing_toc = 1;
       global.pagecount = 1;  /* 'pagecount' is modified by hid_expose_callback() call */
-      hid_expose_callback (&ps_hid, &global.region, 0);
+      hid_expose_callback (&ps_graphics, &global.region, 0);
     }
 
   global.pagecount = 1; /* Reset 'pagecount' if single file */
   global.doing_toc = 0;
   ps_set_layer (NULL, 0, -1);  /* reset static vars */
-  hid_expose_callback (&ps_hid, &global.region, 0);
+  hid_expose_callback (&ps_graphics, &global.region, 0);
 
   if (the_file)
     fprintf (the_file, "showpage\n");
@@ -1002,7 +1008,7 @@ ps_set_layer (const char *name, int group, int empty)
       strcmp (name, "route") != 0
       )
     {
-      DrawLayer (global.outline_layer, &global.region);
+      dapi->draw_layer (global.outline_layer, &global.region, NULL);
     }
 
   return 1;
@@ -1011,10 +1017,15 @@ ps_set_layer (const char *name, int group, int empty)
 static hidGC
 ps_make_gc (void)
 {
-  hidGC rv = (hidGC) calloc (1, sizeof (hid_gc_struct));
-  rv->me_pointer = &ps_hid;
-  rv->cap = Trace_Cap;
-  return rv;
+  hidGC gc = (hidGC) calloc (1, sizeof (struct ps_gc_struct));
+  psGC ps_gc = (psGC)gc;
+
+  gc->hid = &ps_hid;
+  gc->hid_draw = &ps_graphics;
+
+  ps_gc->cap = Trace_Cap;
+
+  return gc;
 }
 
 static void
@@ -1032,37 +1043,43 @@ ps_use_mask (enum mask_mode mode)
 static void
 ps_set_color (hidGC gc, const char *name)
 {
+  psGC ps_gc = (psGC)gc;
+
   if (strcmp (name, "erase") == 0 || strcmp (name, "drill") == 0)
     {
-      gc->r = gc->g = gc->b = 255;
-      gc->erase = 1;
+      ps_gc->r = ps_gc->g = ps_gc->b = 255;
+      ps_gc->erase = 1;
     }
   else if (global.incolor)
     {
       int r, g, b;
       sscanf (name + 1, "%02x%02x%02x", &r, &g, &b);
-      gc->r = r;
-      gc->g = g;
-      gc->b = b;
-      gc->erase = 0;
+      ps_gc->r = r;
+      ps_gc->g = g;
+      ps_gc->b = b;
+      ps_gc->erase = 0;
     }
   else
     {
-      gc->r = gc->g = gc->b = 0;
-      gc->erase = 0;
+      ps_gc->r = ps_gc->g = ps_gc->b = 0;
+      ps_gc->erase = 0;
     }
 }
 
 static void
 ps_set_line_cap (hidGC gc, EndCapStyle style)
 {
-  gc->cap = style;
+  psGC ps_gc = (psGC)gc;
+
+  ps_gc->cap = style;
 }
 
 static void
 ps_set_line_width (hidGC gc, Coord width)
 {
-  gc->width = width;
+  psGC ps_gc = (psGC)gc;
+
+  ps_gc->width = width;
 }
 
 static void
@@ -1074,12 +1091,15 @@ ps_set_draw_xor (hidGC gc, int xor_)
 static void
 ps_set_draw_faded (hidGC gc, int faded)
 {
-  gc->faded = faded;
+  psGC ps_gc = (psGC)gc;
+
+  ps_gc->faded = faded;
 }
 
 static void
 use_gc (hidGC gc)
 {
+  psGC ps_gc = (psGC)gc;
   static int lastcap = -1;
   static int lastcolor = -1;
 
@@ -1088,21 +1108,21 @@ use_gc (hidGC gc)
       lastcap = lastcolor = -1;
       return;
     }
-  if (gc->me_pointer != &ps_hid)
+  if (gc->hid != &ps_hid)
     {
       fprintf (stderr, "Fatal: GC from another HID passed to ps HID\n");
       abort ();
     }
-  if (global.linewidth != gc->width)
+  if (global.linewidth != ps_gc->width)
     {
       pcb_fprintf (global.f, "%mi setlinewidth\n",
-                   gc->width + (gc->erase ? -2 : 2) * global.bloat);
-      global.linewidth = gc->width;
+                   ps_gc->width + (ps_gc->erase ? -2 : 2) * global.bloat);
+      global.linewidth = ps_gc->width;
     }
-  if (lastcap != gc->cap)
+  if (lastcap != ps_gc->cap)
     {
       int c;
-      switch (gc->cap)
+      switch (ps_gc->cap)
 	{
 	case Round_Cap:
 	case Trace_Cap:
@@ -1114,29 +1134,29 @@ use_gc (hidGC gc)
 	  break;
 	}
       fprintf (global.f, "%d setlinecap %d setlinejoin\n", c, c);
-      lastcap = gc->cap;
+      lastcap = ps_gc->cap;
     }
-#define CBLEND(gc) (((gc->r)<<24)|((gc->g)<<16)|((gc->b)<<8)|(gc->faded))
+#define CBLEND(gc) (((ps_gc->r)<<24)|((ps_gc->g)<<16)|((ps_gc->b)<<8)|(ps_gc->faded))
   if (lastcolor != CBLEND (gc))
     {
       if (global.is_drill || global.is_mask)
 	{
-	  fprintf (global.f, "%d gray\n", gc->erase ? 0 : 1);
+	  fprintf (global.f, "%d gray\n", ps_gc->erase ? 0 : 1);
 	  lastcolor = 0;
 	}
       else
 	{
 	  double r, g, b;
-	  r = gc->r;
-	  g = gc->g;
-	  b = gc->b;
-	  if (gc->faded)
+	  r = ps_gc->r;
+	  g = ps_gc->g;
+	  b = ps_gc->b;
+	  if (ps_gc->faded)
 	    {
 	      r = (1 - global.fade_ratio) * 255 + global.fade_ratio * r;
 	      g = (1 - global.fade_ratio) * 255 + global.fade_ratio * g;
 	      b = (1 - global.fade_ratio) * 255 + global.fade_ratio * b;
 	    }
-	  if (gc->r == gc->g && gc->g == gc->b)
+	  if (ps_gc->r == ps_gc->g && ps_gc->g == ps_gc->b)
 	    fprintf (global.f, "%g gray\n", r / 255.0);
 	  else
 	    fprintf (global.f, "%g %g %g rgb\n", r / 255.0, g / 255.0, b / 255.0);
@@ -1158,11 +1178,13 @@ static void ps_fill_circle (hidGC gc, Coord cx, Coord cy, Coord radius);
 static void
 ps_draw_line (hidGC gc, Coord x1, Coord y1, Coord x2, Coord y2)
 {
+  psGC ps_gc = (psGC)gc;
+
 #if 0
   /* If you're etching your own paste mask, this will reduce the
      amount of brass you need to etch by drawing outlines for large
      pads.  See also ps_fill_rect.  */
-  if (is_paste && gc->width > 2500 && gc->cap == Square_Cap
+  if (is_paste && ps_gc->width > 2500 && ps_gc->cap == Square_Cap
       && (x1 == x2 || y1 == y2))
     {
       Coord t, w;
@@ -1170,15 +1192,15 @@ ps_draw_line (hidGC gc, Coord x1, Coord y1, Coord x2, Coord y2)
 	{ t = x1; x1 = x2; x2 = t; }
       if (y1 > y2)
 	{ t = y1; y1 = y2; y2 = t; }
-      w = gc->width/2;
+      w = ps_gc->width/2;
       ps_fill_rect (gc, x1-w, y1-w, x2+w, y2+w);
       return;
     }
 #endif
   if (x1 == x2 && y1 == y2)
     {
-      Coord w = gc->width / 2;
-      if (gc->cap == Square_Cap)
+      Coord w = ps_gc->width / 2;
+      if (ps_gc->cap == Square_Cap)
 	ps_fill_rect (gc, x1 - w, y1 - w, x1 + w, y1 + w);
       else
 	ps_fill_circle (gc, x1, y1, w);
@@ -1237,14 +1259,16 @@ ps_draw_arc (hidGC gc, Coord cx, Coord cy, Coord width, Coord height,
 static void
 ps_fill_circle (hidGC gc, Coord cx, Coord cy, Coord radius)
 {
+  psGC ps_gc = (psGC)gc;
+
   use_gc (gc);
-  if (!gc->erase || !global.is_copper || global.drillcopper)
+  if (!ps_gc->erase || !global.is_copper || global.drillcopper)
     {
-      if (gc->erase && global.is_copper && global.drill_helper
+      if (ps_gc->erase && global.is_copper && global.drill_helper
 	  && radius >= PCB->minDrill / 4)
 	radius = PCB->minDrill / 4;
       pcb_fprintf (global.f, "%mi %mi %mi c\n",
-                   cx, cy, radius + (gc->erase ? -1 : 1) * global.bloat);
+                   cx, cy, radius + (ps_gc->erase ? -1 : 1) * global.bloat);
     }
 }
 
@@ -1523,37 +1547,38 @@ ps_set_crosshair (int x, int y, int action)
 
 #include "dolists.h"
 
-HID ps_hid;
-static HID_DRAW ps_graphics;
-
 void ps_ps_init (HID *hid)
 {
   hid->get_export_options = ps_get_export_options;
   hid->do_export          = ps_do_export;
   hid->parse_arguments    = ps_parse_arguments;
-  hid->set_layer          = ps_set_layer;
   hid->calibrate          = ps_calibrate;
   hid->set_crosshair      = ps_set_crosshair;
 }
 
+void ps_ps_graphics_class_init (HID_DRAW_CLASS *klass)
+{
+  klass->set_layer          = ps_set_layer;
+  klass->make_gc            = ps_make_gc;
+  klass->destroy_gc         = ps_destroy_gc;
+  klass->use_mask           = ps_use_mask;
+  klass->set_color          = ps_set_color;
+  klass->set_line_cap       = ps_set_line_cap;
+  klass->set_line_width     = ps_set_line_width;
+  klass->set_draw_xor       = ps_set_draw_xor;
+  klass->set_draw_faded     = ps_set_draw_faded;
+  klass->draw_line          = ps_draw_line;
+  klass->draw_arc           = ps_draw_arc;
+  klass->draw_rect          = ps_draw_rect;
+  klass->fill_circle        = ps_fill_circle;
+  klass->fill_polygon       = ps_fill_polygon;
+  klass->fill_rect          = ps_fill_rect;
+
+  klass->draw_pcb_polygon   = ps_draw_pcb_polygon;
+}
+
 void ps_ps_graphics_init (HID_DRAW *graphics)
 {
-  graphics->make_gc            = ps_make_gc;
-  graphics->destroy_gc         = ps_destroy_gc;
-  graphics->use_mask           = ps_use_mask;
-  graphics->set_color          = ps_set_color;
-  graphics->set_line_cap       = ps_set_line_cap;
-  graphics->set_line_width     = ps_set_line_width;
-  graphics->set_draw_xor       = ps_set_draw_xor;
-  graphics->set_draw_faded     = ps_set_draw_faded;
-  graphics->draw_line          = ps_draw_line;
-  graphics->draw_arc           = ps_draw_arc;
-  graphics->draw_rect          = ps_draw_rect;
-  graphics->fill_circle        = ps_fill_circle;
-  graphics->fill_polygon       = ps_fill_polygon;
-  graphics->fill_rect          = ps_fill_rect;
-
-  graphics->draw_pcb_polygon   = ps_draw_pcb_polygon;
 }
 
 void
@@ -1563,17 +1588,22 @@ hid_ps_init ()
   memset (&ps_graphics, 0, sizeof (HID_DRAW));
 
   common_nogui_init (&ps_hid);
-  common_draw_helpers_init (&ps_graphics);
   ps_ps_init (&ps_hid);
-  ps_ps_graphics_init (&ps_graphics);
 
   ps_hid.struct_size        = sizeof (HID);
   ps_hid.name               = "ps";
   ps_hid.description        = N_("Postscript export");
   ps_hid.exporter           = 1;
-  ps_hid.poly_before        = 1;
 
-  ps_hid.graphics           = &ps_graphics;
+  common_nogui_graphics_class_init (&ps_graphics_class);
+  common_draw_helpers_class_init (&ps_graphics_class);
+  ps_ps_graphics_class_init (&ps_graphics_class);
+
+  ps_graphics.klass = &ps_graphics_class;
+  ps_graphics.poly_before = true;
+  common_nogui_graphics_init (&ps_graphics);
+  common_draw_helpers_init (&ps_graphics);
+  ps_ps_graphics_init (&ps_graphics);
 
   hid_register_hid (&ps_hid);
 

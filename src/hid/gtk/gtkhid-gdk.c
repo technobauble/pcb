@@ -80,18 +80,18 @@ typedef struct render_priv {
 } render_priv;
 
 
-typedef struct hid_gc_struct
+typedef struct gtk_gc_struct
 {
-  HID *me_pointer;
-  GdkGC *gc;
+  struct hid_gc_struct hid_gc; /* Parent */
+
+  GdkGC *gdk_gc;
 
   gchar *colorname;
   Coord width;
   gint cap, join;
   gchar xor_mask;
   gint mask_seq;
-}
-hid_gc_struct;
+} *gtkGC;
 
 
 static void draw_lead_user (render_priv *priv);
@@ -107,14 +107,14 @@ ghid_set_layer (const char *name, int group, int empty)
       for (idx = 0; idx < n-1; idx ++)
 	{
 	  int ni = PCB->LayerGroups.Entries[group][idx];
-	  if (ni >= 0 && ni < max_copper_layer + SILK_LAYER
+	  if (ni >= 0 && ni < max_copper_layer + EXTRA_LAYERS
 	      && PCB->Data->Layer[ni].On)
 	    break;
 	}
       idx = PCB->LayerGroups.Entries[group][idx];
     }
 
-  if (idx >= 0 && idx < max_copper_layer + SILK_LAYER)
+  if (idx >= 0 && idx < max_copper_layer + EXTRA_LAYERS)
     return /*pinout ? 1 : */ PCB->Data->Layer[idx].On;
   if (idx < 0)
     {
@@ -145,20 +145,25 @@ ghid_set_layer (const char *name, int group, int empty)
 void
 ghid_destroy_gc (hidGC gc)
 {
-  if (gc->gc)
-    g_object_unref (gc->gc);
+  gtkGC gtk_gc = (gtkGC)gc;
+
+  if (gtk_gc->gdk_gc)
+    g_object_unref (gtk_gc->gdk_gc);
   g_free (gc);
 }
 
 hidGC
 ghid_make_gc (void)
 {
-  hidGC rv;
+  hidGC gc = (hidGC)g_new0 (struct gtk_gc_struct, 1);
+  gtkGC gtk_gc = (gtkGC)gc;
 
-  rv = g_new0 (hid_gc_struct, 1);
-  rv->me_pointer = &ghid_hid;
-  rv->colorname = Settings.BackgroundColor;
-  return rv;
+  gc->hid = &ghid_hid;
+  gc->hid_draw = &ghid_graphics;
+
+  gtk_gc->colorname = Settings.BackgroundColor;
+
+  return gc;
 }
 
 /*!
@@ -298,7 +303,7 @@ ghid_draw_bg_image (void)
 				   w - x, h - y, GDK_RGB_DITHER_NORMAL, 0, 0);
 }
 
-#define WHICH_GC(gc) (cur_mask == HID_MASK_CLEAR ? priv->mask_gc : (gc)->gc)
+#define WHICH_GC(gtk_gc) (cur_mask == HID_MASK_CLEAR ? priv->mask_gc : (gtk_gc)->gdk_gc)
 
 void
 ghid_use_mask (enum mask_mode mode)
@@ -410,6 +415,7 @@ ghid_set_special_colors (HID_Attribute * ha)
 void
 ghid_set_color (hidGC gc, const char *name)
 {
+  gtkGC gtk_gc = (gtkGC)gc;
   static void *cache = 0;
   hidval cval;
 
@@ -420,19 +426,19 @@ ghid_set_color (hidGC gc, const char *name)
       name = "magenta";
     }
 
-  gc->colorname = (char *) name;
-  if (!gc->gc)
+  gtk_gc->colorname = (char *) name;
+  if (!gtk_gc->gdk_gc)
     return;
   if (gport->colormap == 0)
     gport->colormap = gtk_widget_get_colormap (gport->top_window);
 
   if (strcmp (name, "erase") == 0)
     {
-      gdk_gc_set_foreground (gc->gc, &gport->bg_color);
+      gdk_gc_set_foreground (gtk_gc->gdk_gc, &gport->bg_color);
     }
   else if (strcmp (name, "drill") == 0)
     {
-      gdk_gc_set_foreground (gc->gc, &gport->offlimits_color);
+      gdk_gc_set_foreground (gtk_gc->gdk_gc, &gport->offlimits_color);
     }
   else
     {
@@ -455,7 +461,7 @@ ghid_set_color (hidGC gc, const char *name)
 	    gdk_color_white (gport->colormap, &cc->color);
 	  cc->color_set = 1;
 	}
-      if (gc->xor_mask)
+      if (gtk_gc->xor_mask)
 	{
 	  if (!cc->xor_set)
 	    {
@@ -465,11 +471,11 @@ ghid_set_color (hidGC gc, const char *name)
 	      gdk_color_alloc (gport->colormap, &cc->xor_color);
 	      cc->xor_set = 1;
 	    }
-	  gdk_gc_set_foreground (gc->gc, &cc->xor_color);
+	  gdk_gc_set_foreground (gtk_gc->gdk_gc, &cc->xor_color);
 	}
       else
 	{
-	  gdk_gc_set_foreground (gc->gc, &cc->color);
+	  gdk_gc_set_foreground (gtk_gc->gdk_gc, &cc->color);
 	}
     }
 }
@@ -477,56 +483,61 @@ ghid_set_color (hidGC gc, const char *name)
 void
 ghid_set_line_cap (hidGC gc, EndCapStyle style)
 {
+  gtkGC gtk_gc = (gtkGC)gc;
   render_priv *priv = gport->render_priv;
 
   switch (style)
     {
     case Trace_Cap:
     case Round_Cap:
-      gc->cap = GDK_CAP_ROUND;
-      gc->join = GDK_JOIN_ROUND;
+      gtk_gc->cap = GDK_CAP_ROUND;
+      gtk_gc->join = GDK_JOIN_ROUND;
       break;
     case Square_Cap:
     case Beveled_Cap:
-      gc->cap = GDK_CAP_PROJECTING;
-      gc->join = GDK_JOIN_MITER;
+      gtk_gc->cap = GDK_CAP_PROJECTING;
+      gtk_gc->join = GDK_JOIN_MITER;
       break;
     }
-  if (gc->gc)
-    gdk_gc_set_line_attributes (WHICH_GC (gc),
-				Vz (gc->width), GDK_LINE_SOLID,
-				(GdkCapStyle)gc->cap, (GdkJoinStyle)gc->join);
+  if (gtk_gc->gdk_gc)
+    gdk_gc_set_line_attributes (WHICH_GC (gtk_gc),
+                                Vz (gtk_gc->width), GDK_LINE_SOLID,
+                                (GdkCapStyle)gtk_gc->cap, (GdkJoinStyle)gtk_gc->join);
 }
 
 void
 ghid_set_line_width (hidGC gc, Coord width)
 {
+  gtkGC gtk_gc = (gtkGC)gc;
   render_priv *priv = gport->render_priv;
 
-  gc->width = width;
-  if (gc->gc)
-    gdk_gc_set_line_attributes (WHICH_GC (gc),
-				Vz (gc->width), GDK_LINE_SOLID,
-				(GdkCapStyle)gc->cap, (GdkJoinStyle)gc->join);
+  gtk_gc->width = width;
+  if (gtk_gc->gdk_gc)
+    gdk_gc_set_line_attributes (WHICH_GC (gtk_gc),
+                                Vz (gtk_gc->width), GDK_LINE_SOLID,
+                                (GdkCapStyle)gtk_gc->cap, (GdkJoinStyle)gtk_gc->join);
 }
 
 void
 ghid_set_draw_xor (hidGC gc, int xor_mask)
 {
-  gc->xor_mask = xor_mask;
-  if (!gc->gc)
+  gtkGC gtk_gc = (gtkGC)gc;
+
+  gtk_gc->xor_mask = xor_mask;
+  if (!gtk_gc->gdk_gc)
     return;
-  gdk_gc_set_function (gc->gc, xor_mask ? GDK_XOR : GDK_COPY);
-  ghid_set_color (gc, gc->colorname);
+  gdk_gc_set_function (gtk_gc->gdk_gc, xor_mask ? GDK_XOR : GDK_COPY);
+  ghid_set_color (gc, gtk_gc->colorname);
 }
 
 static int
 use_gc (hidGC gc)
 {
+  gtkGC gtk_gc = (gtkGC)gc;
   render_priv *priv = gport->render_priv;
   GdkWindow *window = gtk_widget_get_window (gport->top_window);
 
-  if (gc->me_pointer != &ghid_hid)
+  if (gc->hid != &ghid_hid)
     {
       fprintf (stderr, "Fatal: GC from another HID passed to GTK HID\n");
       abort ();
@@ -534,30 +545,31 @@ use_gc (hidGC gc)
 
   if (!gport->pixmap)
     return 0;
-  if (!gc->gc)
+  if (!gtk_gc->gdk_gc)
     {
-      gc->gc = gdk_gc_new (window);
-      ghid_set_color (gc, gc->colorname);
-      ghid_set_line_width (gc, gc->width);
-      ghid_set_line_cap (gc, (EndCapStyle)gc->cap);
-      ghid_set_draw_xor (gc, gc->xor_mask);
-      gdk_gc_set_clip_origin (gc->gc, 0, 0);
+      gtk_gc->gdk_gc = gdk_gc_new (window);
+      ghid_set_color (gc, gtk_gc->colorname);
+      ghid_set_line_width (gc, gtk_gc->width);
+      ghid_set_line_cap (gc, (EndCapStyle)gtk_gc->cap);
+      ghid_set_draw_xor (gc, gtk_gc->xor_mask);
+      gdk_gc_set_clip_origin (gtk_gc->gdk_gc, 0, 0);
     }
-  if (gc->mask_seq != mask_seq)
+  if (gtk_gc->mask_seq != mask_seq)
     {
       if (mask_seq)
-	gdk_gc_set_clip_mask (gc->gc, gport->mask);
+        gdk_gc_set_clip_mask (gtk_gc->gdk_gc, gport->mask);
       else
-	set_clip (priv, gc->gc);
-      gc->mask_seq = mask_seq;
+        set_clip (priv, gtk_gc->gdk_gc);
+      gtk_gc->mask_seq = mask_seq;
     }
-  priv->u_gc = WHICH_GC (gc);
+  priv->u_gc = WHICH_GC (gtk_gc);
   return 1;
 }
 
 void
 ghid_draw_line (hidGC gc, Coord x1, Coord y1, Coord x2, Coord y2)
 {
+  gtkGC gtk_gc = (gtkGC)gc;
   double dx1, dy1, dx2, dy2;
   render_priv *priv = gport->render_priv;
 
@@ -567,7 +579,7 @@ ghid_draw_line (hidGC gc, Coord x1, Coord y1, Coord x2, Coord y2)
   dy2 = Vy ((double) y2);
 
   if (!ClipLine (0, 0, gport->width, gport->height,
-		 &dx1, &dy1, &dx2, &dy2, gc->width / gport->view.coord_per_px))
+                 &dx1, &dy1, &dx2, &dy2, gtk_gc->width / gport->view.coord_per_px))
     return;
 
   USE_GC (gc);
@@ -617,10 +629,11 @@ ghid_draw_arc (hidGC gc, Coord cx, Coord cy,
 void
 ghid_draw_rect (hidGC gc, Coord x1, Coord y1, Coord x2, Coord y2)
 {
+  gtkGC gtk_gc = (gtkGC)gc;
   gint w, h, lw;
   render_priv *priv = gport->render_priv;
 
-  lw = gc->width;
+  lw = gtk_gc->width;
   w = gport->width * gport->view.coord_per_px;
   h = gport->height * gport->view.coord_per_px;
 
@@ -703,10 +716,11 @@ ghid_fill_polygon (hidGC gc, int n_coords, Coord *x, Coord *y)
 void
 ghid_fill_rect (hidGC gc, Coord x1, Coord y1, Coord x2, Coord y2)
 {
+  gtkGC gtk_gc = (gtkGC)gc;
   gint w, h, lw, xx, yy;
   render_priv *priv = gport->render_priv;
 
-  lw = gc->width;
+  lw = gtk_gc->width;
   w = gport->width * gport->view.coord_per_px;
   h = gport->height * gport->view.coord_per_px;
 
@@ -839,9 +853,9 @@ redraw_region (GdkRectangle *rect)
   ghid_draw_bg_image();
 
   /* Draw all of the PCB stuff, elements, traces, etc. */
-  hid_expose_callback (&ghid_hid, &region, 0);
+  hid_expose_callback (&ghid_graphics, &region, 0);
   
-  ghid_graphics.draw_grid (&region);
+  ghid_graphics_class.draw_grid (priv->crosshair_gc, &region);
 
   /* In some cases we are called with the crosshair still off */
   if (priv->attached_invalidate_depth == 0)
@@ -1094,7 +1108,7 @@ ghid_init_renderer (int *argc, char ***argv, GHidPort *port)
 {
   /* Init any GC's required */
   port->render_priv = g_new0 (render_priv, 1);
-  port->render_priv->crosshair_gc = gui->graphics->make_gc ();
+  port->render_priv->crosshair_gc = hid_draw_make_gc (&ghid_graphics);
 }
 
 void
@@ -1102,7 +1116,7 @@ ghid_shutdown_renderer (GHidPort *port)
 {
   render_priv *priv = port->render_priv;
 
-  gui->graphics->destroy_gc (priv->crosshair_gc);
+  hid_draw_destroy_gc (priv->crosshair_gc);
   ghid_cancel_lead_user ();
   g_free (port->render_priv);
   port->render_priv = NULL;
@@ -1219,7 +1233,7 @@ ghid_pinout_preview_expose (GtkWidget *widget,
                       0, 0, allocation.width, allocation.height);
 
   /* call the drawing routine */
-  hid_expose_callback (&ghid_hid, NULL, pinout->element);
+  hid_expose_callback (&ghid_graphics, NULL, pinout->element);
 
   gport->drawable = save_drawable;
   gport->view = save_view;
@@ -1276,7 +1290,7 @@ ghid_render_pixmap (int cx, int cy, double zoom, int width, int height, int dept
   region.Y1 = MAX (0, MIN (PCB->MaxHeight, region.Y1));
   region.Y2 = MAX (0, MIN (PCB->MaxHeight, region.Y2));
 
-  hid_expose_callback (&ghid_hid, &region, NULL);
+  hid_expose_callback (&ghid_graphics, &region, NULL);
 
   gport->drawable = save_drawable;
   gport->view = save_view;
@@ -1291,7 +1305,7 @@ ghid_request_debug_draw (void)
 {
   /* No special setup requirements, drawing goes into
    * the backing pixmap. */
-  return ghid_hid.graphics;
+  return &ghid_graphics;
 }
 
 void

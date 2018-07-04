@@ -48,13 +48,13 @@
    */
 #define LAYER_BUTTON_SILK     (MAX_LAYER)
 #define LAYER_BUTTON_RATS     (MAX_LAYER + 1)
-#define	N_SELECTABLE_LAYER_BUTTONS	(LAYER_BUTTON_RATS + 1)
+#define LAYER_BUTTON_MASK     (MAX_LAYER + 2)
+#define N_SELECTABLE_LAYER_BUTTONS (LAYER_BUTTON_MASK + 1)
 
-#define LAYER_BUTTON_PINS     (MAX_ALL_LAYER)
-#define LAYER_BUTTON_VIAS     (MAX_ALL_LAYER + 1)
-#define LAYER_BUTTON_FARSIDE  (MAX_ALL_LAYER + 2)
-#define LAYER_BUTTON_MASK     (MAX_ALL_LAYER + 3)
-#define N_LAYER_BUTTONS       (MAX_ALL_LAYER + 4)
+#define LAYER_BUTTON_PINS     (MAX_LAYER + 3)
+#define LAYER_BUTTON_VIAS     (MAX_LAYER + 4)
+#define LAYER_BUTTON_FARSIDE  (MAX_LAYER + 5)
+#define N_LAYER_BUTTONS       (MAX_LAYER + 6)
 
   /* Go from from the grid units in use (millimeters or mils) to PCB units
      |  and back again.
@@ -486,7 +486,7 @@ void ghid_set_color (hidGC gc, const char *name);
 void ghid_set_line_cap (hidGC gc, EndCapStyle style);
 void ghid_set_line_width (hidGC gc, Coord width);
 void ghid_set_draw_xor (hidGC gc, int _xor);
-void ghid_draw_grid(BoxType * region);
+void ghid_draw_grid(hidGC gc, BoxType * region);
 void ghid_draw_line (hidGC gc, Coord x1, Coord y1, Coord x2, Coord y2);
 void ghid_draw_arc (hidGC gc, Coord cx, Coord cy, Coord xradius, Coord yradius,
                     Angle start_angle, Angle delta_angle);

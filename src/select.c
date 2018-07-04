@@ -241,7 +241,7 @@ SelectBlock (BoxType *Box, bool select)
   END_LOOP;
 
   /* check layers */
-  LAYER_LOOP(PCB->Data, max_copper_layer + SILK_LAYER);
+  LAYER_LOOP(PCB->Data, max_copper_layer + EXTRA_LAYERS);
   {
     if (layer == & PCB->Data->SILKLAYER)
       {
@@ -251,6 +251,16 @@ SelectBlock (BoxType *Box, bool select)
     else if (layer == & PCB->Data->BACKSILKLAYER)
       {
 	if (! (PCB->InvisibleObjectsOn || !select))
+	  continue;
+      }
+    if (layer == & PCB->Data->SOLDERMASKLAYER)
+      {
+	if (! (TEST_FLAG (SHOWMASKFLAG, PCB) || !select))
+	  continue;
+      }
+    if (layer == & PCB->Data->BACKSOLDERMASKLAYER)
+      {
+	if (! ((PCB->InvisibleObjectsOn && TEST_FLAG (SHOWMASKFLAG, PCB)) || !select))
 	  continue;
       }
     else

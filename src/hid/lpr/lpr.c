@@ -13,6 +13,7 @@
 #include "misc.h"
 
 #include "hid.h"
+#include "hid_draw.h"
 #include "../hidint.h"
 #include "../ps/ps.h"
 #include "hid/common/hidnogui.h"
@@ -135,7 +136,6 @@ hid_lpr_init ()
   lpr_hid.name                = "lpr";
   lpr_hid.description         = N_("Postscript print");
   lpr_hid.printer             = 1;
-  lpr_hid.poly_before         = 1;
 
   lpr_hid.get_export_options  = lpr_get_export_options;
   lpr_hid.do_export           = lpr_do_export;

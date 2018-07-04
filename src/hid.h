@@ -104,10 +104,11 @@ extern "C"
   } hidval;
 
   /*!
-   * This graphics context is an opaque pointer defined by the HID.
-   *
+   * This graphics context is an semi-opaque pointer defined by the HID.
    * GCs are HID-specific; attempts to use one HID's GC for a different
-   * HID will result in a fatal error.
+   * HID will result in a fatal error. Certain elements are defined in
+   * hid_draw.h are visible for use in draw.c, but the full structure
+   * size may not be determined from that definition.
    */
   typedef struct hid_gc_struct *hidGC;
 
@@ -393,19 +394,6 @@ typedef enum
        * Examples are PNG, Gerber, and EPS exporters.
        */
 
-    char poly_before:1;
-      /*!< If set, the redraw code will draw polygons before erasing the
-       * clearances.
-       */
-
-    char poly_after:1;
-      /*!< If set, the redraw code will draw polygons after erasing the
-       * clearances.
-       *
-       * \note Note that HIDs may set both of these, in which case
-       * polygons will be drawn twice.
-       */
-
     HID_Attribute *(*get_export_options) (int *n_ret_);
       /*!< Returns a set of resources describing options the export or
        * print HID supports.
@@ -457,32 +445,6 @@ typedef enum
     void (*notify_crosshair_change) (bool changes_complete);
 
     void (*notify_mark_change) (bool changes_complete);
-
-    int (*set_layer) (const char *name_, int group_, int _empty);
-      /*!< During redraw or print/export cycles, this is called once per
-       * layer (or layer group, for copper layers).
-       *
-       * If it returns false (zero), the HID does not want that layer,
-       * and none of the drawing functions should be called.
-       *
-       * If it returns true (nonzero), the items in that layer [group]
-       * should be drawn using the various drawing functions.
-       *
-       * In addition to the MAX_GROUP copper layer groups, you may
-       * select layers indicated by the macros SL_* defined above, or
-       * any others with an index of -1.
-       *
-       * For copper layer groups, you may pass NULL for name to have a
-       * name fetched from the PCB struct.
-       *
-       * The EMPTY argument is a hint - if set, the layer is empty, if
-       * zero it may be non-empty.
-       */
-
-    void (*end_layer) (void);
-      /*!< Tell the GUI the layer last selected has been finished with. */
-
-    HID_DRAW *graphics;
 
     void (*calibrate) (double xval_, double yval_);
       /*!< This is for the printer.
@@ -820,7 +782,7 @@ typedef enum
    *
    * This callback is also used for printing and exporting.
    */
-  void hid_expose_callback (HID * hid_, struct BoxType *region_, void *item_);
+  void hid_expose_callback (HID_DRAW *hid_draw, struct BoxType *region_, void *item_);
 
   extern HID *gui;
     /*!< This is initially set to a "no-gui" gui, and later reset by
