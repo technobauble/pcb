@@ -73,6 +73,7 @@ typedef struct hidgl_gc_struct {
 } *hidglGC;
 
 extern hidgl_shader *circular_program;
+extern hidgl_shader *resistor_program;
 
 void hidgl_flush_triangles (hidgl_instance *hidgl);
 void hidgl_ensure_vertex_space (hidGC gc, int count);
@@ -179,5 +180,13 @@ int hidgl_stencil_bits (hidgl_instance *hidgl);
 int hidgl_assign_clear_stencil_bit (hidgl_instance *hidgl);
 void hidgl_return_stencil_bit (hidgl_instance *hidgl, int bit);
 void hidgl_reset_stencil_usage (hidgl_instance *hidgl);
+
+/* hidgl_pacakge_acy_resistor.c */
+void hidgl_draw_acy_resistor (ElementType *element, float surface_depth, float board_thickness);
+void hidgl_draw_800mil_resistor (ElementType *element, float surface_depth, float board_thickness);
+void hidgl_draw_2300mil_resistor (ElementType *element, float surface_depth, float board_thickness);
+void hidgl_draw_700mil_diode_smd (ElementType *element, float surface_depth, float board_thickness);
+void hidgl_draw_1650mil_cap (ElementType *element, float surface_depth, float board_thickness);
+void hidgl_draw_350x800mil_cap (ElementType *element, float surface_depth, float board_thickness);
 
 #endif /* PCB_HID_COMMON_HIDGL_H  */

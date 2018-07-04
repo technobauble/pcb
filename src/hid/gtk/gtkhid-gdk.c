@@ -96,48 +96,107 @@ typedef struct gtk_gc_struct
 
 static void draw_lead_user (render_priv *priv);
 
+#define	DRAW_X(x)         (gint)((SIDE_X(x) - gport->view.x0) / gport->view.coord_per_px)
+#define	DRAW_Y(y)         (gint)((SIDE_Y(y) - gport->view.y0) / gport->view.coord_per_px)
+
+/* Coordinate conversions */
+/* Px converts view->pcb, Vx converts pcb->view */
+static inline int
+Vx (Coord x)
+{
+  int rv;
+  if (gport->view.flip_x)
+    rv = (PCB->MaxWidth - x - gport->view.x0) / gport->view.coord_per_px + 0.5;
+  else
+    rv = (x - gport->view.x0) / gport->view.coord_per_px + 0.5;
+  return rv;
+}
+
+static inline int
+Vy (Coord y)
+{
+  int rv;
+  if (gport->view.flip_y)
+    rv = (PCB->MaxHeight - y - gport->view.y0) / gport->view.coord_per_px + 0.5;
+  else
+    rv = (y - gport->view.y0) / gport->view.coord_per_px + 0.5;
+  return rv;
+}
+
+static inline int
+Vz (Coord z)
+{
+  return z / gport->view.coord_per_px + 0.5;
+}
+
+static inline Coord
+Px (int x)
+{
+  Coord rv = x * gport->view.coord_per_px + gport->view.x0;
+  if (gport->view.flip_x)
+    rv = PCB->MaxWidth - (x * gport->view.coord_per_px + gport->view.x0);
+  return  rv;
+}
+
+static inline Coord
+Py (int y)
+{
+  Coord rv = y * gport->view.coord_per_px + gport->view.y0;
+  if (gport->view.flip_y)
+    rv = PCB->MaxHeight - (y * gport->view.coord_per_px + gport->view.y0);
+  return  rv;
+}
+
+static inline Coord
+Pz (int z)
+{
+  return (z * gport->view.coord_per_px);
+}
+
+
+/* Compute group visibility based upon on copper layers only */
+static bool
+is_layer_group_visible (int group)
+{
+  int entry;
+  for (entry = 0; entry < PCB->LayerGroups.Number[group]; entry++)
+    {
+      int layer_idx = PCB->LayerGroups.Entries[group][entry];
+      if (layer_idx >= 0 && layer_idx < max_copper_layer &&
+          LAYER_PTR (layer_idx)->On)
+        return true;
+    }
+  return false;
+}
 
 int
 ghid_set_layer (const char *name, int group, int empty)
 {
-  int idx = group;
-  if (idx >= 0 && idx < max_group)
-    {
-      int n = PCB->LayerGroups.Number[group];
-      for (idx = 0; idx < n-1; idx ++)
-	{
-	  int ni = PCB->LayerGroups.Entries[group][idx];
-	  if (ni >= 0 && ni < max_copper_layer + EXTRA_LAYERS
-	      && PCB->Data->Layer[ni].On)
-	    break;
-	}
-      idx = PCB->LayerGroups.Entries[group][idx];
-    }
+  if (group >= 0 && group < max_group)
+    return is_layer_group_visible (group);
 
-  if (idx >= 0 && idx < max_copper_layer + EXTRA_LAYERS)
-    return /*pinout ? 1 : */ PCB->Data->Layer[idx].On;
-  if (idx < 0)
+  /* If we didn't hit a match above, group is being used as a
+     special symbolic layer type, and will be negative. */
+
+  switch (SL_TYPE (group))
     {
-      switch (SL_TYPE (idx))
-	{
-	case SL_INVISIBLE:
-	  return /* pinout ? 0 : */ PCB->InvisibleObjectsOn;
-	case SL_MASK:
-	  if (SL_MYSIDE (idx) /*&& !pinout */ )
-	    return TEST_FLAG (SHOWMASKFLAG, PCB);
-	  return 0;
-	case SL_SILK:
-	  if (SL_MYSIDE (idx) /*|| pinout */ )
-	    return PCB->ElementOn;
-	  return 0;
-	case SL_ASSY:
-	  return 0;
-	case SL_PDRILL:
-	case SL_UDRILL:
-	  return 1;
-	case SL_RATS:
-	  return PCB->RatOn;
-	}
+    case SL_INVISIBLE:
+      return /* pinout ? 0 : */ PCB->InvisibleObjectsOn;
+    case SL_MASK:
+      if (SL_MYSIDE (group) /*&& !pinout */ )
+        return TEST_FLAG (SHOWMASKFLAG, PCB);
+      return 0;
+    case SL_SILK:
+      if (SL_MYSIDE (group) /*|| pinout */ )
+        return PCB->ElementOn;
+      return 0;
+    case SL_ASSY:
+      return 0;
+    case SL_PDRILL:
+    case SL_UDRILL:
+      return 1;
+    case SL_RATS:
+      return PCB->RatOn;
     }
   return 0;
 }
@@ -1326,8 +1385,8 @@ ghid_finish_debug_draw (void)
 bool
 ghid_event_to_pcb_coords (int event_x, int event_y, Coord *pcb_x, Coord *pcb_y)
 {
-  *pcb_x = EVENT_TO_PCB_X (event_x);
-  *pcb_y = EVENT_TO_PCB_Y (event_y);
+  *pcb_x = SIDE_X((gint)(event_x * gport->view.coord_per_px + gport->view.x0));
+  *pcb_y = SIDE_Y((gint)(event_y * gport->view.coord_per_px + gport->view.y0));
 
   return true;
 }
@@ -1456,4 +1515,10 @@ ghid_cancel_lead_user (void)
   priv->lead_user_timeout = 0;
   priv->lead_user_timer = NULL;
   priv->lead_user = false;
+}
+
+/* XXX: DUMMY FUNCTION TO ENABLE BUILD */
+void
+ghid_set_lock_effects (hidGC gc, AnyObjectType *object)
+{
 }

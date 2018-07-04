@@ -62,6 +62,40 @@
 #  error autoconf couldnt find glu.h
 #endif
 
+#ifdef WIN32
+#   include "glext.h"
+
+PFNGLGENBUFFERSPROC         glGenBuffers        = NULL;
+PFNGLDELETEBUFFERSPROC      glDeleteBuffers     = NULL;
+PFNGLBINDBUFFERPROC         glBindBuffer        = NULL;
+PFNGLBUFFERDATAPROC         glBufferData        = NULL;
+PFNGLBUFFERSUBDATAPROC      glBufferSubData     = NULL;
+PFNGLMAPBUFFERPROC          glMapBuffer         = NULL;
+PFNGLUNMAPBUFFERPROC        glUnmapBuffer       = NULL;
+
+PFNGLATTACHSHADERPROC       glAttachShader      = NULL;
+PFNGLCOMPILESHADERPROC      glCompileShader     = NULL;
+PFNGLCREATEPROGRAMPROC      glCreateProgram     = NULL;
+PFNGLCREATESHADERPROC       glCreateShader      = NULL;
+PFNGLDELETEPROGRAMPROC      glDeleteProgram     = NULL;
+PFNGLDELETESHADERPROC       glDeleteShader      = NULL;
+PFNGLGETPROGRAMINFOLOGPROC  glGetProgramInfoLog = NULL;
+PFNGLGETPROGRAMIVPROC       glGetProgramiv      = NULL;
+PFNGLGETSHADERINFOLOGPROC   glGetShaderInfoLog  = NULL;
+PFNGLGETSHADERIVPROC        glGetShaderiv       = NULL;
+PFNGLISSHADERPROC           glIsShader          = NULL;
+PFNGLLINKPROGRAMPROC        glLinkProgram       = NULL;
+PFNGLSHADERSOURCEPROC       glShaderSource      = NULL;
+PFNGLUSEPROGRAMPROC         glUseProgram        = NULL;
+
+PFNGLMULTITEXCOORD1FPROC    glMultiTexCoord1f    = NULL;
+PFNGLMULTITEXCOORD2FPROC    glMultiTexCoord2f    = NULL;
+PFNGLMULTITEXCOORD3FPROC    glMultiTexCoord3f    = NULL;
+PFNGLGETUNIFORMLOCATIONPROC glGetUniformLocation = NULL;
+PFNGLUNIFORM1IPROC          glUniform1i          = NULL;
+PFNGLACTIVETEXTUREARBPROC   glActiveTextureARB   = NULL;
+#endif
+
 #include "action.h"
 #include "crosshair.h"
 #include "data.h"
@@ -83,6 +117,7 @@
 //#define MEMCPY_VERTEX_DATA 1
 
 hidgl_shader *circular_program = NULL;
+hidgl_shader *resistor_program = NULL;
 
 static bool in_context = false;
 
@@ -159,10 +194,6 @@ hidgl_init_triangle_array (hidgl_instance *hidgl)
    */
   priv->buffer.use_map = false;
 
-  /* If using VBOs (but not mapping), we only need to this once */
-  if (priv->buffer.use_vbo && !priv->buffer.use_map)
-    glBufferData (GL_ARRAY_BUFFER, BUFFER_SIZE, NULL, GL_STREAM_DRAW);
-
   priv->buffer.triangle_array = NULL;
   hidgl_reset_triangle_array (hidgl);
 }
@@ -204,10 +235,10 @@ hidgl_flush_triangles (hidgl_instance *hidgl)
       glUnmapBuffer (GL_ARRAY_BUFFER);
       priv->buffer.triangle_array = NULL;
     } else {
-      /* NB: We only upload the portion of the buffer we've used */
-      glBufferSubData (GL_ARRAY_BUFFER, 0,
-                       BUFFER_STRIDE * priv->buffer.vertex_count,
-                       priv->buffer.triangle_array);
+      glBufferData (GL_ARRAY_BUFFER,
+                    BUFFER_STRIDE * priv->buffer.vertex_count,
+                    priv->buffer.triangle_array,
+                    GL_STREAM_DRAW);
     }
   } else {
     data_pointer = priv->buffer.triangle_array;
@@ -219,6 +250,12 @@ hidgl_flush_triangles (hidgl_instance *hidgl)
   glEnableClientState (GL_TEXTURE_COORD_ARRAY);
   glEnableClientState (GL_VERTEX_ARRAY);
   glDrawArrays (GL_TRIANGLE_STRIP, 0, priv->buffer.vertex_count);
+#if 0
+  glPushAttrib (GL_CURRENT_BIT);
+  glColor4f (1., 1., 1., 1.);
+  glDrawArrays (GL_LINE_STRIP, 0, priv->buffer.vertex_count);
+  glPopAttrib ();
+#endif
   glDisableClientState (GL_VERTEX_ARRAY);
   glDisableClientState (GL_TEXTURE_COORD_ARRAY);
 
@@ -414,24 +451,31 @@ hidgl_draw_line (hidGC gc, int cap, Coord width, Coord x1, Coord y1, Coord x2, C
   /* Don't bother capping hairlines */
   if (circular_caps && !hairline)
     {
-      float capx = deltax * width / 2. / length;
-      float capy = deltay * width / 2. / length;
+      if (length == 0)
+        {
+          hidgl_fill_circle (gc, x1, y1, width / 2.);
+        }
+      else
+        {
+          float capx = deltax * width / 2. / length;
+          float capy = deltay * width / 2. / length;
 
-      hidgl_ensure_vertex_space (gc, 10);
+          hidgl_ensure_vertex_space (gc, 10);
 
-      /* NB: Repeated first virtex to separate from other tri-strip */
-      hidgl_add_vertex_tex (gc, x1 - wdx - capx, y1 - wdy - capy, -1.0, -1.0);
-      hidgl_add_vertex_tex (gc, x1 - wdx - capx, y1 - wdy - capy, -1.0, -1.0);
-      hidgl_add_vertex_tex (gc, x1 + wdx - capx, y1 + wdy - capy, -1.0,  1.0);
-      hidgl_add_vertex_tex (gc, x1 - wdx,        y1 - wdy,         0.0, -1.0);
-      hidgl_add_vertex_tex (gc, x1 + wdx,        y1 + wdy,         0.0,  1.0);
+          /* NB: Repeated first virtex to separate from other tri-strip */
+          hidgl_add_vertex_tex (gc, x1 - wdx - capx, y1 - wdy - capy, -1.0, -1.0);
+          hidgl_add_vertex_tex (gc, x1 - wdx - capx, y1 - wdy - capy, -1.0, -1.0);
+          hidgl_add_vertex_tex (gc, x1 + wdx - capx, y1 + wdy - capy, -1.0,  1.0);
+          hidgl_add_vertex_tex (gc, x1 - wdx,        y1 - wdy,         0.0, -1.0);
+          hidgl_add_vertex_tex (gc, x1 + wdx,        y1 + wdy,         0.0,  1.0);
 
-      hidgl_add_vertex_tex (gc, x2 - wdx,        y2 - wdy,         0.0, -1.0);
-      hidgl_add_vertex_tex (gc, x2 + wdx,        y2 + wdy,         0.0,  1.0);
-      hidgl_add_vertex_tex (gc, x2 - wdx + capx, y2 - wdy + capy,  1.0, -1.0);
-      hidgl_add_vertex_tex (gc, x2 + wdx + capx, y2 + wdy + capy,  1.0,  1.0);
-      hidgl_add_vertex_tex (gc, x2 + wdx + capx, y2 + wdy + capy,  1.0,  1.0);
-      /* NB: Repeated last virtex to separate from other tri-strip */
+          hidgl_add_vertex_tex (gc, x2 - wdx,        y2 - wdy,         0.0, -1.0);
+          hidgl_add_vertex_tex (gc, x2 + wdx,        y2 + wdy,         0.0,  1.0);
+          hidgl_add_vertex_tex (gc, x2 - wdx + capx, y2 - wdy + capy,  1.0, -1.0);
+          hidgl_add_vertex_tex (gc, x2 + wdx + capx, y2 + wdy + capy,  1.0,  1.0);
+          hidgl_add_vertex_tex (gc, x2 + wdx + capx, y2 + wdy + capy,  1.0,  1.0);
+          /* NB: Repeated last virtex to separate from other tri-strip */
+        }
     }
   else
     {
@@ -917,9 +961,20 @@ fill_polyarea (hidGC gc, POLYAREA *pa, const BoxType *clip_box, bool use_new_ste
   hidgl_flush_triangles (hidgl);
 
   glPushAttrib (GL_STENCIL_BUFFER_BIT |                 /* Resave the stencil write-mask etc.., and */
-                GL_COLOR_BUFFER_BIT);                   /* the colour buffer write mask etc.. for part way restore */
+                GL_COLOR_BUFFER_BIT |                   /* the colour buffer write mask etc.. for part way restore */
+                GL_DEPTH_BUFFER_BIT);
   glEnable (GL_STENCIL_TEST);                           /* Enable the stencil test, just in case it wasn't already on */
+//=======
+//<<<<<<< current
+//                GL_COLOR_BUFFER_BIT);                   /* the colour buffer write mask etc.. for part way restore */
+//  glEnable (GL_STENCIL_TEST);                           /* Enable the stencil test, just in case it wasn't already on */
+//=======
+//                GL_COLOR_BUFFER_BIT |                   /* the colour buffer write mask etc.. for part way restore */
+//                GL_DEPTH_BUFFER_BIT);
+//>>>>>>> patched
   glColorMask (0, 0, 0, 0);                             /* Disable writting in color buffer */
+  glDepthFunc (GL_ALWAYS);
+  glDepthMask (GL_FALSE);
 
   if (use_new_stencil)
     {
@@ -1010,7 +1065,34 @@ load_built_in_shaders (void)
           "  gl_FragColor = gl_Color;\n"
           "}\n";
 
+  char *resistor_fs_source =
+          "uniform sampler1D detail_tex;\n"
+          "uniform sampler2D bump_tex;\n"
+          "\n"
+          "void main()\n"
+          "{\n"
+          "  vec3 bumpNormal = texture2D (bump_tex, gl_TexCoord[1].st).rgb;\n"
+          "  vec3 detailColor = texture1D (detail_tex, gl_TexCoord[0].s).rgb;\n"
+          "\n"
+          "  /* Uncompress vectors ([0, 1] -> [-1, 1]) */\n"
+          "  vec3 lightVectorFinal = -1.0 + 2.0 * gl_Color.rgb;\n"
+          "  vec3 halfVectorFinal = -1.0 + 2.0 * gl_TexCoord[2].xyz;\n"
+          "  vec3 bumpNormalVectorFinal = -1.0 + 2.0 * bumpNormal;\n"
+          "\n"
+          "  /* Compute diffuse factor */\n"
+          "  float diffuse = clamp(dot(bumpNormalVectorFinal,\n"
+          "                            lightVectorFinal),0.0, 1.0);\n"
+          "  float specular = pow(clamp(dot(bumpNormalVectorFinal,\n"
+          "                                 halfVectorFinal), 0.0, 1.0),\n"
+          "                       2.0);\n"
+          "  specular *= 0.4;\n"
+          "\n"
+          "   gl_FragColor = vec4(detailColor * (0.3 + 0.7 * diffuse) + \n"
+          "                    vec3(specular, specular, specular), 1.0);\n"
+          "}\n";
+
   /*priv->*/circular_program = hidgl_shader_new ("circular_rendering", NULL, circular_fs_source);
+  /*priv->*/resistor_program = hidgl_shader_new ("resistor_rendering", NULL, resistor_fs_source);
 }
 
 void
@@ -1025,6 +1107,39 @@ hidgl_init (void)
     }
 
   /* Any one-time (hopefully!) hidgl setup goes in here */
+
+#ifdef WIN32
+  glGenBuffers        = (PFNGLGENBUFFERSPROC)        wglGetProcAddress ("glGenBuffers");
+  glDeleteBuffers     = (PFNGLDELETEBUFFERSPROC)     wglGetProcAddress ("glDeleteBuffers");
+  glBindBuffer        = (PFNGLBINDBUFFERPROC)        wglGetProcAddress ("glBindBuffer");
+  glBufferData        = (PFNGLBUFFERDATAPROC)        wglGetProcAddress ("glBufferData");
+  glBufferSubData     = (PFNGLBUFFERSUBDATAPROC)     wglGetProcAddress ("glBufferSubData");
+  glMapBuffer         = (PFNGLMAPBUFFERPROC)         wglGetProcAddress ("glMapBuffer");
+  glUnmapBuffer       = (PFNGLUNMAPBUFFERPROC)       wglGetProcAddress ("glUnmapBuffer");
+
+  glAttachShader      = (PFNGLATTACHSHADERPROC)      wglGetProcAddress ("glAttachShader");
+  glCompileShader     = (PFNGLCOMPILESHADERPROC)     wglGetProcAddress ("glCompileShader");
+  glCreateProgram     = (PFNGLCREATEPROGRAMPROC)     wglGetProcAddress ("glCreateProgram");
+  glCreateShader      = (PFNGLCREATESHADERPROC)      wglGetProcAddress ("glCreateShader");
+  glDeleteProgram     = (PFNGLDELETEPROGRAMPROC)     wglGetProcAddress ("glDeleteProgram");
+  glDeleteShader      = (PFNGLDELETESHADERPROC)      wglGetProcAddress ("glDeleteShader");
+  glGetProgramInfoLog = (PFNGLGETPROGRAMINFOLOGPROC) wglGetProcAddress ("glGetProgramInfoLog");
+  glGetProgramiv      = (PFNGLGETPROGRAMIVPROC)      wglGetProcAddress ("glGetProgramiv");
+  glGetShaderInfoLog  = (PFNGLGETSHADERINFOLOGPROC)  wglGetProcAddress ("glGetShaderInfoLog");
+  glGetShaderiv       = (PFNGLGETSHADERIVPROC)       wglGetProcAddress ("glGetShaderiv");
+  glIsShader          = (PFNGLISSHADERPROC)          wglGetProcAddress ("glIsShader");
+  glLinkProgram       = (PFNGLLINKPROGRAMPROC)       wglGetProcAddress ("glLinkProgram");
+  glShaderSource      = (PFNGLSHADERSOURCEPROC)      wglGetProcAddress ("glShaderSource");
+  glUseProgram        = (PFNGLUSEPROGRAMPROC)        wglGetProcAddress ("glUseProgram");
+
+  glMultiTexCoord1f    = (PFNGLMULTITEXCOORD1FPROC)    wglGetProcAddress ("glMultiTexCoord1f");
+  glMultiTexCoord2f    = (PFNGLMULTITEXCOORD2FPROC)    wglGetProcAddress ("glMultiTexCoord2f");
+  glMultiTexCoord3f    = (PFNGLMULTITEXCOORD3FPROC)    wglGetProcAddress ("glMultiTexCoord3f");
+  glGetUniformLocation = (PFNGLGETUNIFORMLOCATIONPROC) wglGetProcAddress ("glGetUniformLocation");
+  glUniform1i          = (PFNGLUNIFORM1IPROC)          wglGetProcAddress ("glUniform1i");
+  glActiveTextureARB   = (PFNGLACTIVETEXTUREARBPROC)   wglGetProcAddress ("glActiveTextureARB");
+
+#endif
 
 #if 0 /* Need to initialise shaders with a current GL context */
   if (hidgl_shader_init_shaders ())

@@ -13,6 +13,7 @@
 #include "rtree.h"
 #include "polygon.h"
 #include "gui-pinout-preview.h"
+#include "pcb-printf.h"
 
 /* The Linux OpenGL ABI 1.0 spec requires that we define
  * GL_GLEXT_PROTOTYPES before including gl.h or glx.h for extensions
@@ -34,6 +35,12 @@
 #  error autoconf couldnt find gl.h
 #endif
 
+#ifdef WIN32
+#   include "hid/common/glext.h"
+
+extern PFNGLUSEPROGRAMPROC         glUseProgram;
+#endif
+
 #include <gtk/gtkgl.h>
 #include "hid/common/hidgl.h"
 
@@ -43,6 +50,8 @@
 #ifdef HAVE_LIBDMALLOC
 #include <dmalloc.h>
 #endif
+
+//#define VIEW_ORTHO
 
 extern HID ghid_hid;
 extern HID_DRAW ghid_graphics;
@@ -63,6 +72,10 @@ static GLfloat last_modelview_matrix[4][4] = {{1.0, 0.0, 0.0, 0.0},
                                               {0.0, 1.0, 0.0, 0.0},
                                               {0.0, 0.0, 1.0, 0.0},
                                               {0.0, 0.0, 0.0, 1.0}};
+static GLfloat last_projection_matrix[4][4] = {{1.0, 0.0, 0.0, 0.0},
+                                               {0.0, 1.0, 0.0, 0.0},
+                                               {0.0, 0.0, 1.0, 0.0},
+                                               {0.0, 0.0, 0.0, 1.0}};
 static int global_view_2d = 1;
 
 typedef struct render_priv {
@@ -72,6 +85,8 @@ typedef struct render_priv {
   int subcomposite_stencil_bit;
   char *current_colorname;
   double current_alpha_mult;
+  double current_brightness;
+  double current_saturation;
   GTimer *time_since_expose;
 
   /* Feature for leading the user to a particular location */
@@ -94,13 +109,59 @@ typedef struct gtk_gc_struct
 
   const char *colorname;
   double alpha_mult;
+  double brightness;
+  double saturation;
   Coord width;
   gint cap, join;
 } *gtkGC;
 
 static void draw_lead_user (hidGC gc, render_priv *priv);
-static void ghid_unproject_to_z_plane (int ex, int ey, Coord pcb_z, Coord *pcb_x, Coord *pcb_y);
+static bool ghid_unproject_to_z_plane (int ex, int ey, Coord pcb_z, double *pcb_x, double *pcb_y);
 
+void ghid_set_lock_effects (hidGC gc, AnyObjectType *object);
+
+
+
+/* Coordinate conversions */
+/* Px converts view->pcb, Vx converts pcb->view */
+static inline int
+Vz (Coord z)
+{
+  return z / gport->view.coord_per_px + 0.5;
+}
+
+static inline Coord
+Px (int x)
+{
+  double rv = (double)x * gport->view.coord_per_px + gport->view.x0;
+
+  if (gport->view.flip_x)
+    rv = PCB->MaxWidth - rv;
+
+  if (rv > G_MAXINT / 4)
+    rv = G_MAXINT / 4;
+
+  if (rv < -G_MAXINT / 4)
+    rv = -G_MAXINT / 4;
+
+  return  rv;
+}
+
+static inline Coord
+Py (int y)
+{
+  double rv = (double)y * gport->view.coord_per_px + gport->view.y0;
+  if (gport->view.flip_y)
+    rv = PCB->MaxHeight - rv;
+
+  if (rv > G_MAXINT / 4)
+    rv = G_MAXINT / 4;
+
+  if (rv < -G_MAXINT / 4)
+    rv = -G_MAXINT / 4;
+
+  return  rv;
+}
 
 #define BOARD_THICKNESS         MM_TO_COORD(1.60)
 #define MASK_COPPER_SPACING     MM_TO_COORD(0.05)
@@ -118,12 +179,15 @@ compute_depth (int group)
   int middle_copper_group;
   int depth;
 
+  if (global_view_2d)
+    return 0;
+
   top_group = GetLayerGroupNumberBySide (TOP_SIDE);
   bottom_group = GetLayerGroupNumberBySide (BOTTOM_SIDE);
 
   min_copper_group = MIN (bottom_group, top_group);
   max_copper_group = MAX (bottom_group, top_group);
-  num_copper_groups = max_copper_group - min_copper_group + 1;
+  num_copper_groups = max_copper_group - min_copper_group;// + 1;
   middle_copper_group = min_copper_group + num_copper_groups / 2;
 
   if (group >= 0 && group < max_group) {
@@ -335,6 +399,8 @@ ghid_make_gc (void)
 
   gtk_gc->colorname = Settings.BackgroundColor;
   gtk_gc->alpha_mult = 1.0;
+  gtk_gc->brightness = 1.0;
+  gtk_gc->saturation = 1.0;
 
   priv->active_gc_list = g_list_prepend (priv->active_gc_list, gc);
 
@@ -369,6 +435,49 @@ ghid_draw_grid (hidGC gc, BoxType *drawn_area)
   glDisable (GL_COLOR_LOGIC_OP);
   glEnable (GL_STENCIL_TEST);
 }
+
+#if 0
+/* XXX: Refactor this into hidgl common routines */
+static void
+load_texture_from_png (char *filename)
+{
+  GError *error = NULL;
+  GdkPixbuf *pixbuf;
+  int width;
+  int height;
+  int rowstride;
+  /* int has_alpha; */
+  int bits_per_sample;
+  int n_channels;
+  unsigned char *pixels;
+
+  pixbuf = gdk_pixbuf_new_from_file (filename, &error);
+
+  if (pixbuf == NULL) {
+    g_error ("%s", error->message);
+    g_error_free (error);
+    error = NULL;
+    return;
+  }
+
+  width = gdk_pixbuf_get_width (pixbuf);
+  height = gdk_pixbuf_get_height (pixbuf);
+  rowstride = gdk_pixbuf_get_rowstride (pixbuf);
+  /* has_alpha = gdk_pixbuf_get_has_alpha (pixbuf); */
+  bits_per_sample = gdk_pixbuf_get_bits_per_sample (pixbuf);
+  n_channels = gdk_pixbuf_get_n_channels (pixbuf);
+  pixels = gdk_pixbuf_get_pixels (pixbuf);
+
+  g_warn_if_fail (bits_per_sample == 8);
+  g_warn_if_fail (n_channels == 4);
+  g_warn_if_fail (rowstride == width * n_channels);
+
+  glTexImage2D (GL_TEXTURE_2D, 0, GL_RGB, width, height, 0,
+                (n_channels == 4) ? GL_RGBA : GL_RGB, GL_UNSIGNED_BYTE, pixels);
+
+  g_object_unref (pixbuf);
+}
+#endif
 
 static void
 ghid_draw_bg_image (void)
@@ -455,6 +564,7 @@ ghid_use_mask (enum mask_mode mode)
     case HID_MASK_CLEAR:
       /* Write '1' to the stencil buffer where the solder-mask should not be drawn. */
       glColorMask (0, 0, 0, 0);                             /* Disable writting in color buffer */
+      glDepthMask (GL_FALSE);
       glEnable (GL_STENCIL_TEST);                           /* Enable Stencil test */
       stencil_bit = hidgl_assign_clear_stencil_bit (hidgl); /* Get a new (clean) bitplane to stencil with */
       glStencilFunc (GL_ALWAYS, stencil_bit, stencil_bit);  /* Always pass stencil test, write stencil_bit */
@@ -465,6 +575,7 @@ ghid_use_mask (enum mask_mode mode)
     case HID_MASK_AFTER:
       /* Drawing operations as masked to areas where the stencil buffer is '0' */
       glColorMask (1, 1, 1, 1);                             /* Enable drawing of r, g, b & a */
+      glDepthMask (GL_TRUE);
       glStencilFunc (GL_GEQUAL, 0, stencil_bit);            /* Draw only where our bit of the stencil buffer is clear */
       glStencilOp (GL_KEEP, GL_KEEP, GL_KEEP);              /* Stencil buffer read only */
       break;
@@ -531,10 +642,13 @@ set_gl_color_for_gc (hidGC gc)
   hidval cval;
   ColorCache *cc;
   double r, g, b, a;
+  double luminance;
 
   if (priv->current_colorname != NULL &&
       strcmp (priv->current_colorname, gtk_gc->colorname) == 0 &&
-      priv->current_alpha_mult == gtk_gc->alpha_mult)
+      priv->current_alpha_mult == gtk_gc->alpha_mult &&
+      priv->current_brightness == gtk_gc->brightness &&
+      priv->current_saturation == gtk_gc->saturation)
     return;
 
   free (priv->current_colorname);
@@ -549,6 +663,8 @@ set_gl_color_for_gc (hidGC gc)
 
   priv->current_colorname = strdup (gtk_gc->colorname);
   priv->current_alpha_mult = gtk_gc->alpha_mult;
+  priv->current_brightness = gtk_gc->brightness;
+  priv->current_saturation = gtk_gc->saturation;
 
   if (gport->colormap == NULL)
     gport->colormap = gtk_widget_get_colormap (gport->top_window);
@@ -610,6 +726,18 @@ set_gl_color_for_gc (hidGC gc)
 #endif
   }
 
+  r *= gtk_gc->brightness;
+  g *= gtk_gc->brightness;
+  b *= gtk_gc->brightness;
+
+  /* B/W Equivalent brightness */
+  luminance = (r + g + b) / 3.0;
+
+  /* Fade between B/W and colour */
+  r = r * gtk_gc->saturation + luminance * (1.0 - gtk_gc->saturation);
+  g = g * gtk_gc->saturation + luminance * (1.0 - gtk_gc->saturation);
+  b = b * gtk_gc->saturation + luminance * (1.0 - gtk_gc->saturation);
+
   hidgl_flush_triangles (gtk_gc->hidgl_gc.hidgl);
   glColor4d (r, g, b, a);
 }
@@ -629,6 +757,24 @@ ghid_set_alpha_mult (hidGC gc, double alpha_mult)
   gtkGC gtk_gc = (gtkGC)gc;
 
   gtk_gc->alpha_mult = alpha_mult;
+  set_gl_color_for_gc (gc);
+}
+
+static void
+ghid_set_saturation (hidGC gc, double saturation)
+{
+  gtkGC gtk_gc = (gtkGC)gc;
+
+  gtk_gc->saturation = saturation;
+  set_gl_color_for_gc (gc);
+}
+
+static void
+ghid_set_brightness (hidGC gc, double brightness)
+{
+  gtkGC gtk_gc = (gtkGC)gc;
+
+  gtk_gc->brightness = brightness;
   set_gl_color_for_gc (gc);
 }
 
@@ -988,6 +1134,7 @@ ghid_init_renderer (int *argc, char ***argv, GHidPort *port)
   /* setup GL-context */
   priv->glconfig = gdk_gl_config_new_by_mode (GDK_GL_MODE_RGBA    |
                                               GDK_GL_MODE_STENCIL |
+                                              GDK_GL_MODE_DEPTH   |
                                               GDK_GL_MODE_DOUBLE);
   if (!priv->glconfig)
     {
@@ -1104,6 +1251,7 @@ set_object_color (AnyObjectType *obj, char *warn_color, char *selected_color,
   else if (found_color     != NULL && TEST_FLAG (FOUNDFLAG,     obj)) color = found_color;
   else                                                                color = normal_color;
 
+  ghid_set_lock_effects (Output.fgGC, obj);
   hid_draw_set_color (Output.fgGC, color);
 }
 
@@ -1116,6 +1264,8 @@ set_layer_object_color (LayerType *layer, AnyObjectType *obj)
 static void
 set_pv_inlayer_color (PinType *pv, LayerType *layer, int type)
 {
+  ghid_set_lock_effects (Output.fgGC, (AnyObjectType *) pv);
+
   if (TEST_FLAG (WARNFLAG, pv))           hid_draw_set_color (Output.fgGC, PCB->WarnColor);
   else if (TEST_FLAG (SELECTEDFLAG, pv))  hid_draw_set_color (Output.fgGC, (type == VIA_TYPE) ? PCB->ViaSelectedColor
                                                                                               : PCB->PinSelectedColor);
@@ -1159,6 +1309,8 @@ _draw_pv_name (PinType *pv)
       box.X1 = pv->X + pv->DrillingHole / 2 + Settings.PinoutTextOffsetX;
       box.Y1 = pv->Y - pv->Thickness    / 2 + Settings.PinoutTextOffsetY;
     }
+
+  ghid_set_lock_effects (Output.fgGC, (AnyObjectType *)pv);
   hid_draw_set_color (Output.fgGC, PCB->PinNameColor);
 
   text.Flags = NoFlags ();
@@ -1292,6 +1444,7 @@ draw_pad_name (PadType *pad)
       box.Y1 += Settings.PinoutTextOffsetY;
     }
 
+  ghid_set_lock_effects (Output.fgGC, (AnyObjectType *)pad);
   hid_draw_set_color (Output.fgGC, PCB->PinNameColor);
 
   text.Flags = NoFlags ();
@@ -1320,6 +1473,7 @@ _draw_pad (hidGC gc, PadType *pad, bool clear, bool mask)
 static void
 draw_pad (PadType *pad)
 {
+  ghid_set_lock_effects (Output.fgGC, (AnyObjectType *)pad);
   set_object_color ((AnyObjectType *)pad, PCB->WarnColor,
                     PCB->PinSelectedColor, PCB->ConnectedColor, PCB->FoundColor,
                     FRONT (pad) ? PCB->PinColor : PCB->InvisibleObjectsColor);
@@ -1423,6 +1577,7 @@ pv_ok:
 
   if (TEST_FLAG (HOLEFLAG, pv))
     {
+      ghid_set_lock_effects (Output.fgGC, (AnyObjectType *)pv);
       set_object_color ((AnyObjectType *) pv, PCB->WarnColor,
                         PCB->ViaSelectedColor, NULL, NULL, Settings.BlackColor);
 
@@ -1440,6 +1595,7 @@ line_callback (const BoxType * b, void *cl)
   LayerType *layer = cl;
   LineType *line = (LineType *)b;
 
+  ghid_set_lock_effects (Output.fgGC, (AnyObjectType *) line);
   set_layer_object_color (layer, (AnyObjectType *) line);
   hid_draw_pcb_line (Output.fgGC, line);
   return 1;
@@ -1451,6 +1607,7 @@ arc_callback (const BoxType * b, void *cl)
   LayerType *layer = cl;
   ArcType *arc = (ArcType *)b;
 
+  ghid_set_lock_effects (Output.fgGC, (AnyObjectType *) arc);
   set_layer_object_color (layer, (AnyObjectType *) arc);
   hid_draw_pcb_arc (Output.fgGC, arc);
   return 1;
@@ -1463,6 +1620,7 @@ text_callback (const BoxType * b, void *cl)
   TextType *text = (TextType *)b;
   int min_silk_line;
 
+  ghid_set_lock_effects (Output.fgGC, (AnyObjectType *)text);
   if (TEST_FLAG (SELECTEDFLAG, text))
     hid_draw_set_color (Output.fgGC, layer->SelectedColor);
   else
@@ -1502,6 +1660,7 @@ poly_callback_no_clear (const BoxType * b, void *cl)
   if (TEST_FLAG (CLEARPOLYFLAG, polygon))
     return 0;
 
+  ghid_set_lock_effects (Output.fgGC, (AnyObjectType *) polygon);
   set_layer_object_color (i->layer, (AnyObjectType *) polygon);
   hid_draw_pcb_polygon (Output.fgGC, polygon, i->drawn_area);
   return 1;
@@ -1516,6 +1675,7 @@ poly_callback_clearing (const BoxType * b, void *cl)
   if (!TEST_FLAG (CLEARPOLYFLAG, polygon))
     return 0;
 
+  ghid_set_lock_effects (Output.fgGC, (AnyObjectType *) polygon);
   set_layer_object_color (i->layer, (AnyObjectType *) polygon);
   hid_draw_pcb_polygon (Output.fgGC, polygon, i->drawn_area);
   return 1;
@@ -1561,12 +1721,108 @@ clearPad_callback_solid (const BoxType * b, void *cl)
 }
 
 static void
+ensure_board_outline (void)
+{
+  if (!PCB->Data->outline_valid) {
+
+    if (PCB->Data->outline != NULL)
+      poly_Free (&PCB->Data->outline);
+
+    PCB->Data->outline = board_outline_poly (false);
+    PCB->Data->outline_valid = true;
+  }
+}
+
+static void
+fill_board_outline (hidGC gc, const BoxType *drawn_area)
+{
+  PolygonType polygon;
+
+  ensure_board_outline ();
+
+  memset (&polygon, 0, sizeof (polygon));
+  polygon.Clipped = PCB->Data->outline;
+  if (drawn_area)
+    polygon.BoundingBox = *drawn_area;
+  polygon.Flags = NoFlags ();
+  SET_FLAG (FULLPOLYFLAG, &polygon);
+  hid_draw_fill_pcb_polygon (gc, &polygon, drawn_area);
+  poly_FreeContours (&polygon.NoHoles);
+}
+
+struct outline_info {
+  hidGC gc;
+  float z1;
+  float z2;
+};
+
+static int
+fill_outline_hole_cb (PLINE *pl, void *user_data)
+{
+  struct outline_info *info = (struct outline_info *)user_data;
+  PolygonType polygon;
+  PLINE *pl_copy = NULL;
+
+  poly_CopyContour (&pl_copy, pl);
+  poly_InvContour (pl_copy);
+
+  memset (&polygon, 0, sizeof (polygon));
+  polygon.Clipped = poly_Create ();
+  poly_InclContour (polygon.Clipped, pl_copy);
+
+//  if (polygon.Clipped->contours == NULL)
+//    return 0;
+
+  polygon.Flags = NoFlags ();
+  SET_FLAG (FULLPOLYFLAG, &polygon);
+
+  /* XXX: For some reason, common_fill_pcb_polygon doesn't work for all contours here.. not sure why */
+//  common_fill_pcb_polygon (info->gc, &polygon, NULL);
+  hid_draw_fill_pcb_polygon (info->gc, &polygon, NULL);
+
+  poly_FreeContours (&polygon.NoHoles);
+
+  poly_Free (&polygon.Clipped);
+
+  return 0;
+}
+
+static void
+fill_board_outline_holes (hidGC gc, const BoxType *drawn_area)
+{
+  render_priv *priv = gport->render_priv;
+  PolygonType polygon, p;
+  struct outline_info info;
+
+  ensure_board_outline ();
+
+  memset (&polygon, 0, sizeof (polygon));
+  polygon.Clipped = PCB->Data->outline;
+  if (drawn_area)
+    polygon.BoundingBox = *drawn_area;
+  polygon.Flags = NoFlags ();
+  SET_FLAG (FULLPOLYFLAG, &polygon);
+
+  info.gc = gc;
+
+  p = polygon;
+  do {
+    PolygonHoles (&p, drawn_area, fill_outline_hole_cb, &info);
+  } while ((p.Clipped = p.Clipped->f) != polygon.Clipped);
+
+//  poly_FreeContours (&polygon.NoHoles);
+
+  hidgl_flush_triangles (priv->hidgl);
+}
+
+static void
 GhidDrawMask (int side, BoxType * screen)
 {
+//  static bool first_run = true;
+//  static GLuint texture;
   int thin = TEST_FLAG(THINDRAWFLAG, PCB) || TEST_FLAG(THINDRAWPOLYFLAG, PCB);
   LayerType *Layer = LAYER_PTR (side == TOP_SIDE ? top_soldermask_layer : bottom_soldermask_layer);
   struct poly_info info;
-  PolygonType polygon;
 
   OutputType *out = &Output;
 
@@ -1597,25 +1853,137 @@ GhidDrawMask (int side, BoxType * screen)
   hid_draw_set_color (out->fgGC, PCB->MaskColor);
   ghid_set_alpha_mult (out->fgGC, thin ? 0.35 : 1.0);
 
-  if (!PCB->Data->outline_valid) {
-
-    if (PCB->Data->outline != NULL)
-      poly_Free (&PCB->Data->outline);
-
-    PCB->Data->outline = board_outline_poly ();
-    PCB->Data->outline_valid = true;
+#if 0
+  if (first_run) {
+    glGenTextures (1, &texture);
+    glBindTexture (GL_TEXTURE_2D, texture);
+    load_texture_from_png ("board_texture.png");
+  } else {
+    glBindTexture (GL_TEXTURE_2D, texture);
   }
+  glUseProgram (0);
+
+  if (1) {
+    GLfloat s_params[] = {0.0001, 0., 0., 0.};
+    GLfloat t_params[] = {0., 0.0001, 0., 0.};
+    GLint obj_lin = GL_OBJECT_LINEAR;
+    glTexGeniv (GL_S, GL_TEXTURE_GEN_MODE, &obj_lin);
+    glTexGeniv (GL_T, GL_TEXTURE_GEN_MODE, &obj_lin);
+    glTexGenfv (GL_S, GL_OBJECT_PLANE, s_params);
+    glTexGenfv (GL_T, GL_OBJECT_PLANE, t_params);
+    glEnable (GL_TEXTURE_GEN_S);
+    glEnable (GL_TEXTURE_GEN_T);
+  }
+
+  glTexEnvf (GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+  glTexParameterf (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameterf (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameterf (GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+  glTexParameterf (GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+  glEnable (GL_TEXTURE_2D);
+#endif
+
+#if 0
+  ensure_board_outline ();
 
   memset (&polygon, 0, sizeof (polygon));
   polygon.Clipped = PCB->Data->outline;
-  polygon.BoundingBox = *screen;
+  if (screen)
+    polygon.BoundingBox = *screen;
   polygon.Flags = NoFlags ();
   SET_FLAG (FULLPOLYFLAG, &polygon);
   hid_draw_fill_pcb_polygon (out->fgGC, &polygon, screen);
   poly_FreeContours (&polygon.NoHoles);
+#endif
+
+  fill_board_outline (out->fgGC, screen);
+
   ghid_set_alpha_mult (out->fgGC, 1.0);
+//  hidgl_flush_triangles (priv->hidgl);
+#if 0
+  glDisable (GL_TEXTURE_GEN_S);
+  glDisable (GL_TEXTURE_GEN_T);
+  glBindTexture (GL_TEXTURE_2D, 0);
+  glDisable (GL_TEXTURE_2D);
+#endif
+  hidgl_shader_activate (circular_program);
 
   hid_draw_use_mask (&ghid_graphics, HID_MASK_OFF);
+
+//  first_run = false;
+}
+
+static void
+draw_outline_contour (hidGC gc, PLINE *pl, float z1, float z2)
+{
+  VNODE *v;
+  GLfloat x, y;
+
+  hidgl_ensure_vertex_space (gc, 2 * pl->Count + 2 + 2);
+
+  /* NB: Repeated first virtex to separate from other tri-strip */
+
+  x = pl->head.point[0];
+  y = pl->head.point[1];
+
+  hidgl_add_vertex_3D_tex (gc, x, y, z1, 0.0, 0.0);
+  hidgl_add_vertex_3D_tex (gc, x, y, z1, 0.0, 0.0);
+  hidgl_add_vertex_3D_tex (gc, x, y, z2, 0.0, 0.0);
+
+  v = pl->head.next;
+
+  do
+    {
+      x = v->point[0];
+      y = v->point[1];
+
+      hidgl_add_vertex_3D_tex (gc, x, y, z1, 0.0, 0.0);
+      hidgl_add_vertex_3D_tex (gc, x, y, z2, 0.0, 0.0);
+    }
+  while ((v = v->next) != pl->head.next);
+
+  /* NB: Repeated last virtex to separate from other tri-strip */
+  hidgl_add_vertex_3D_tex (gc, x, y, z2, 0.0, 0.0);
+}
+
+static int
+outline_hole_cb (PLINE *pl, void *user_data)
+{
+  struct outline_info *info = (struct outline_info *)user_data;
+
+  draw_outline_contour (info->gc, pl, info->z1, info->z2);
+  return 0;
+}
+
+static void
+ghid_draw_outline_between_layers (int from_layer, int to_layer, BoxType *drawn_area)
+{
+  render_priv *priv = gport->render_priv;
+  PolygonType polygon, p;
+  struct outline_info info;
+
+  ensure_board_outline ();
+
+  memset (&polygon, 0, sizeof (polygon));
+  polygon.Clipped = PCB->Data->outline;
+  if (drawn_area)
+    polygon.BoundingBox = *drawn_area;
+  polygon.Flags = NoFlags ();
+  SET_FLAG (FULLPOLYFLAG, &polygon);
+
+  info.gc = Output.fgGC;
+  info.z1 = compute_depth (from_layer);
+  info.z2 = compute_depth (to_layer);
+
+  p = polygon;
+  do {
+    draw_outline_contour (info.gc, p.Clipped->contours, info.z1, info.z2);
+    PolygonHoles (&p, drawn_area, outline_hole_cb, &info);
+  } while ((p.Clipped = p.Clipped->f) != polygon.Clipped);
+
+  poly_FreeContours (&polygon.NoHoles);
+
+  hidgl_flush_triangles (priv->hidgl);
 }
 
 static int
@@ -1660,11 +2028,13 @@ GhidDrawLayerGroup (int group, const BoxType * screen)
       if (!is_outline && !TEST_FLAG (THINDRAWFLAG, PCB)) {
         /* Mask out drilled holes on this layer */
         hidgl_flush_triangles (priv->hidgl);
-        glPushAttrib (GL_COLOR_BUFFER_BIT);
+        glPushAttrib (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glColorMask (0, 0, 0, 0);
+        glDepthMask (GL_FALSE);
         hid_draw_set_color (Output.bgGC, PCB->MaskColor);
         if (PCB->PinOn) r_search (PCB->Data->pin_tree, screen, NULL, hole_callback, NULL);
         if (PCB->ViaOn) r_search (PCB->Data->via_tree, screen, NULL, hole_callback, &h_info);
+        fill_board_outline_holes (Output.bgGC, screen);
         hidgl_flush_triangles (priv->hidgl);
         glPopAttrib ();
       }
@@ -1683,11 +2053,13 @@ GhidDrawLayerGroup (int group, const BoxType * screen)
 
         if (!is_outline && !TEST_FLAG (THINDRAWFLAG, PCB)) {
           hidgl_flush_triangles (priv->hidgl);
-          glPushAttrib (GL_COLOR_BUFFER_BIT);
+          glPushAttrib (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
           glColorMask (0, 0, 0, 0);
+          glDepthMask (GL_FALSE);
           /* Mask out drilled holes on this layer */
           if (PCB->PinOn) r_search (PCB->Data->pin_tree, screen, NULL, hole_callback, NULL);
           if (PCB->ViaOn) r_search (PCB->Data->via_tree, screen, NULL, hole_callback, &h_info);
+          fill_board_outline_holes (Output.bgGC, screen);
           hidgl_flush_triangles (priv->hidgl);
           glPopAttrib ();
         }
@@ -1793,6 +2165,7 @@ draw_hole_cyl (PinType *Pin, struct cyl_info *info, int Type)
   else
     color = "drill";
 
+  ghid_set_lock_effects (Output.fgGC, (AnyObjectType *)Pin);
   hid_draw_set_color (Output.fgGC, color);
   DrawDrillChannel (Output.fgGC, Pin->X, Pin->Y, Pin->DrillingHole / 2, info->from_layer_group, info->to_layer_group, info->scale);
   return 0;
@@ -1815,6 +2188,56 @@ via_hole_cyl_callback (const BoxType * b, void *cl)
     draw_hole_cyl ((PinType *)b, info, VIA_TYPE);
 
   return 0;
+}
+
+static int
+frontE_package_callback (const BoxType * b, void *cl)
+{
+  ElementType *element = (ElementType *) b;
+
+  if (FRONT (element))
+    {
+      if (element->Name[DESCRIPTION_INDEX].TextString == NULL)
+        return 0;
+
+      if (strcmp (element->Name[DESCRIPTION_INDEX].TextString, "ACY400") == 0) {
+        int layer_group = FRONT (element) ? 0 : max_copper_layer - 1; /* XXX: FIXME */
+        hidgl_draw_acy_resistor (element, compute_depth (layer_group), BOARD_THICKNESS);
+      }
+
+      if (strcmp (element->Name[DESCRIPTION_INDEX].TextString, "800mil_resistor.fp") == 0) {
+        int layer_group = FRONT (element) ? 0 : max_copper_layer - 1; /* XXX: FIXME */
+        hidgl_draw_800mil_resistor (element, compute_depth (layer_group), BOARD_THICKNESS);
+      }
+
+      if (strcmp (element->Name[DESCRIPTION_INDEX].TextString, "2300mil_resistor.fp") == 0) {
+        int layer_group = FRONT (element) ? 0 : max_copper_layer - 1; /* XXX: FIXME */
+        hidgl_draw_2300mil_resistor (element, compute_depth (layer_group), BOARD_THICKNESS);
+      }
+
+      if (strcmp (element->Name[DESCRIPTION_INDEX].TextString, "diode_700mil_surface.fp") == 0) {
+        int layer_group = FRONT (element) ? 0 : max_copper_layer - 1; /* XXX: FIXME */
+        hidgl_draw_700mil_diode_smd (element, compute_depth (layer_group), BOARD_THICKNESS);
+      }
+
+      if (strcmp (element->Name[DESCRIPTION_INDEX].TextString, "cap_100V_10uF.fp") == 0) {
+        int layer_group = FRONT (element) ? 0 : max_copper_layer - 1; /* XXX: FIXME */
+        hidgl_draw_1650mil_cap (element, compute_depth (layer_group), BOARD_THICKNESS);
+      }
+
+      if (strcmp (element->Name[DESCRIPTION_INDEX].TextString, "cap_15000V_2500pF.fp") == 0) {
+        int layer_group = FRONT (element) ? 0 : max_copper_layer - 1; /* XXX: FIXME */
+        hidgl_draw_350x800mil_cap (element, compute_depth (layer_group), BOARD_THICKNESS);
+      }
+    }
+  return 1;
+}
+
+static void
+ghid_draw_packages (BoxType *drawn_area)
+{
+  /* XXX: Just the front elements for now */
+  r_search (PCB->Data->element_tree, drawn_area, NULL, frontE_package_callback, NULL);
 }
 
 void
@@ -1841,7 +2264,7 @@ ghid_draw_everything (BoxType *drawn_area)
   /* Look at sign of eye coordinate system z-coord when projecting a
      world vector along +ve Z axis, (0, 0, 1). */
   /* XXX: This isn't strictly correct, as I've ignored the matrix
-          elements for homogeneous coordinates. */
+     elements for homogeneous coordinates. */
   /* NB: last_modelview_matrix is transposed in memory! */
   reverse_layers = (last_modelview_matrix[2][2] < 0);
 
@@ -1918,6 +2341,7 @@ ghid_draw_everything (BoxType *drawn_area)
       cyl_info.scale = gport->view.coord_per_px;
       hid_draw_set_color (Output.fgGC, "drill");
       ghid_set_alpha_mult (Output.fgGC, 0.75);
+      ghid_draw_outline_between_layers (cyl_info.from_layer_group, cyl_info.to_layer_group, drawn_area);
       if (PCB->PinOn) r_search (PCB->Data->pin_tree, drawn_area, NULL, pin_hole_cyl_callback, &cyl_info);
       if (PCB->ViaOn) r_search (PCB->Data->via_tree, drawn_area, NULL, via_hole_cyl_callback, &cyl_info);
       ghid_set_alpha_mult (Output.fgGC, 1.0);
@@ -1938,10 +2362,12 @@ ghid_draw_everything (BoxType *drawn_area)
     if (!TEST_FLAG (THINDRAWFLAG, PCB)) {
       /* Mask out drilled holes */
       hidgl_flush_triangles (priv->hidgl);
-      glPushAttrib (GL_COLOR_BUFFER_BIT);
+      glPushAttrib (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
       glColorMask (0, 0, 0, 0);
+      glDepthMask (GL_FALSE);
       if (PCB->PinOn) r_search (PCB->Data->pin_tree, drawn_area, NULL, hole_callback, NULL);
       if (PCB->ViaOn) r_search (PCB->Data->via_tree, drawn_area, NULL, hole_callback, NULL);
+      fill_board_outline_holes (Output.bgGC, drawn_area);
       hidgl_flush_triangles (priv->hidgl);
       glPopAttrib ();
     }
@@ -1988,11 +2414,17 @@ ghid_drawing_area_expose_cb (GtkWidget *widget,
   render_priv *priv = port->render_priv;
   GtkAllocation allocation;
   BoxType region;
-  Coord min_x, min_y;
-  Coord max_x, max_y;
-  Coord new_x, new_y;
+  double min_x, min_y;
+  double max_x, max_y;
+  double new_x, new_y;
   Coord min_depth;
   Coord max_depth;
+  float aspect;
+  GLfloat scale[] = {1, 0, 0, 0,
+                     0, 1, 0, 0,
+                     0, 0, 1, 0,
+                     0, 0, 0, 1};
+  bool horizon_problem = false;
 
   gtk_widget_get_allocation (widget, &allocation);
 
@@ -2020,29 +2452,77 @@ ghid_drawing_area_expose_cb (GtkWidget *widget,
 
   glMatrixMode (GL_PROJECTION);
   glLoadIdentity ();
-  glOrtho (0, allocation.width, allocation.height, 0, -100000, 100000);
+
+  aspect = (float)allocation.width / (float)allocation.height;
+
+#ifdef VIEW_ORTHO
+  glOrtho (-1. * aspect, 1. * aspect, 1., -1., 1., 24.);
+#else
+  glFrustum (-1. * aspect, 1 * aspect, 1., -1., 1., 24.);
+#endif
+
   glMatrixMode (GL_MODELVIEW);
   glLoadIdentity ();
-  glTranslatef (widget->allocation.width / 2., widget->allocation.height / 2., 0);
+
+#ifndef VIEW_ORTHO
+  /* TEST HACK */
+  glScalef (11., 11., 1.);
+#endif
+
+  /* Push the space coordinates board back into the middle of the z-view volume */
+  /* XXX: THIS CAUSES NEED FOR SCALING BY 11 IN ghid_unproject_to_z_plane(), FOR ORTHO VIEW ONLY! */
+  glTranslatef (0., 0., -11.);
+
+  /* Rotate about the center of the board space */
   glMultMatrixf ((GLfloat *)view_matrix);
-  glTranslatef (-widget->allocation.width / 2., -widget->allocation.height / 2., 0);
-  glScalef ((port->view.flip_x ? -1. : 1.) / port->view.coord_per_px,
-            (port->view.flip_y ? -1. : 1.) / port->view.coord_per_px,
-            ((port->view.flip_x == port->view.flip_y) ? 1. : -1.) / port->view.coord_per_px);
-  glTranslatef (port->view.flip_x ?  port->view.x0 - PCB->MaxWidth  :
-                                    -port->view.x0,
-                port->view.flip_y ?  port->view.y0 - PCB->MaxHeight :
-                                    -port->view.y0, 0);
+
+  /* Flip about the center of the viewed area */
+  glScalef ((port->view.flip_x ? -1. : 1.),
+            (port->view.flip_y ? -1. : 1.),
+            ((port->view.flip_x == port->view.flip_y) ? 1. : -1.));
+
+  /* Scale board coordiantes to (-1,-1)-(1,1) coordiantes */
+  /* Adjust the "w" coordinate of our homogeneous coodinates. We coulld in
+   * theory just use glScalef to transform, but on mesa this produces errors
+   * as the resulting modelview matrix has a very small determinant.
+   */
+  scale[15] = port->view.coord_per_px * (float)MIN (widget->allocation.width, widget->allocation.height) / 2.;
+  /* XXX: Need to choose which to use (width or height) based on the aspect of the window
+   *      AND the aspect of the board!
+   */
+  glMultMatrixf (scale);
+
+  /* Translate to the center of the board space view */
+  glTranslatef (-SIDE_X (port->view.x0 + port->view.width / 2),
+                -SIDE_Y (port->view.y0 + port->view.height / 2),
+                0.);
+
+  /* Stash the model view matrix so we can work out the screen coordinate -> board coordinate mapping */
   glGetFloatv (GL_MODELVIEW_MATRIX, (GLfloat *)last_modelview_matrix);
+  glGetFloatv (GL_PROJECTION_MATRIX, (GLfloat *)last_projection_matrix);
+
+#if 0
+  /* Fix up matrix so the board Z coordinate does not affect world Z
+   * this lets us view each stacked layer without parallax effects.
+   *
+   * Commented out because it breaks:
+   *   Board view "which side should I render first" calculation
+   *   Z-buffer depth occlusion when rendering component models
+   */
+  last_modelview_matrix[2][2] = 0.;
+  glLoadMatrixf ((GLfloat *)last_modelview_matrix);
+#endif
 
   glEnable (GL_STENCIL_TEST);
+  glEnable (GL_DEPTH_TEST);
+  glDepthFunc (GL_ALWAYS);
   glClearColor (port->offlimits_color.red / 65535.,
                 port->offlimits_color.green / 65535.,
                 port->offlimits_color.blue / 65535.,
                 1.);
   glStencilMask (~0);
   glClearStencil (0);
-  glClear (GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+  glClear (GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   hidgl_reset_stencil_usage (priv->hidgl);
 
   /* Disable the stencil test until we need it - otherwise it gets dirty */
@@ -2054,57 +2534,90 @@ ghid_drawing_area_expose_cb (GtkWidget *widget,
   min_depth = -50 + compute_depth (0);                    /* FIXME: NEED TO USE PHYSICAL GROUPS */
   max_depth =  50 + compute_depth (max_copper_layer - 1); /* FIXME: NEED TO USE PHYSICAL GROUPS */
 
-  ghid_unproject_to_z_plane (ev->area.x,
-                             ev->area.y,
-                             min_depth, &new_x, &new_y);
+  if (!ghid_unproject_to_z_plane (ev->area.x,
+                                  ev->area.y,
+                                  min_depth, &new_x, &new_y))
+    horizon_problem = true;
+
   max_x = min_x = new_x;
   max_y = min_y = new_y;
 
-  ghid_unproject_to_z_plane (ev->area.x,
-                             ev->area.y,
-                             max_depth, &new_x, &new_y);
+  if (!ghid_unproject_to_z_plane (ev->area.x,
+                                  ev->area.y,
+                                  max_depth, &new_x, &new_y))
+    horizon_problem = true;
+
   min_x = MIN (min_x, new_x);  max_x = MAX (max_x, new_x);
   min_y = MIN (min_y, new_y);  max_y = MAX (max_y, new_y);
 
   /* */
-  ghid_unproject_to_z_plane (ev->area.x + ev->area.width,
-                             ev->area.y,
-                             min_depth, &new_x, &new_y);
+  if (!ghid_unproject_to_z_plane (ev->area.x + ev->area.width,
+                                 ev->area.y,
+                                 min_depth, &new_x, &new_y))
+    horizon_problem = true;
+
   min_x = MIN (min_x, new_x);  max_x = MAX (max_x, new_x);
   min_y = MIN (min_y, new_y);  max_y = MAX (max_y, new_y);
 
-  ghid_unproject_to_z_plane (ev->area.x + ev->area.width, ev->area.y,
-                             max_depth, &new_x, &new_y);
-  min_x = MIN (min_x, new_x);  max_x = MAX (max_x, new_x);
-  min_y = MIN (min_y, new_y);  max_y = MAX (max_y, new_y);
+  if (!ghid_unproject_to_z_plane (ev->area.x + ev->area.width,
+                                  ev->area.y,
+                                  max_depth, &new_x, &new_y))
+    horizon_problem = true;
 
-  /* */
-  ghid_unproject_to_z_plane (ev->area.x + ev->area.width,
-                             ev->area.y + ev->area.height,
-                             min_depth, &new_x, &new_y);
-  min_x = MIN (min_x, new_x);  max_x = MAX (max_x, new_x);
-  min_y = MIN (min_y, new_y);  max_y = MAX (max_y, new_y);
-
-  ghid_unproject_to_z_plane (ev->area.x + ev->area.width,
-                             ev->area.y + ev->area.height,
-                             max_depth, &new_x, &new_y);
   min_x = MIN (min_x, new_x);  max_x = MAX (max_x, new_x);
   min_y = MIN (min_y, new_y);  max_y = MAX (max_y, new_y);
 
   /* */
-  ghid_unproject_to_z_plane (ev->area.x,
-                             ev->area.y + ev->area.height,
-                             min_depth,
-                             &new_x, &new_y);
+  if (!ghid_unproject_to_z_plane (ev->area.x + ev->area.width,
+                                  ev->area.y + ev->area.height,
+                                  min_depth, &new_x, &new_y))
+    horizon_problem = true;
+
   min_x = MIN (min_x, new_x);  max_x = MAX (max_x, new_x);
   min_y = MIN (min_y, new_y);  max_y = MAX (max_y, new_y);
 
-  ghid_unproject_to_z_plane (ev->area.x,
-                             ev->area.y + ev->area.height,
-                             max_depth,
-                             &new_x, &new_y);
+  if (!ghid_unproject_to_z_plane (ev->area.x + ev->area.width,
+                                  ev->area.y + ev->area.height,
+                                  max_depth, &new_x, &new_y))
+    horizon_problem = true;
+
   min_x = MIN (min_x, new_x);  max_x = MAX (max_x, new_x);
   min_y = MIN (min_y, new_y);  max_y = MAX (max_y, new_y);
+
+  /* */
+  if (!ghid_unproject_to_z_plane (ev->area.x,
+                                  ev->area.y + ev->area.height,
+                                  min_depth,
+                                  &new_x, &new_y))
+    horizon_problem = true;
+
+  min_x = MIN (min_x, new_x);  max_x = MAX (max_x, new_x);
+  min_y = MIN (min_y, new_y);  max_y = MAX (max_y, new_y);
+
+  if (!ghid_unproject_to_z_plane (ev->area.x,
+                                  ev->area.y + ev->area.height,
+                                  max_depth,
+                                  &new_x, &new_y))
+    horizon_problem = true;
+
+  min_x = MIN (min_x, new_x);  max_x = MAX (max_x, new_x);
+  min_y = MIN (min_y, new_y);  max_y = MAX (max_y, new_y);
+
+  if (horizon_problem) {
+    min_x = 0;
+    min_y = 0;
+    max_x = PCB->MaxWidth;
+    max_y = PCB->MaxHeight;
+  }
+
+  if (min_x < (double)-G_MAXINT / 4.) min_x = -G_MAXINT / 4;
+  if (min_y < (double)-G_MAXINT / 4.) min_y = -G_MAXINT / 4;
+  if (max_x < (double)-G_MAXINT / 4.) max_x = -G_MAXINT / 4;
+  if (max_y < (double)-G_MAXINT / 4.) max_y = -G_MAXINT / 4;
+  if (min_x > (double) G_MAXINT / 4.) min_x =  G_MAXINT / 4;
+  if (min_y > (double) G_MAXINT / 4.) min_y =  G_MAXINT / 4;
+  if (max_x > (double) G_MAXINT / 4.) max_x =  G_MAXINT / 4;
+  if (max_y > (double) G_MAXINT / 4.) max_y =  G_MAXINT / 4;
 
   region.X1 = min_x;  region.X2 = max_x + 1;
   region.Y1 = min_y;  region.Y2 = max_y + 1;
@@ -2126,6 +2639,7 @@ ghid_drawing_area_expose_cb (GtkWidget *widget,
   /* Drawing operations as masked to areas where the stencil buffer is '0' */
   /* glStencilFunc (GL_GREATER, 1, 1); */           /* Draw only where stencil buffer is 0 */
 
+  glDepthMask (GL_FALSE);
   if (global_view_2d) {
     glBegin (GL_QUADS);
     glVertex3i (0,             0,              0);
@@ -2157,11 +2671,53 @@ ghid_drawing_area_expose_cb (GtkWidget *widget,
     glEnd ();
   }
 
+  glDepthMask (GL_TRUE);
+
   ghid_draw_bg_image ();
 
   /* hid_expose_callback (&ghid_graphics, &region, 0); */
   ghid_draw_everything (&region);
   hidgl_flush_triangles (priv->hidgl);
+
+  glTexCoord2f (0., 0.);
+  glColor3f (1., 1., 1.);
+
+  if (0) {
+    double x, y;
+    Coord z = max_depth;
+
+    glBegin (GL_LINES);
+
+    ghid_unproject_to_z_plane (ev->area.x, ev->area.y, z, &x, &y);
+    glPushMatrix ();
+    glLoadIdentity ();
+    glVertex3f (0., 0., 0.);
+    glPopMatrix ();
+    glVertex3f (x, y, z);
+
+    ghid_unproject_to_z_plane (ev->area.x, ev->area.y + ev->area.height, z, &x, &y);
+    glPushMatrix ();
+    glLoadIdentity ();
+    glVertex3f (0., 0., 0.);
+    glPopMatrix ();
+    glVertex3f (x, y, z);
+
+    ghid_unproject_to_z_plane (ev->area.x + ev->area.width, ev->area.y + ev->area.height, z, &x, &y);
+    glPushMatrix ();
+    glLoadIdentity ();
+    glVertex3f (0., 0., 0.);
+    glPopMatrix ();
+    glVertex3f (x, y, z);
+
+    ghid_unproject_to_z_plane (ev->area.x + ev->area.width, ev->area.y, z, &x, &y);
+    glPushMatrix ();
+    glLoadIdentity ();
+    glVertex3f (0., 0., 0.);
+    glPopMatrix ();
+    glVertex3f (x, y, z);
+
+    glEnd ();
+  }
 
   /* Set the current depth to the right value for the layer we are editing */
   priv->edit_depth = compute_depth (GetLayerGroupNumberByNumber (INDEXOFCURRENT));
@@ -2175,7 +2731,66 @@ ghid_drawing_area_expose_cb (GtkWidget *widget,
   DrawMark (Output.fgGC);
   hidgl_flush_triangles (priv->hidgl);
 
+  glEnable (GL_LIGHTING);
+
+  glShadeModel (GL_SMOOTH);
+
+  glEnable (GL_LIGHT0);
+
+  /* XXX: FIX OUR NORMALS */
+  glEnable (GL_NORMALIZE);
+//  glEnable (GL_RESCALE_NORMAL);
+
+  glDepthFunc (GL_LESS);
+  glDisable (GL_STENCIL_TEST);
+
+  glEnable (GL_CULL_FACE);
+  glCullFace (GL_BACK);
+
+  if (1) {
+    GLfloat global_ambient[] = {0.0f, 0.0f, 0.0f, 1.0f};
+    glLightModelfv (GL_LIGHT_MODEL_AMBIENT, global_ambient);
+    glLightModeli (GL_LIGHT_MODEL_LOCAL_VIEWER, GL_FALSE);
+    glLightModeli (GL_LIGHT_MODEL_COLOR_CONTROL, GL_SEPARATE_SPECULAR_COLOR);
+  }
+  if (1) {
+    GLfloat diffuse[] =  {0.6, 0.6, 0.6, 1.0};
+    GLfloat ambient[] =  {0.4, 0.4, 0.4, 1.0};
+    GLfloat specular[] = {1.0, 1.0, 1.0, 1.0};
+    glLightfv (GL_LIGHT0, GL_DIFFUSE,  diffuse);
+    glLightfv (GL_LIGHT0, GL_AMBIENT,  ambient);
+    glLightfv (GL_LIGHT0, GL_SPECULAR, specular);
+  }
+  if (1) {
+//    GLfloat position[] = {1., -1., 1., 0.};
+//    GLfloat position[] = {1., -0.5, 1., 0.};
+//    GLfloat position[] = {0., -1., 1., 0.};
+//    GLfloat position[] = {0.5, -1., 1., 0.};
+//    GLfloat position[] = {0.0, -0.5, 1., 0.};
+    GLfloat position[] = {0.0, 0.0, 1., 0.};
+    GLfloat abspos = sqrt (position[0] * position[0] +
+                           position[1] * position[1] +
+                           position[2] * position[2]);
+    position[0] /= abspos;
+    position[1] /= abspos;
+    position[2] /= abspos;
+    glPushMatrix ();
+    glLoadIdentity ();
+    glLightfv (GL_LIGHT0, GL_POSITION, position);
+    glPopMatrix ();
+  }
+
+  if (!global_view_2d)
+    ghid_draw_packages (&region);
+
+  glDisable (GL_CULL_FACE);
+  glDisable (GL_DEPTH_TEST);
+  glDisable (GL_LIGHT0);
+  glDisable (GL_COLOR_MATERIAL);
+  glDisable (GL_LIGHTING);
+
   draw_crosshair (Output.fgGC, priv);
+
   hidgl_flush_triangles (priv->hidgl);
 
   draw_lead_user (Output.fgGC, priv);
@@ -2306,7 +2921,7 @@ ghid_pinout_preview_expose (GtkWidget *widget,
                 1.);
   glStencilMask (~0);
   glClearStencil (0);
-  glClear (GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+  glClear (GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   hidgl_reset_stencil_usage (priv->hidgl);
 
   /* Disable the stencil test until we need it - otherwise it gets dirty */
@@ -2369,6 +2984,7 @@ ghid_render_pixmap (int cx, int cy, double zoom, int width, int height, int dept
 
   glconfig = gdk_gl_config_new_by_mode (GDK_GL_MODE_RGB     |
                                         GDK_GL_MODE_STENCIL |
+                                        GDK_GL_MODE_DEPTH   |
                                         GDK_GL_MODE_SINGLE);
 
   pixmap = gdk_pixmap_new (NULL, width, height, depth);
@@ -2417,7 +3033,7 @@ ghid_render_pixmap (int cx, int cy, double zoom, int width, int height, int dept
                 1.);
   glStencilMask (~0);
   glClearStencil (0);
-  glClear (GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+  glClear (GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   hidgl_reset_stencil_usage (priv->hidgl);
 
   /* Disable the stencil test until we need it - otherwise it gets dirty */
@@ -2533,10 +3149,10 @@ ghid_finish_debug_draw (void)
   ghid_end_drawing (gport, gport->drawing_area);
 }
 
-static float
-determinant_2x2 (float m[2][2])
+static double
+determinant_2x2 (double m[2][2])
 {
-  float det;
+  double det;
   det = m[0][0] * m[1][1] -
         m[0][1] * m[1][0];
   return det;
@@ -2564,9 +3180,9 @@ determinant_4x4 (float m[4][4])
 #endif
 
 static void
-invert_2x2 (float m[2][2], float out[2][2])
+invert_2x2 (double m[2][2], double out[2][2])
 {
-  float scale = 1 / determinant_2x2 (m);
+  double scale = 1 / determinant_2x2 (m);
   out[0][0] =  m[1][1] * scale;
   out[0][1] = -m[0][1] * scale;
   out[1][0] = -m[1][0] * scale;
@@ -2631,14 +3247,65 @@ invert_4x4 (float m[4][4], float out[4][4])
 #endif
 
 
-static void
-ghid_unproject_to_z_plane (int ex, int ey, Coord pcb_z, Coord *pcb_x, Coord *pcb_y)
+static bool
+ghid_unproject_to_z_plane (int ex, int ey, Coord pcb_z, double *pcb_x, double *pcb_y)
 {
-  float mat[2][2];
-  float inv_mat[2][2];
-  float x, y;
+  double mat[2][2];
+  double inv_mat[2][2];
+  double x, y;
+  double fvz;
+  double vpx, vpy;
+  double fvx, fvy;
+  GtkWidget *widget = gport->drawing_area;
 
-  /*
+  /* FIXME: Dirty kludge.. I know what our view parameters are here */
+  double aspect = (double)widget->allocation.width / (double)widget->allocation.height;
+  double width = 2. * aspect;
+  double height = 2.;
+  double near_plane = 1.;
+  /* double far_plane = 24.; */
+
+  /* This is nasty beyond words, but I'm lazy and translating directly
+   * from some untested maths I derived which used this notation */
+  double A, B, C, D, E, F, G, H, I, J, K, L;
+
+  /* NB: last_modelview_matrix is transposed in memory! */
+  A = last_modelview_matrix[0][0];
+  B = last_modelview_matrix[1][0];
+  C = last_modelview_matrix[2][0];
+  D = last_modelview_matrix[3][0];
+  E = last_modelview_matrix[0][1];
+  F = last_modelview_matrix[1][1];
+  G = last_modelview_matrix[2][1];
+  H = last_modelview_matrix[3][1];
+  I = last_modelview_matrix[0][2];
+  J = last_modelview_matrix[1][2];
+  K = last_modelview_matrix[2][2];
+  L = last_modelview_matrix[3][2];
+
+  /* I could assert that the last row is (as assumed) [0 0 0 1], but again.. I'm lazy */
+
+  /* XXX: Actually the last element is not 1, we use it to scale the PCB coordinates! */
+#if 0
+  printf ("row %f %f %f %f\n", last_modelview_matrix[0][0],
+                               last_modelview_matrix[1][0],
+                               last_modelview_matrix[2][0],
+                               last_modelview_matrix[3][0]);
+  printf ("row %f %f %f %f\n", last_modelview_matrix[0][1],
+                               last_modelview_matrix[1][1],
+                               last_modelview_matrix[2][1],
+                               last_modelview_matrix[3][1]);
+  printf ("row %f %f %f %f\n", last_modelview_matrix[0][2],
+                               last_modelview_matrix[1][2],
+                               last_modelview_matrix[2][2],
+                               last_modelview_matrix[3][2]);
+  printf ("Last row %f %f %f %f\n", last_modelview_matrix[0][3],
+                                    last_modelview_matrix[1][3],
+                                    last_modelview_matrix[2][3],
+                                    last_modelview_matrix[3][3]);
+#endif
+
+/*
     ex = view_matrix[0][0] * vx +
          view_matrix[0][1] * vy +
          view_matrix[0][2] * vz +
@@ -2651,48 +3318,81 @@ ghid_unproject_to_z_plane (int ex, int ey, Coord pcb_z, Coord *pcb_x, Coord *pcb
                  view_matrix[2][1] * vy +
                  view_matrix[2][2] * vz +
                  view_matrix[2][3] * 1;
+    UNKNOWN ew = view_matrix[3][0] * vx +
+                 view_matrix[3][1] * vy +
+                 view_matrix[3][2] * vz +
+                 view_matrix[3][3] * 1;
+*/
 
-    ex - view_matrix[0][3] * 1
-       - view_matrix[0][2] * vz
-      = view_matrix[0][0] * vx +
-        view_matrix[0][1] * vy;
+  /* Convert from event coordinates to viewport coordinates */
+  vpx = (float)ex / (float)widget->allocation.width * 2. - 1.;
+  vpy = (float)ey / (float)widget->allocation.height * 2. - 1.;
 
-    ey - view_matrix[1][3] * 1
-       - view_matrix[1][2] * vz
-      = view_matrix[1][0] * vx +
-        view_matrix[1][1] * vy;
-  */
+#ifdef VIEW_ORTHO
+  /* XXX: NOT SURE WHAT IS WRONG TO REQUIRE THIS... SOMETHING IS INCONSISTENT */
+  vpx /= 11.;
+  vpy /= 11.;
+#endif
 
-  /* NB: last_modelview_matrix is transposed in memory! */
-  x = (float)ex - last_modelview_matrix[3][0] * 1
-                - last_modelview_matrix[2][0] * pcb_z;
+  /* Convert our model space Z plane coordinte to float for convenience */
+  fvz = (float)pcb_z;
 
-  y = (float)ey - last_modelview_matrix[3][1] * 1
-                - last_modelview_matrix[2][1] * pcb_z;
+  /* This isn't really X and Y? */
+  x = (C * fvz + D) * 2. / width  * near_plane + vpx * (K * fvz + L);
+  y = (G * fvz + H) * 2. / height * near_plane + vpy * (K * fvz + L);
 
-  /*
-    x = view_matrix[0][0] * vx +
-        view_matrix[0][1] * vy;
+  mat[0][0] = -vpx * I - A * 2 / width / near_plane;
+  mat[0][1] = -vpx * J - B * 2 / width / near_plane;
+  mat[1][0] = -vpy * I - E * 2 / height / near_plane;
+  mat[1][1] = -vpy * J - F * 2 / height / near_plane;
 
-    y = view_matrix[1][0] * vx +
-        view_matrix[1][1] * vy;
-
-    [view_matrix[0][0] view_matrix[0][1]] [vx] = [x]
-    [view_matrix[1][0] view_matrix[1][1]] [vy]   [y]
-  */
-
-  mat[0][0] = last_modelview_matrix[0][0];
-  mat[0][1] = last_modelview_matrix[1][0];
-  mat[1][0] = last_modelview_matrix[0][1];
-  mat[1][1] = last_modelview_matrix[1][1];
-
-  /*    if (determinant_2x2 (mat) < 0.00001)       */
-  /*      printf ("Determinant is quite small\n"); */
+//  if (fabs (determinant_2x2 (mat)) < 0.000000000001)
+//    printf ("Determinant is quite small\n");
 
   invert_2x2 (mat, inv_mat);
 
-  *pcb_x = (int)(inv_mat[0][0] * x + inv_mat[0][1] * y);
-  *pcb_y = (int)(inv_mat[1][0] * x + inv_mat[1][1] * y);
+  fvx = (inv_mat[0][0] * x + inv_mat[0][1] * y);
+  fvy = (inv_mat[1][0] * x + inv_mat[1][1] * y);
+
+//  if (fvx == NAN) printf ("fvx is NAN\n");
+//  if (fvy == NAN) printf ("fvx is NAN\n");
+
+//  if (fabs (fvx) == INFINITY) printf ("fvx is infinite %f\n", fvx);
+//  if (fabs (fvy) == INFINITY) printf ("fvy is infinite %f\n", fvy);
+
+//  if (fvx > (double)G_MAXINT/5.) {fvx = (double)G_MAXINT/5.; printf ("fvx overflow clamped\n"); }
+//  if (fvy > (double)G_MAXINT/5.) {fvy = (double)G_MAXINT/5.; printf ("fvy overflow clamped\n"); }
+
+//  if (fvx < (double)-G_MAXINT/5.) {fvx = (double)-G_MAXINT/5.; printf ("fvx underflow clamped\n"); }
+//  if (fvy < (double)-G_MAXINT/5.) {fvy = (double)-G_MAXINT/5.; printf ("fvy underflow clamped\n"); }
+
+//  *pcb_x = (Coord)fvx;
+//  *pcb_y = (Coord)fvy;
+
+  *pcb_x = fvx;
+  *pcb_y = fvy;
+
+  {
+    /* Reproject the computed board plane coordinates to eye space */
+    /* float ex = last_modelview_matrix[0][0] * fvx + last_modelview_matrix[1][0] * fvy + last_modelview_matrix[2][0] * fvz + last_modelview_matrix[3][0]; */
+    /* float ey = last_modelview_matrix[0][1] * fvx + last_modelview_matrix[1][1] * fvy + last_modelview_matrix[2][1] * fvz + last_modelview_matrix[3][1]; */
+    float ez = last_modelview_matrix[0][2] * fvx + last_modelview_matrix[1][2] * fvy + last_modelview_matrix[2][2] * fvz + last_modelview_matrix[3][2];
+    /* We don't care about ew, as we don't use anything other than 1 for homogeneous coordinates at this stage */
+    /* float ew = last_modelview_matrix[0][3] * fvx + last_modelview_matrix[1][3] * fvy + last_modelview_matrix[2][3] * fvz + last_modelview_matrix[3][3]; */
+
+#if 0
+    if (-ez < near_plane)
+      printf ("ez is closer than the near_plane clipping plane, ez = %f\n", ez);
+    if (-ez > far_plane)
+      printf ("ez is further than the near_plane clipping plane, ez = %f\n", ez);
+#endif
+    if (-ez < 0) {
+      // printf ("EZ IS BEHIND THE CAMERA !! ez = %f\n", ez);
+      return false;
+    }
+
+    return true;
+  }
 }
 
 
@@ -2700,31 +3400,63 @@ bool
 ghid_event_to_pcb_coords (int event_x, int event_y, Coord *pcb_x, Coord *pcb_y)
 {
   render_priv *priv = gport->render_priv;
+  double tmp_x, tmp_y;
+  bool retval;
 
-  ghid_unproject_to_z_plane (event_x, event_y, priv->edit_depth, pcb_x, pcb_y);
+  retval = ghid_unproject_to_z_plane (event_x, event_y, priv->edit_depth, &tmp_x, &tmp_y);
 
-  return true;
+  *pcb_x = tmp_x;
+  *pcb_y = tmp_y;
+
+  return retval;
 }
 
 bool
 ghid_pcb_to_event_coords (Coord pcb_x, Coord pcb_y, int *event_x, int *event_y)
 {
   render_priv *priv = gport->render_priv;
+  float vpx, vpy, vpz, vpw;
+  float wx, wy, ww;
+
+  /* Transform the passed coordinate to eye space */
 
   /* NB: last_modelview_matrix is transposed in memory */
-  float w = last_modelview_matrix[0][3] * (float)pcb_x +
-            last_modelview_matrix[1][3] * (float)pcb_y +
-            last_modelview_matrix[2][3] * 0. +
-            last_modelview_matrix[3][3] * 1.;
+  vpx = last_modelview_matrix[0][0] * (float)pcb_x +
+        last_modelview_matrix[1][0] * (float)pcb_y +
+        last_modelview_matrix[2][0] * priv->edit_depth +
+        last_modelview_matrix[3][0] * 1.;
+  vpy = last_modelview_matrix[0][1] * (float)pcb_x +
+        last_modelview_matrix[1][1] * (float)pcb_y +
+        last_modelview_matrix[2][1] * priv->edit_depth +
+        last_modelview_matrix[3][1] * 1.;
+  vpz = last_modelview_matrix[0][2] * (float)pcb_x +
+        last_modelview_matrix[1][2] * (float)pcb_y +
+        last_modelview_matrix[2][2] * priv->edit_depth +
+        last_modelview_matrix[3][2] * 1.;
+  vpw = last_modelview_matrix[0][3] * (float)pcb_x +
+        last_modelview_matrix[1][3] * (float)pcb_y +
+        last_modelview_matrix[2][3] * priv->edit_depth +
+        last_modelview_matrix[3][3] * 1.;
 
-  *event_x = (last_modelview_matrix[0][0] * (float)pcb_x +
-              last_modelview_matrix[1][0] * (float)pcb_y +
-              last_modelview_matrix[2][0] * priv->edit_depth +
-              last_modelview_matrix[3][0] * 1.) / w;
-  *event_y = (last_modelview_matrix[0][1] * (float)pcb_x +
-              last_modelview_matrix[1][1] * (float)pcb_y +
-              last_modelview_matrix[2][1] * priv->edit_depth +
-              last_modelview_matrix[3][1] * 1.) / w;
+  /* Project the eye coordinates into clip space */
+
+  /* NB: last_projection_matrix is transposed in memory */
+  wx = last_projection_matrix[0][0] * vpx +
+       last_projection_matrix[1][0] * vpy +
+       last_projection_matrix[2][0] * vpz +
+       last_projection_matrix[3][0] * vpw;
+  wy = last_projection_matrix[0][1] * vpx +
+       last_projection_matrix[1][1] * vpy +
+       last_projection_matrix[2][1] * vpz +
+       last_projection_matrix[3][1] * vpw;
+  ww = last_projection_matrix[0][3] * vpx +
+       last_projection_matrix[1][3] * vpy +
+       last_projection_matrix[2][3] * vpz +
+       last_projection_matrix[3][3] * vpw;
+
+  /* And transform according to our viewport */
+  *event_x = ( wx / ww + 1.) * 0.5 * (float)gport->drawing_area->allocation.width,
+  *event_y = (-wy / ww + 1.) * 0.5 * (float)gport->drawing_area->allocation.height;
 
   return true;
 }
@@ -2869,4 +3601,27 @@ ghid_cancel_lead_user (void)
   priv->lead_user_timeout = 0;
   priv->lead_user_timer = NULL;
   priv->lead_user = false;
+}
+
+void
+ghid_set_lock_effects (hidGC gc, AnyObjectType *object)
+{
+  // XXX: Workaround to crashing exporters
+  if (gc->hid != &ghid_hid)
+    return;
+
+  /* Only apply effects to locked objects when in "lock" mode */
+  if (Settings.Mode == LOCK_MODE &&
+      TEST_FLAG (LOCKFLAG, object))
+    {
+      ghid_set_alpha_mult (gc, 0.8);
+      ghid_set_saturation (gc, 0.3);
+      ghid_set_brightness (gc, 0.7);
+    }
+  else
+    {
+      ghid_set_alpha_mult (gc, 1.0);
+      ghid_set_saturation (gc, 1.0);
+      ghid_set_brightness (gc, 1.0);
+    }
 }
