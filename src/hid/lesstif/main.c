@@ -3076,7 +3076,7 @@ lesstif_set_layer (const char *name, int group, int empty)
       for (idx = 0; idx < n-1; idx ++)
 	{
 	  int ni = PCB->LayerGroups.Entries[group][idx];
-	  if (ni >= 0 && ni < max_copper_layer + SILK_LAYER
+	  if (ni >= 0 && ni < max_copper_layer + EXTRA_LAYERS
 	      && PCB->Data->Layer[ni].On)
 	    break;
 	}
@@ -3094,7 +3094,7 @@ lesstif_set_layer (const char *name, int group, int empty)
   else
     autofade = 0;
 #endif
-  if (idx >= 0 && idx < max_copper_layer + SILK_LAYER)
+  if (idx >= 0 && idx < max_copper_layer + EXTRA_LAYERS)
     return pinout ? 1 : PCB->Data->Layer[idx].On;
   if (idx < 0)
     {

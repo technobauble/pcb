@@ -83,17 +83,28 @@
 #define	LAYER_ON_STACK(n)	(&PCB->Data->Layer[LayerStack[(n)]])
 #define LAYER_PTR(n)            (&PCB->Data->Layer[(n)])
 #define	CURRENT			(PCB->SilkActive ? &PCB->Data->Layer[ \
-				(Settings.ShowBottomSide ? bottom_silk_layer : top_silk_layer)] \
+				Settings.ShowBottomSide ? bottom_silk_layer : top_silk_layer] \
+				: PCB->SolderMaskActive ? &PCB->Data->Layer[ \
+				Settings.ShowBottomSide ? bottom_soldermask_layer : top_soldermask_layer] \
 				: LAYER_ON_STACK(0))
 #define	INDEXOFCURRENT		(PCB->SilkActive ? \
-				(Settings.ShowBottomSide ? bottom_silk_layer : top_silk_layer) \
+				Settings.ShowBottomSide ? bottom_silk_layer : top_silk_layer \
+				: PCB->SolderMaskActive ? \
+				Settings.ShowBottomSide ? bottom_soldermask_layer : top_soldermask_layer \
 				: LayerStack[0])
 #define SILKLAYER		Layer[ \
 				(Settings.ShowBottomSide ? bottom_silk_layer : top_silk_layer)]
 #define BACKSILKLAYER		Layer[ \
 				(Settings.ShowBottomSide ? top_silk_layer : bottom_silk_layer)]
+#define SOLDERMASKLAYER		Layer[ \
+				(Settings.ShowBottomSide ? bottom_soldermask_layer : top_soldermask_layer)]
+#define BACKSOLDERMASKLAYER	Layer[ \
+				(Settings.ShowBottomSide ? top_soldermask_layer : bottom_soldermask_layer)]
 
-#define TEST_SILK_LAYER(layer)	(GetLayerNumber (PCB->Data, layer) >= max_copper_layer)
+#define TEST_SILK_LAYER(layer)	(GetLayerNumber (PCB->Data, layer) == top_silk_layer || \
+                                 GetLayerNumber (PCB->Data, layer) == bottom_silk_layer)
+#define TEST_SOLDERMASK_LAYER(layer)	(GetLayerNumber (PCB->Data, layer) == top_soldermask_layer || \
+                                 GetLayerNumber (PCB->Data, layer) == bottom_soldermask_layer)
 
 
 /* ---------------------------------------------------------------------------
@@ -314,21 +325,21 @@
 #define	ALLLINE_LOOP(top) do	{		\
 	Cardinal		l;			\
 	LayerType *layer = (top)->Layer;		\
-	for (l = 0; l < max_copper_layer + SILK_LAYER; l++, layer++)	\
+	for (l = 0; l < max_copper_layer + EXTRA_LAYERS; l++, layer++)	\
 	{ \
 		LINE_LOOP(layer)
 
 #define ALLARC_LOOP(top) do {		\
 	Cardinal		l;			\
 	LayerType *layer = (top)->Layer;		\
-	for (l =0; l < max_copper_layer + SILK_LAYER; l++, layer++)		\
+	for (l =0; l < max_copper_layer + EXTRA_LAYERS; l++, layer++)		\
 	{ \
 		ARC_LOOP(layer)
 
 #define	ALLPOLYGON_LOOP(top)	do {		\
 	Cardinal		l;			\
 	LayerType *layer = (top)->Layer;		\
-	for (l = 0; l < max_copper_layer + SILK_LAYER; l++, layer++)	\
+	for (l = 0; l < max_copper_layer + EXTRA_LAYERS; l++, layer++)	\
 	{ \
 		POLYGON_LOOP(layer)
 
@@ -380,14 +391,14 @@
 #define	ALLTEXT_LOOP(top)	do {		\
 	Cardinal		l;			\
 	LayerType *layer = (top)->Layer;		\
-	for (l = 0; l < max_copper_layer + SILK_LAYER; l++, layer++)	\
+	for (l = 0; l < max_copper_layer + EXTRA_LAYERS; l++, layer++)	\
 	{ \
 		TEXT_LOOP(layer)
 
 #define	VISIBLELINE_LOOP(top) do	{		\
 	Cardinal		l;			\
 	LayerType *layer = (top)->Layer;		\
-	for (l = 0; l < max_copper_layer + SILK_LAYER; l++, layer++)	\
+	for (l = 0; l < max_copper_layer + EXTRA_LAYERS; l++, layer++)	\
 	{ \
 		if (layer->On)				\
 			LINE_LOOP(layer)
@@ -395,7 +406,7 @@
 #define	VISIBLEARC_LOOP(top) do	{		\
 	Cardinal		l;			\
 	LayerType *layer = (top)->Layer;		\
-	for (l = 0; l < max_copper_layer + SILK_LAYER; l++, layer++)	\
+	for (l = 0; l < max_copper_layer + EXTRA_LAYERS; l++, layer++)	\
 	{ \
 		if (layer->On)				\
 			ARC_LOOP(layer)
@@ -403,7 +414,7 @@
 #define	VISIBLETEXT_LOOP(board) do	{		\
 	Cardinal		l;			\
 	LayerType *layer = (board)->Data->Layer;		\
-	for (l = 0; l < max_copper_layer + SILK_LAYER; l++, layer++)	\
+	for (l = 0; l < max_copper_layer + EXTRA_LAYERS; l++, layer++)	\
 	{ \
                 TEXT_LOOP(layer);                                      \
                   if (TEXT_IS_VISIBLE((board), layer, text))
@@ -411,7 +422,7 @@
 #define	VISIBLEPOLYGON_LOOP(top) do	{	\
 	Cardinal		l;			\
 	LayerType *layer = (top)->Layer;		\
-	for (l = 0; l < max_copper_layer + SILK_LAYER; l++, layer++)	\
+	for (l = 0; l < max_copper_layer + EXTRA_LAYERS; l++, layer++)	\
 	{ \
 		if (layer->On)				\
 			POLYGON_LOOP(layer)
