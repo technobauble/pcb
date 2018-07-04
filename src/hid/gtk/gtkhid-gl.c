@@ -11,6 +11,7 @@
 #include "draw.h"
 #include "draw_funcs.h"
 #include "rtree.h"
+#include "polygon.h"
 #include "gui-pinout-preview.h"
 
 /* The Linux OpenGL ABI 1.0 spec requires that we define
@@ -1491,7 +1492,35 @@ static int
 poly_callback (const BoxType * b, void *cl)
 {
   struct poly_info *i = (struct poly_info *) cl;
-  PolygonType *polygon = (PolygonType *)b;
+  PolygonType *polygon = (PolygonType *) b;
+
+  set_layer_object_color (i->layer, (AnyObjectType *) polygon);
+  hid_draw_pcb_polygon (Output.fgGC, polygon, i->drawn_area);
+  return 1;
+}
+
+static int
+poly_callback_no_clear (const BoxType * b, void *cl)
+{
+  struct poly_info *i = (struct poly_info *) cl;
+  PolygonType *polygon = (PolygonType *) b;
+
+  if (TEST_FLAG (CLEARPOLYFLAG, polygon))
+    return 0;
+
+  set_layer_object_color (i->layer, (AnyObjectType *) polygon);
+  hid_draw_pcb_polygon (Output.fgGC, polygon, i->drawn_area);
+  return 1;
+}
+
+static int
+poly_callback_clearing (const BoxType * b, void *cl)
+{
+  struct poly_info *i = (struct poly_info *) cl;
+  PolygonType *polygon = (PolygonType *) b;
+
+  if (!TEST_FLAG (CLEARPOLYFLAG, polygon))
+    return 0;
 
   set_layer_object_color (i->layer, (AnyObjectType *) polygon);
   hid_draw_pcb_polygon (Output.fgGC, polygon, i->drawn_area);
@@ -1541,6 +1570,9 @@ static void
 GhidDrawMask (int side, BoxType * screen)
 {
   int thin = TEST_FLAG(THINDRAWFLAG, PCB) || TEST_FLAG(THINDRAWPOLYFLAG, PCB);
+  LayerType *Layer = LAYER_PTR (side == TOP_SIDE ? top_soldermask_layer : bottom_soldermask_layer);
+  struct poly_info info;
+  PolygonType polygon;
 
   OutputType *out = &Output;
 
@@ -1555,6 +1587,14 @@ GhidDrawMask (int side, BoxType * screen)
     }
 
   hid_draw_use_mask (&ghid_graphics, HID_MASK_CLEAR);
+
+  info.layer = Layer;
+  info.drawn_area = screen;
+  r_search (Layer->polygon_tree, screen, NULL, poly_callback, &info);
+  r_search (Layer->line_tree, screen, NULL, line_callback, Layer);
+  r_search (Layer->arc_tree, screen, NULL, arc_callback, Layer);
+  r_search (Layer->text_tree, screen, NULL, text_callback, Layer);
+
   r_search (PCB->Data->pin_tree, screen, NULL, clearPin_callback_solid, NULL);
   r_search (PCB->Data->via_tree, screen, NULL, clearPin_callback_solid, NULL);
   r_search (PCB->Data->pad_tree, screen, NULL, clearPad_callback_solid, &side);
@@ -1562,7 +1602,23 @@ GhidDrawMask (int side, BoxType * screen)
   hid_draw_use_mask (&ghid_graphics, HID_MASK_AFTER);
   hid_draw_set_color (out->fgGC, PCB->MaskColor);
   ghid_set_alpha_mult (out->fgGC, thin ? 0.35 : 1.0);
-  hid_draw_fill_rect (out->fgGC, 0, 0, PCB->MaxWidth, PCB->MaxHeight);
+
+  if (!PCB->Data->outline_valid) {
+
+    if (PCB->Data->outline != NULL)
+      poly_Free (&PCB->Data->outline);
+
+    PCB->Data->outline = board_outline_poly ();
+    PCB->Data->outline_valid = true;
+  }
+
+  memset (&polygon, 0, sizeof (polygon));
+  polygon.Clipped = PCB->Data->outline;
+  polygon.BoundingBox = *screen;
+  polygon.Flags = NoFlags ();
+  SET_FLAG (FULLPOLYFLAG, &polygon);
+  hid_draw_fill_pcb_polygon (out->fgGC, &polygon, screen);
+  poly_FreeContours (&polygon.NoHoles);
   ghid_set_alpha_mult (out->fgGC, 1.0);
 
   hid_draw_use_mask (&ghid_graphics, HID_MASK_OFF);
@@ -1623,7 +1679,8 @@ GhidDrawLayerGroup (int group, const BoxType * screen)
       if (Layer->PolygonN) {
         info.layer = Layer;
         info.drawn_area = screen;
-        r_search (Layer->polygon_tree, screen, NULL, poly_callback, &info);
+        r_search (Layer->polygon_tree, screen, NULL, poly_callback_no_clear, &info);
+        r_search (Layer->polygon_tree, screen, NULL, poly_callback_clearing, &info);
 
         /* HACK: Subcomposite polygons separately from other layer primitives */
         /* Reset the compositing */
