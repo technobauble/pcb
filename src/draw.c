@@ -985,7 +985,7 @@ mask_poly_callback (const BoxType * b, void *cl)
   struct poly_info *i = cl;
   PolygonType *polygon = (PolygonType *)b;
 
-  gui->graphics->draw_pcb_polygon (Output.pmGC, polygon, i->drawn_area);
+  hid_draw_pcb_polygon (Output.pmGC, polygon, i->drawn_area);
   return 1;
 }
 
@@ -994,7 +994,7 @@ mask_line_callback (const BoxType * b, void *cl)
 {
   LineType *line = (LineType *)b;
 
-  gui->graphics->draw_pcb_line (Output.pmGC, line);
+  hid_draw_pcb_line (Output.pmGC, line);
   return 1;
 }
 
@@ -1003,7 +1003,7 @@ mask_arc_callback (const BoxType * b, void *cl)
 {
   ArcType *arc = (ArcType *)b;
 
-  gui->graphics->draw_pcb_arc (Output.pmGC, arc);
+  hid_draw_pcb_arc (Output.pmGC, arc);
   return 1;
 }
 
@@ -1019,7 +1019,7 @@ mask_text_callback (const BoxType * b, void *cl)
     min_silk_line = PCB->minSlk;
   else
     min_silk_line = PCB->minWid;
-  gui->graphics->draw_pcb_text (Output.fgGC, text, min_silk_line);
+  hid_draw_pcb_text (Output.fgGC, text, min_silk_line);
   return 1;
 }
 
