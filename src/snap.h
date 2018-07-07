@@ -150,11 +150,12 @@ SnapSpecType * snap_spec_copy(SnapSpecType * snap);
     iterated through every time the mouse is moved.
  
     When SnapSpecs are added, they are inserted into the list at a position
-    according to their priority. The memory is always kept contiguous, so the
-    elements after are all shifted down in memory to make room for the new one.
+    according to their priority. The list is maintained sorted in priority 
+	order. The memory is always kept contiguous, so the elements after are all 
+	shifted down in memory to make room for the new one.
  
     If an element is subsequently removed, the size of the allocated memory is
-    not reduced, but the memory is still held. The elements in the list after 
+    not reduced, the memory is still held. The elements in the list after 
     the one removed are all shifted in memory so that all the elements in the
     list remain contiguous. When the element is removed, \a n is decremented,
     but max is not. Another snap can be added and fill that memory.
@@ -173,9 +174,6 @@ void snap_list_delete(SnapListType * list);
 SnapSpecType * snap_list_add_snap(SnapListType * list, SnapSpecType * snap);
 int snap_list_remove_snap_by_name(SnapListType * list, char * name);
 SnapSpecType * snap_list_find_snap_by_name(SnapListType * list, char * name);
-int snap_list_list_snaps(SnapListType * list);
 SnapType * snap_list_search_snaps(SnapListType * list, Coord x, Coord y);
-
-
 
 #endif /* snap_h */
