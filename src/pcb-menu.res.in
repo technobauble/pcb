@@ -196,7 +196,6 @@ MainMenu =
    {"'All-direction' lines" checked=alldirection Display(Toggle45Degree) a={"." "<Key>."}}
    {"Auto swap line start angle" checked=swapstartdir Display(ToggleStartDirection)}
    {"Orthogonal moves" checked=orthomove Display(ToggleOrthoMove)}
-   {"Crosshair snaps to pins and pads" checked=snappin Display(ToggleSnapPin)}
    {"Crosshair shows DRC clearance" checked=showdrc Display(ToggleShowDRC)}
    {"Auto enforce DRC clearance" checked=autodrc Display(ToggleAutoDRC)}
    -
