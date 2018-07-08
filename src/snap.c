@@ -61,6 +61,7 @@
 #include "data.h"   // Crosshair structure
 #include "error.h"  // Message
 #include "search.h" // Searching functions
+#include "misc.h"   // GetValue
 
 /*
  * Snap Type functions
@@ -340,8 +341,93 @@ ActionListSnaps(int argc, char **argv, Coord x, Coord y)
 }
 
 
+static const char snap_set_property_help[] = "Change the property of a given snap.";
+static const char snap_set_property_syntax[] = "SnapSetProperty(<name>, <property>, <new value>)";
+
+/* %start-doc actions SnapSetProperty
+
+Set a property of a snap. Valid properties include:
+  * Enabled
+  * Radius
+  * Priority
+
+This action acts on the snap list is currently active.
+
+%end-doc */
+
+/* There's a version of this defined in action.c. It should really be
+ * defined more globally so that other functions can use it, but right now
+ * it's not. */
+#ifndef ARG
+  #define ARG(n) (argc > (n) ? argv[n] : NULL)
+#endif
+
+/*! \brief Set the specified property of the specified snap. */
+static int
+ActionSnapSetProperty(int argc, char **argv, Coord x, Coord y)
+{
+  char *name = ARG(0);
+  char *prop = ARG(1);
+  char *val = ARG(2);
+  bool absolute;
+  Coord value;
+  SnapSpecType * spec;
+
+  /* Sanity check the inputs */
+  if (argc != 3 || !name || !prop || !val) {
+	Message("SnapSetProperty: exactly 3 arguments required.\n");
+	return -1;
+  }
+
+  /* Find the snap we need to change*/
+  spec = snap_list_find_snap_by_name(Crosshair.snaps, name);
+  if (!spec) {
+	Message("SnapSetProperty: snap %s not found.\n");
+	return -1;
+  }
+
+  // figure out what property is to be changed, and change it.
+  if (strcasecmp (prop, "Enabled") == 0) {
+	  // we should have a general function for converting strings to
+	  // booleans, or ints, or whatever.
+    if (   strcasecmp (val, "true") == 0
+	    || strcasecmp (val, "on") == 0
+	    || strcasecmp (val, "1") == 0) {
+	  spec->enabled = true;
+    } else if (
+		   strcasecmp (val, "false") == 0
+	    || strcasecmp (val, "off") == 0
+	    || strcasecmp (val, "0") == 0) {
+	  spec->enabled = false;
+	} else {
+	  Message("SnapSetProperty: Invalid value for property \"enabled\": %s.\n", val);
+	  return -1;
+	}
+
+  } else if (strcasecmp (prop, "Radius") == 0) {
+    value = GetValue(val, NULL, &absolute);
+	if (absolute) spec->radius = value;
+	else spec->radius += value;
+
+  } else if (strcasecmp (prop, "Priority") == 0) {
+	SnapSpecType * snap_copy = snap_spec_copy(spec);
+	value = GetUnitlessValue(val, &absolute);
+    snap_list_remove_snap_by_name(Crosshair.snaps, spec->name);
+    if (absolute) snap_copy->priority = value;
+	else snap_copy->priority += value;
+    snap_list_add_snap(Crosshair.snaps, snap_copy);
+
+  } else {
+    Message("SnapSetProperty: Invalid proprty: %s.\n", prop);
+	return -1;
+  }
+  return 0;
+}
+
+
 HID_Action snap_action_list[] = {
-  {"ListSnaps", 0, ActionListSnaps, listsnaps_help, listsnaps_syntax}
+  {"ListSnaps", 0, ActionListSnaps, listsnaps_help, listsnaps_syntax},
+  {"SnapSetProperty", 0, ActionSnapSetProperty, snap_set_property_help, snap_set_property_syntax}
 };
 
 REGISTER_ACTIONS(snap_action_list)
