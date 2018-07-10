@@ -4,8 +4,17 @@
 \section pcb-intro PCB Introduction
     \htmlinclude what-is-pcb.html
 <hr>
+\section branches Development Branches howto
+    \htmlinclude branches.html
+<hr>
 \section pcb-releases PCB Releases howto
     \htmlinclude pcb-releases.html
+<hr>
+\section win32_mingw PCB for Windows with a MinGW cross-compiler howto
+    \htmlinclude win32_MinGW.html
+<hr>
+\section win32_cygwin Building a PCB Windows installer under Cygwin howto
+    \htmlinclude win32_cygwin.html
 <hr>
 \section pcb-launchpad-ppa PCB Launchpad PPA howto
     \htmlinclude pcb-launchpad-ppa.html
