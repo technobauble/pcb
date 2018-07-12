@@ -985,7 +985,7 @@ snap_to_grid(Coord x, Coord y, Coord r)
   return snap;
 }
 
-static SnapSpecType grid_snap = {
+SnapSpecType grid_snap = {
   "Snap to grid",  // Name
   &snap_to_grid,   // Function pointer
   true,            // enabled
@@ -1047,7 +1047,7 @@ snap_to_pins_pads(Coord x, Coord y, Coord r)
   return snap;
 }
 
-static SnapSpecType pin_pad_snap = {
+SnapSpecType pin_pad_snap = {
   "Snap to pins and pads",  // Name
   &snap_to_pins_pads,       // Function pointer
   true,                     // enabled
@@ -1081,7 +1081,7 @@ snap_to_elements(Coord x, Coord y, Coord r)
   return snap;
 }
 
-static SnapSpecType element_snap = {
+SnapSpecType element_snap = {
   "Snap to elements",       // Name
   &snap_to_elements,        // Function pointer
   false,                     // enabled
@@ -1116,7 +1116,7 @@ snap_to_vias(Coord x, Coord y, Coord r)
   return snap;
 }
 
-static SnapSpecType via_snap = {
+SnapSpecType via_snap = {
   "Snap to vias",       // Name
   &snap_to_vias,        // Function pointer
   true,                 // enabled
@@ -1189,7 +1189,7 @@ snap_to_lines(Coord x, Coord y, Coord r)
   return snap;
 }
 
-static SnapSpecType line_snap = {
+SnapSpecType line_snap = {
   "Snap to lines",      // Name
   &snap_to_lines,       // Function pointer
   true,                 // enabled
@@ -1223,7 +1223,7 @@ snap_to_arcs(Coord x, Coord y, Coord r)
   
   return snap;
 }
-static SnapSpecType arc_snap = {
+SnapSpecType arc_snap = {
   "Snap to arcs",       // Name
   &snap_to_arcs,        // Function pointer
   true,                 // enabled
@@ -1255,7 +1255,7 @@ snap_to_polygons(Coord x, Coord y, Coord r)
   
   return snap;
 }
-static SnapSpecType polygon_snap = {
+SnapSpecType polygon_snap = {
   "Snap to polygon points", // Name
   &snap_to_polygons,        // Function pointer
   true,                     // enabled
