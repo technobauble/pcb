@@ -217,6 +217,7 @@ ghid_port_key_press_cb (GtkWidget * drawing_area,
     case GDK_Shift_R:
     case GDK_Shift_Lock:
     case GDK_ISO_Level3_Shift:
+	  handled = FALSE;
       break;
 
     case GDK_Up:
