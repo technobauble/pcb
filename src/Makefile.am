@@ -97,6 +97,7 @@ PCB_SRCS = \
 	mirror.h \
 	misc.c \
 	misc.h \
+	mod_snapping.c\
 	move.c \
 	move.h \
 	mtspace.c \
