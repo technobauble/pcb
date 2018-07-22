@@ -67,7 +67,8 @@ typedef struct
   /*! The type of the object that was found. */
   unsigned obj_type;
   /*! A pointer to the object that was found */
-  void * object;
+  /* Someday the p1, p2, p3 will be able to go away... */
+  void * object, *p1, *p2, *p3;
   /*! A bool to indicate that an object was found. */
   bool valid;
   /*! The point to snap to. */

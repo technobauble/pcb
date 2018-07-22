@@ -1711,8 +1711,15 @@ SearchScreen (Coord X, Coord Y, int Type, void **Result1,
 	      void **Result2, void **Result3)
 {
   int ans;
-
-  ans = SearchObjectByLocation (Type, Result1, Result2, Result3,
-				X, Y, SLOP * pixel_slop);
+  
+  if (Crosshair.snapped_to && (Crosshair.snapped_to->obj_type & Type)){
+    *Result1 = Crosshair.snapped_to->p1;
+    *Result2 = Crosshair.snapped_to->p2;
+    *Result3 = Crosshair.snapped_to->p3;
+	ans = Crosshair.snapped_to->obj_type;
+  } 
+  else
+    ans = SearchObjectByLocation (Type, Result1, Result2, Result3,
+                                  X, Y, SLOP * pixel_slop);
   return (ans);
 }

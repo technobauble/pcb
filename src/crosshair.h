@@ -125,6 +125,7 @@ typedef struct
   enum crosshair_shape shape; /*!< Shape of Crosshair. */
   SnapType * (*snap)(SnapListType *, Coord, Coord); /*! Snapping function */
   SnapListType * snaps; /*! List of snappables */
+  SnapType * snapped_to; /*! Snap the crosshair is currently snapped to */
 } CrosshairType;
 
 typedef struct
