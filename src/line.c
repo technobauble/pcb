@@ -47,6 +47,7 @@
 #include "find.h"
 #include "line.h"
 #include "misc.h"
+#include "pcb_geometry.h"
 #include "rtree.h"
 
 #ifdef HAVE_LIBDMALLOC
@@ -247,7 +248,7 @@ drcVia_callback (const BoxType * b, void *cl)
   PinType *via = (PinType *) b;
   struct drc_info *i = (struct drc_info *) cl;
 
-  if (!TEST_FLAG (FOUNDFLAG, via) && PinLineIntersect (via, i->line))
+  if (!TEST_FLAG (FOUNDFLAG, via) && PinLineIntersect (via, i->line, PCB->Bloat))
     longjmp (i->env, 1);
   return 1;
 }
@@ -259,7 +260,7 @@ drcPad_callback (const BoxType * b, void *cl)
   struct drc_info *i = (struct drc_info *) cl;
 
   if (TEST_FLAG (ONSOLDERFLAG, pad) == i->bottom_side &&
-      !TEST_FLAG (FOUNDFLAG, pad) && LinePadIntersect (i->line, pad))
+      !TEST_FLAG (FOUNDFLAG, pad) && LinePadIntersect (i->line, pad, PCB->Bloat))
     longjmp (i->env, 1);
   return 1;
 }
@@ -270,7 +271,7 @@ drcLine_callback (const BoxType * b, void *cl)
   LineType *line = (LineType *) b;
   struct drc_info *i = (struct drc_info *) cl;
 
-  if (!TEST_FLAG (FOUNDFLAG, line) && LineLineIntersect (line, i->line))
+  if (!TEST_FLAG (FOUNDFLAG, line) && LineLineIntersect (line, i->line, PCB->Bloat))
     longjmp (i->env, 1);
   return 1;
 }
@@ -281,7 +282,7 @@ drcArc_callback (const BoxType * b, void *cl)
   ArcType *arc = (ArcType *) b;
   struct drc_info *i = (struct drc_info *) cl;
 
-  if (!TEST_FLAG (FOUNDFLAG, arc) && LineArcIntersect (i->line, arc))
+  if (!TEST_FLAG (FOUNDFLAG, arc) && LineArcIntersect (i->line, arc, PCB->Bloat))
     longjmp (i->env, 1);
   return 1;
 }

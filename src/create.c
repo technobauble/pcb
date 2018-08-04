@@ -48,6 +48,7 @@
 #include "mymem.h"
 #include "misc.h"
 #include "parse_l.h"
+#include "pcb_geometry.h"
 #include "pcb-printf.h"
 #include "polygon.h"
 #include "rtree.h"

@@ -42,12 +42,13 @@
 #include "data.h"
 #include "draw.h"
 #include "error.h"
+#include "find.h"
+#include "misc.h"
+#include "pcb_geometry.h"
 #include "search.h"
 #include "select.h"
-#include "undo.h"
 #include "rats.h"
-#include "misc.h"
-#include "find.h"
+#include "undo.h"
 
 #include <sys/types.h>
 #ifdef HAVE_REGEX_H

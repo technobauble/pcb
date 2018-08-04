@@ -45,6 +45,7 @@
 #include "line.h"
 #include "misc.h"
 #include "move.h"
+#include "pcb_geometry.h"
 #include "polygon.h"
 #include "rtree.h"
 #include "search.h"

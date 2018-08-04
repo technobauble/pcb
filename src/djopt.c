@@ -49,6 +49,7 @@
 #include "strflags.h"
 #include "find.h"
 #include "pcb-printf.h"
+#include "pcb_geometry.h"
 
 #ifdef HAVE_LIBDMALLOC
 #include <dmalloc.h>
@@ -1097,7 +1098,7 @@ canonicalize_line (line_s * l)
 	      th /= 2;
 	      if (dist (l->s->x, l->s->y, c->x, c->y) > th
 		  && dist (l->e->x, l->e->y, c->x, c->y) > th
-		  && PinLineIntersect (c->pin ? c->pin : c->via, l->line))
+		  && PinLineIntersect (c->pin ? c->pin : c->via, l->line, PCB->Bloat))
 		{
 		  return split_line (l, c);
 		}

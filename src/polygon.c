@@ -95,6 +95,7 @@
 #include "find.h"
 #include "misc.h"
 #include "move.h"
+#include "pcb_geometry.h"
 #include "pcb-printf.h"
 #include "polygon.h"
 #include "remove.h"
