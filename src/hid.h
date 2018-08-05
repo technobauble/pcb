@@ -68,6 +68,8 @@
 
 #include <stdarg.h>
 
+#include "drc.h" /* DRCViolationType */
+
 #if defined(__cplusplus) && __cplusplus
 extern "C"
 {

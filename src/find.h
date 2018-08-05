@@ -55,7 +55,12 @@ bool ClearFlagOnAllObjects (bool, int flag);
 void InitConnectionLookup (void);
 void FreeConnectionLookupMemory (void);
 void RatFindHook (int, void *, void *, void *, bool, int flag, bool);
-int DRCAll (void);
 void LookupConnectionByPin (int , void *);
 
+bool ListStart (int type, void *ptr1, void *ptr2, void *ptr3, int flag);
+bool DoIt (int flag, bool AndRats, bool AndDraw);
+void DumpList (void);
+void start_do_it_and_dump (int type, void *ptr1, void *ptr2, void *ptr3,
+                      int flag, bool AndDraw,
+                      Coord bloat, bool is_drc);
 #endif
