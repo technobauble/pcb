@@ -85,6 +85,15 @@ typedef double Angle;		/*!< Degrees. */
 /* Internationalization support. */
 #include "gettext.h"
 
+#define DEBUG
+
+#if defined(DEBUG) //&& DEBUG > 0
+ #define DBG_MSG(fmt, args...) fprintf(stderr, "DEBUG: %s:%d:%s(): " fmt, \
+    __FILE__, __LINE__, __func__, ##args)
+#else
+ #define DBG_MSG(fmt, args...) /* Don't do anything in release builds */
+#endif
+
 #if defined (ENABLE_NLS)
 /* When an empty string is used for msgid, the functions may return a nonempty
    string. */

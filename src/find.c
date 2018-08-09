@@ -142,6 +142,10 @@ typedef struct
  */
 static Coord Bloat = 0;
 
+/* The only time the User flag is used is to determine if a flag
+ * change should be added to the undo list when an object is added
+ * to the connectivity list. 
+ */
 static bool User = false;    /*!< User action causing this. */
 static bool drc = false;     /*!< Whether to stop if finding something not found. */
 static Cardinal TotalP, TotalV;
@@ -158,17 +162,30 @@ static bool LookupLOConnectionsToArc (ArcType *, Cardinal, int, bool);
 static bool LookupLOConnectionsToRatEnd (PointType *, Cardinal, int);
 static bool PrepareNextLoop (FILE *);
 static void DrawNewConnections (void);
-static void DumpList (void);
 
+/*
+ * Add an object to the specified list.
+ *
+ * Returning true will (always?) abort the algorithm, false will allow it to
+ * continue.
+ *
+ */
 static bool
 add_object_to_list (ListType *list, int type, void *ptr1, void *ptr2, void *ptr3, int flag)
 {
   AnyObjectType *object = (AnyObjectType *)ptr2;
 
+  /* If this is user initiated, we want to be able to restore state, so, add
+   * the flag change to the undo list */
   if (User)
     AddObjectToFlagUndoList (type, ptr1, ptr2, ptr3);
 
+  /* Set the appropriate flag to indicate the object appears in one of the
+   * lists. This is how we later compare runs.
+   */
   SET_FLAG (flag, object);
+
+  /* Add the object to the list. */
   LIST_ENTRY (list, list->Number) = object;
   list->Number++;
 
@@ -177,8 +194,18 @@ add_object_to_list (ListType *list, int type, void *ptr1, void *ptr2, void *ptr3
     printf ("add_object_to_list overflow! type=%i num=%d size=%d\n", type, list->Number, list->Size);
 #endif
 
-  if (drc && !TEST_FLAG (SELECTEDFLAG, object))
+  /* if drc is true, then we want to abort the algorithm if a new object is
+   * found. The first time through, the SELECTEDFLAG is set on all objects
+   * that are found. So, if SELECTEDFLAG is set, then the object is already
+   * known. 
+   *
+   * TODO: This is not very flexible and requires pre-ordained knowledge of
+   * how to use the SELECTEDFLAG.
+   */
+  if (drc && !TEST_FLAG (SELECTEDFLAG, object)){
+	DBG_MSG("Found new object, returning early\n");
     return (SetThing (type, ptr1, ptr2, ptr3));
+  }
   return false;
 }
 
@@ -681,15 +708,25 @@ LookupLOConnectionsToLOList (int flag, bool AndRats)
   while (!done);
   return (false);
 }
-
+/*
+ * This function is an r_search callback. It's called to check if a pin or
+ * via is overlapping with another pin or via.
+ */
 static int
 pv_pv_callback (const BoxType * b, void *cl)
 {
+  /* Cast the object found by the r_search, it's known to be a pin */
   PinType *pin = (PinType *) b;
   struct pv_info *i = (struct pv_info *) cl;
   bool pv_overlap = false;
   Cardinal l;
 
+  /* If both vias are buried, check if the layers of the found via (pin)
+   * overlap with the layers of the original via (i->pv).
+   *
+   * TODO: Why isn't PinPinIntersect called here?
+   * TODO: Why aren't we checking the other flags, like we do below?
+   */
   if (VIA_IS_BURIED (pin) && VIA_IS_BURIED (i->pv))
     {
       for (l = pin->BuriedFrom ; l <= pin->BuriedTo; l++)
@@ -704,8 +741,12 @@ pv_pv_callback (const BoxType * b, void *cl)
 	return 0;
     }
 
+  /* If either of the vias is a thru via, there is potential overlap. */
   if (!TEST_FLAG (i->flag, pin) && PinPinIntersect (i->pv, pin, Bloat))
     {
+	  /* If it's only a hole (no copper) then just issue a warning to the
+	   * log, and highlight the pin. It doesn't affect the netlist.
+	  */
       if (TEST_FLAG (HOLEFLAG, pin) || TEST_FLAG (HOLEFLAG, i->pv))
         {
           SET_FLAG (WARNFLAG, pin);
@@ -1894,11 +1935,17 @@ reassign_no_drc_flags (void)
 
 /*!
  * \brief Loops till no more connections are found.
+ *
+ * is_drc - sets the global drc variable. This will cause the connection
+ * building algorithm to stop if something new is found. 
  */
 bool
-DoIt (int flag, bool AndRats, bool AndDraw)
+DoIt (int flag, bool AndRats, bool AndDraw, bool is_drc)
 {
   bool newone = false;
+  drc = is_drc;
+
+  DBG_MSG("Doing it...\n");
   reassign_no_drc_flags ();
   do
     {
@@ -1940,7 +1987,7 @@ PrintAndSelectUnusedPinsAndPadsOfElement (ElementType *Element, FILE * FP, int f
             int i;
             if (ADD_PV_TO_LIST (pin, flag))
               return true;
-            DoIt (flag, true, true);
+            DoIt (flag, true, true, drc);
             number = PadList[TOP_SIDE].Number
               + PadList[BOTTOM_SIDE].Number + PVList.Number;
             /* the pin has no connection if it's the only
@@ -1984,7 +2031,7 @@ PrintAndSelectUnusedPinsAndPadsOfElement (ElementType *Element, FILE * FP, int f
         if (ADD_PAD_TO_LIST (TEST_FLAG (ONSOLDERFLAG, pad)
                              ? BOTTOM_SIDE : TOP_SIDE, pad, flag))
           return true;
-        DoIt (flag, true, true);
+        DoIt (flag, true, true, drc);
         number = PadList[TOP_SIDE].Number
           + PadList[BOTTOM_SIDE].Number + PVList.Number;
         /* the pin has no connection if it's the only
@@ -2076,7 +2123,7 @@ PrintElementConnections (ElementType *Element, FILE * FP, int flag, bool AndDraw
       }
     if (ADD_PV_TO_LIST (pin, flag))
       return true;
-    DoIt (flag, true, AndDraw);
+    DoIt (flag, true, AndDraw, drc);
     /* printout all found connections */
     PrintPinConnections (FP, true);
     PrintPadConnections (TOP_SIDE, FP, false);
@@ -2101,7 +2148,7 @@ PrintElementConnections (ElementType *Element, FILE * FP, int flag, bool AndDraw
     layer = TEST_FLAG (ONSOLDERFLAG, pad) ? BOTTOM_SIDE : TOP_SIDE;
     if (ADD_PAD_TO_LIST (layer, pad, flag))
       return true;
-    DoIt (flag, true, AndDraw);
+    DoIt (flag, true, AndDraw, drc);
     /* print all found connections */
     PrintPadConnections (layer, FP, true);
     PrintPadConnections (layer ==
@@ -2357,7 +2404,7 @@ LookupConnection (Coord X, Coord Y, bool AndDraw, Coord Range, int flag,
    * This is step (1) from the description
    */
   ListStart (type, ptr1, ptr2, ptr3, flag);
-  DoIt (flag, AndRats, AndDraw);
+  DoIt (flag, AndRats, AndDraw, drc);
   if (AndDraw)
     IncrementUndoSerialNumber ();
   User = false;
@@ -2379,7 +2426,7 @@ LookupConnectionByPin (int type, void *ptr1)
   InitConnectionLookup ();
   ListStart (type, NULL, ptr1, NULL, FOUNDFLAG);
 
-  DoIt (FOUNDFLAG, true, false);
+  DoIt (FOUNDFLAG, true, false, drc);
 
   FreeConnectionLookupMemory ();
 }
@@ -2396,7 +2443,7 @@ RatFindHook (int type, void *ptr1, void *ptr2, void *ptr3,
   User = undo;
   DumpList ();
   ListStart (type, ptr1, ptr2, ptr3, flag);
-  DoIt (flag, AndRats, false);
+  DoIt (flag, AndRats, false, drc);
   User = false;
 }
 
@@ -2604,10 +2651,10 @@ start_do_it_and_dump (int type, void *ptr1, void *ptr2, void *ptr3,
                       int flag, bool AndDraw,
                       Coord bloat, bool is_drc)
 {
+  DBG_MSG("Entering...\n");
   Bloat = bloat;
-  drc = is_drc;
   ListStart (type, ptr1, ptr2, ptr3, flag);
-  DoIt (flag, true, AndDraw);
+  DoIt (flag, true, AndDraw, is_drc);
   DumpList ();
 }
 

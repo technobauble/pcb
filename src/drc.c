@@ -33,9 +33,13 @@
 #include "global.h"
 
 #include "data.h"
+#include "draw.h"
 #include "drc.h"
 #include "error.h"
 #include "find.h"
+#include "misc.h"
+#include "pcb_geometry.h"
+#include "polygon.h"
 #include "pcb-printf.h"
 #include "undo.h"
 
@@ -221,12 +225,13 @@ int GetThing(void **ptr1, void **ptr2, void **ptr3){
   return thing_type;
 }
 static bool User = false;    /*!< User action causing this. */
-static bool drc = false;     /*!< Whether to stop if finding something not found. */
 static Cardinal drcerr_count;   /*!< Count of drc errors */
 
 /*!
  * \brief Check for DRC violations on a single net starting from the pad
- * or pin.
+ * or pin. (Will call this the "seed object")
+ *
+ * TODO: Does the seed object have to be a pin or pad?
  *
  * Sees if the connectivity changes when everything is bloated, or
  * shrunk.
@@ -241,23 +246,53 @@ DRCFind (int What, void *ptr1, void *ptr2, void *ptr3)
   DrcViolationType *violation;
   int flag;
 
+  DBG_MSG("Entering...\n");
+
   if (PCB->Shrink != 0)
     {
-      start_do_it_and_dump (What, ptr1, ptr2, ptr3, DRCFLAG | SELECTEDFLAG, false, -PCB->Shrink, false);
-      /* ok now the shrunk net has the SELECTEDFLAG set */
+      /* Set the DRC and SELECTED flags on all objects that overlap with the
+	   * passed object after shrinking them. 
+	   * 
+	   * The last parameter sets the global "drc" variable in find.c
+	   * (through the call to DoIt). It's set to false here because we want
+	   * to build a list of all the connections.
+	   */
+      start_do_it_and_dump (What, ptr1, ptr2, ptr3, /* seed object */
+			                DRCFLAG | SELECTEDFLAG, /* flags to set */
+							false,  /* AndDraw ?*/ 
+							-PCB->Shrink, /* bloat amount */
+							false); /* is_drc */
+
+	  /* Now build the list without shrinking objects, and set the FOUND
+	   * flag in the process. If a new object is found, the connectivity has
+	   * changed, indicating that the minimum overlap rule is violated for
+	   * something connected to the original object.
+	   *
+	   * The last parameter to DoIt sets the global "drc" variable in
+	   * find.c. It's set to true here to cause the search to abort if any
+	   * new object is found. If the rule is violated once, we stop
+	   * searching.
+	   *
+	   * Note that an object is considered "new" if it doesn't have the
+	   * SELECTEDFLAG set. This behavior is hard coded into the algorithm in
+	   * add_object_to_list:find.c. This means that the first search must
+	   * always set the SELECTEDFLAG.
+	   *
+	   * TODO: This means that we will only find one violation of this
+	   * type for each seed object.
+	   */
       ListStart (What, ptr1, ptr2, ptr3, FOUNDFLAG);
-      Bloat = 0;
-      drc = true;               /* abort the search if we find anything not already found */
-      if (DoIt (FOUNDFLAG, true, false))
+      if (DoIt (FOUNDFLAG, true, false, true))
         {
           DumpList ();
-          /* make the flag changes undoable */
           ClearFlagOnAllObjects (false, FOUNDFLAG | SELECTEDFLAG);
+
           User = true;
-          start_do_it_and_dump (What, ptr1, ptr2, ptr3, SELECTEDFLAG, true, -PCB->Shrink, false);
-          start_do_it_and_dump (What, ptr1, ptr2, ptr3, FOUNDFLAG, true, 0, true);
+          start_do_it_and_dump (What, ptr1, ptr2, ptr3, 
+				                SELECTEDFLAG, true, -PCB->Shrink, false);
+          start_do_it_and_dump (What, ptr1, ptr2, ptr3, 
+				                FOUNDFLAG, true, 0, true);
           User = false;
-          drc = false;
           drcerr_count++;
           LocateError (&x, &y);
           BuildObjectList (&object_count, &object_id_list, &object_type_list);
@@ -284,22 +319,47 @@ DRCFind (int What, void *ptr1, void *ptr2, void *ptr3)
         }
       DumpList ();
     }
-  /* now check the bloated condition */
+  
+  /* now check the bloated condition 
+   *
+   * TODO: Why isn't this wrapped in if (PCB->Bloat > 0) ?
+   */
+
+  /* Reset all of the flags */
   ClearFlagOnAllObjects (false, FOUNDFLAG | SELECTEDFLAG);
-  start_do_it_and_dump (What, ptr1, ptr2, ptr3, SELECTEDFLAG, false, 0, false);
+
+  /* Set the DRC and SELECTED flags on all objects that overlap with the
+   * passed object after bloating them. 
+   *
+   * See above for additional notes.
+   *
+   * TODO: Why is the DRCFLAG used above, but not here?
+   */
+  start_do_it_and_dump (What, ptr1, ptr2, ptr3, /* seed object */
+		                SELECTEDFLAG, /* flags to set */
+						false, /* AndDraw ? */
+						PCB->Bloat, /* bloat amount */
+						false); /* is_drc */
+  /* Now build the list without bloating objects, and set the FOUND
+   * flag in the process. If a new object is found, the connectivity has
+   * changed, indicating that the minimum overlap rule is violated for
+   * something connected to the original object. 
+   *
+   * See above for additional notes. 
+   *
+   * TODO: Why is this a while loop when the above is an if?
+   */
   flag = FOUNDFLAG;
   ListStart (What, ptr1, ptr2, ptr3, flag);
-  drc = true;
-  while (DoIt (flag, true, false))
+  while (DoIt (flag, true, false, true))
     {
       DumpList ();
       /* make the flag changes undoable */
       ClearFlagOnAllObjects (false, FOUNDFLAG | SELECTEDFLAG);
       User = true;
-      start_do_it_and_dump (What, ptr1, ptr2, ptr3, SELECTEDFLAG, true, 0, false);
-      start_do_it_and_dump (What, ptr1, ptr2, ptr3, FOUNDFLAG, true, PCB->Bloat, true);
+      start_do_it_and_dump (What, ptr1, ptr2, ptr3, SELECTEDFLAG, true, PCB->Bloat, false);
+      start_do_it_and_dump (What, ptr1, ptr2, ptr3, FOUNDFLAG, true, 0, true);
       User = false;
-      drc = false;
       drcerr_count++;
       LocateError (&x, &y);
       BuildObjectList (&object_count, &object_id_list, &object_type_list);
@@ -325,10 +385,8 @@ DRCFind (int What, void *ptr1, void *ptr2, void *ptr3)
       /* highlight the rest of the encroaching net so it's not reported again */
       flag = FOUNDFLAG | SELECTEDFLAG;
       start_do_it_and_dump (thing_type, thing_ptr1, thing_ptr2, thing_ptr3, flag, true, 0, false);
-      drc = true;
       ListStart (What, ptr1, ptr2, ptr3, flag);
     }
-  drc = false;
   DumpList ();
   ClearFlagOnAllObjects (false, FOUNDFLAG | SELECTEDFLAG);
   return (false);
@@ -378,7 +436,7 @@ drc_callback (DataType *data, LayerType *layer, PolygonType *polygon,
       break;
     case PAD_TYPE:
       if (pad->Clearance && pad->Clearance < 2 * PCB->Bloat)
-	if (IsPadInPolygon(pad,polygon))
+	if (IsPadInPolygon(pad,polygon, PCB->Bloat))
 	  {
 	    AddObjectToFlagUndoList (type, ptr1, ptr2, ptr2);
 	    SET_FLAG (i->flag, pad);
@@ -441,6 +499,24 @@ doIsBad:
   return 0;
 }
 
+DrcViolationType *
+drc_warning_violation(void)
+{
+  DrcViolationType *violation;
+  /* This phony violation informs user about what DRC does NOT catch.  */
+  violation
+    = pcb_drc_violation_new (
+        _("WARNING: DRC doesn't catch everything"),
+        _("Detection of outright shorts, missing connections, etc.\n"
+          "is handled via rat's nest addition.  To catch these problems,\n"
+          "display the message log using Window->Message Log, then use\n"
+          "Connects->Optimize rats nest (O hotkey) and watch for messages.\n"),
+        /* All remaining arguments are not relevant to this application.  */
+        0, 0, 0, TRUE, 0, 0, 0, NULL, NULL);
+  append_drc_violation (violation);
+  return violation;
+}
+
 /*!
  * \brief Check for DRC violations.
  *
@@ -459,28 +535,37 @@ DRCAll (void)
   bool IsBad;
   struct drc_info info;
 
+  DBG_MSG("Entering...\n");
+
   reset_drc_dialog_message();
 
-  /* This phony violation informs user about what DRC does NOT catch.  */
-  violation
-    = pcb_drc_violation_new (
-        _("WARNING: DRC doesn't catch everything"),
-        _("Detection of outright shorts, missing connections, etc.\n"
-          "is handled via rat's nest addition.  To catch these problems,\n"
-          "display the message log using Window->Message Log, then use\n"
-          "Connects->Optimize rats nest (O hotkey) and watch for messages.\n"),
-        /* All remaining arguments are not relevant to this application.  */
-        0, 0, 0, TRUE, 0, 0, 0, NULL, NULL);
-  append_drc_violation (violation);
+  /* Warn user that DRC doesn't catch everything... */
+  violation = drc_warning_violation();
   pcb_drc_violation_free (violation);
+
+
   if (!throw_drc_dialog())
     return (true);
 
   IsBad = false;
   drcerr_count = 0;
+
+  /* Since the searching functions only operate on visible layers, we need
+   * to make sure that everything is turned on in order to check the entire
+   * design. 
+   *
+   * TODO: This could be a way of giving the user control over what area to
+   *       run the DRC on... ?
+   * 
+   */
+
+  /* Save the layer order and visibility settings so we can restore it later */
   SaveStackAndVisibility ();
+  /* Turn on everything */
   ResetStackAndVisibility ();
   hid_action ("LayersChanged");
+
+
   InitConnectionLookup ();
 
   if (ClearFlagOnAllObjects (true, FOUNDFLAG | DRCFLAG | SELECTEDFLAG))
@@ -835,7 +920,6 @@ DRCAll (void)
     }
 
   FreeConnectionLookupMemory ();
-  Bloat = 0;
 
   /* check silkscreen minimum widths outside of elements */
   /* XXX - need to check text and polygons too! */
@@ -1059,6 +1143,7 @@ ActionDRCheck (int argc, char **argv, Coord x, Coord y)
 {
   int count;
 
+  DBG_MSG("Entering...\n");
   if (gui->drc_gui == NULL || gui->drc_gui->log_drc_overview)
     {
       Message (_("%m+Rules are minspace %$mS, minoverlap %$mS "
@@ -1084,7 +1169,7 @@ ActionDRCheck (int argc, char **argv, Coord x, Coord y)
 
 HID_Action drc_action_list[] = {
   {"DRC", 0, ActionDRCheck, drc_help, drc_syntax}
-}
+};
 
 REGISTER_ACTIONS (drc_action_list)
 
