@@ -256,7 +256,11 @@ DRCFind (int What, void *ptr1, void *ptr2, void *ptr3)
 	   * The last parameter sets the global "drc" variable in find.c
 	   * (through the call to DoIt). It's set to false here because we want
 	   * to build a list of all the connections.
+     *
+     * Note that we do the shrunk condition first because it will presumably
+     * have fewer objects than the nominal object list.
 	   */
+      DBG_MSG("Building shrunk object list:\n");
       start_do_it_and_dump (What, ptr1, ptr2, ptr3, /* seed object */
 			                DRCFLAG | SELECTEDFLAG, /* flags to set */
 							false,  /* AndDraw ?*/ 
@@ -281,12 +285,14 @@ DRCFind (int What, void *ptr1, void *ptr2, void *ptr3)
 	   * TODO: This means that we will only find one violation of this
 	   * type for each seed object.
 	   */
-      ListStart (What, ptr1, ptr2, ptr3, FOUNDFLAG);
-      if (DoIt (FOUNDFLAG, true, false, true))
+      DBG_MSG("Building nominal object list:\n");
+      if (start_do_it_and_dump (What, ptr1, ptr2, ptr3,
+                                FOUNDFLAG, true, 0, true))
         {
-          DumpList ();
           ClearFlagOnAllObjects (false, FOUNDFLAG | SELECTEDFLAG);
 
+          /* As nearly as I can tell, this is used to undo the flag changes.
+           Why isn't this done the first time around? */
           User = true;
           start_do_it_and_dump (What, ptr1, ptr2, ptr3, 
 				                SELECTEDFLAG, true, -PCB->Shrink, false);
@@ -317,7 +323,6 @@ DRCFind (int What, void *ptr1, void *ptr2, void *ptr3)
           IncrementUndoSerialNumber ();
           Undo (true);
         }
-      DumpList ();
     }
   
   /* now check the bloated condition 
@@ -329,16 +334,18 @@ DRCFind (int What, void *ptr1, void *ptr2, void *ptr3)
   ClearFlagOnAllObjects (false, FOUNDFLAG | SELECTEDFLAG);
 
   /* Set the DRC and SELECTED flags on all objects that overlap with the
-   * passed object after bloating them. 
+   * passed object. Here we do the nominal case first, because it will
+   * presumably have fewer objects than the bloated case.
    *
    * See above for additional notes.
    *
    * TODO: Why is the DRCFLAG used above, but not here?
    */
+  DBG_MSG("Building nominal object list:\n");
   start_do_it_and_dump (What, ptr1, ptr2, ptr3, /* seed object */
 		                SELECTEDFLAG, /* flags to set */
 						false, /* AndDraw ? */
-						PCB->Bloat, /* bloat amount */
+						0, /* bloat amount */
 						false); /* is_drc */
   /* Now build the list without bloating objects, and set the FOUND
    * flag in the process. If a new object is found, the connectivity has
@@ -349,11 +356,10 @@ DRCFind (int What, void *ptr1, void *ptr2, void *ptr3)
    *
    * TODO: Why is this a while loop when the above is an if?
    */
+  DBG_MSG("Building bloated object list:\n");
   flag = FOUNDFLAG;
-  ListStart (What, ptr1, ptr2, ptr3, flag);
-  while (DoIt (flag, true, false, true))
+  while (start_do_it_and_dump (What, ptr1, ptr2, ptr3, FOUNDFLAG, true, PCB->Bloat, true))
     {
-      DumpList ();
       /* make the flag changes undoable */
       ClearFlagOnAllObjects (false, FOUNDFLAG | SELECTEDFLAG);
       User = true;

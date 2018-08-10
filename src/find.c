@@ -162,7 +162,7 @@ static bool LookupLOConnectionsToArc (ArcType *, Cardinal, int, bool);
 static bool LookupLOConnectionsToRatEnd (PointType *, Cardinal, int);
 static bool PrepareNextLoop (FILE *);
 static void DrawNewConnections (void);
-
+int ObjectsInLists(void);
 /*
  * Add an object to the specified list.
  *
@@ -1943,14 +1943,20 @@ bool
 DoIt (int flag, bool AndRats, bool AndDraw, bool is_drc)
 {
   bool newone = false;
+  int nloops = 0;
   drc = is_drc;
 
   DBG_MSG("Doing it...\n");
   reassign_no_drc_flags ();
   do
     {
-      /* lookup connections; these are the steps (2) to (4)
+      /* Lookup connections; these are the steps (2) to (4)
        * from the description
+       *
+       * If anything is added to any of the lists, newone will be true. Any
+       * new additions to the lists mean that there are potentially more things
+       * to add to the list, things that might overlap with only the new
+       * objects.
        */
       newone = LookupPVConnectionsToPVList (flag) ||
                LookupLOConnectionsToPVList (flag, AndRats) ||
@@ -1958,8 +1964,12 @@ DoIt (int flag, bool AndRats, bool AndDraw, bool is_drc)
                LookupPVConnectionsToLOList (flag, AndRats);
       if (AndDraw)
         DrawNewConnections ();
+      nloops++;
     }
+  /* Keep executing the lookup untill no new objects are found. */
   while (!newone && !ListsEmpty (AndRats));
+  DBG_MSG("   ... it took %d loops to find %d connected objects.",
+          nloops, ObjectsInLists());
   if (AndDraw)
     Draw ();
   return (newone);
@@ -2611,6 +2621,27 @@ ClearFlagOnAllObjects (bool AndDraw, int flag)
   return change;
 }
 
+int
+ObjectsInLists(void)
+{
+  int i, n = 0;
+  
+  for (i = 0; i < 2; i++) n += PadList[i].Number;
+  
+  n += PVList.Number;
+  
+  for (i = 0; i < max_copper_layer; i++)
+  {
+    n += LineList[i].Number;
+    n += ArcList[i].Number;
+    n += PolygonList[i].Number;
+  }
+  n += RatList.Number;
+  
+  return n;
+  
+}
+
 /*!
  * \brief Dumps the list contents.
  */
@@ -2646,16 +2677,18 @@ DumpList (void)
   RatList.DrawLocation = 0;
 }
 
-void
+bool
 start_do_it_and_dump (int type, void *ptr1, void *ptr2, void *ptr3,
                       int flag, bool AndDraw,
                       Coord bloat, bool is_drc)
 {
+  bool result;
   DBG_MSG("Entering...\n");
   Bloat = bloat;
   ListStart (type, ptr1, ptr2, ptr3, flag);
-  DoIt (flag, true, AndDraw, is_drc);
+  result = DoIt (flag, true, AndDraw, is_drc);
   DumpList ();
+  return result;
 }
 
 void

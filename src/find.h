@@ -60,7 +60,7 @@ void LookupConnectionByPin (int , void *);
 bool ListStart (int type, void *ptr1, void *ptr2, void *ptr3, int flag);
 bool DoIt (int flag, bool AndRats, bool AndDraw, bool is_drc);
 void DumpList (void);
-void start_do_it_and_dump (int type, void *ptr1, void *ptr2, void *ptr3,
+bool start_do_it_and_dump (int type, void *ptr1, void *ptr2, void *ptr3,
                       int flag, bool AndDraw,
                       Coord bloat, bool is_drc);
 #endif
