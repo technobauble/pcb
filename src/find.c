@@ -3,6 +3,15 @@
  *
  * \brief Routines to find connections between pins, vias, lines ...
  *
+ * These routines were originally inteded for the DRC but may have been used
+ * elsewhere for other purposes.
+ *
+ * When the global variable "drc" is true,
+ * The DRCFLAG is used to indicate that an object should propagate the
+ * connection search. Objects that do not have the DRCFLAG set will not be
+ * searched for connections. That means that to find the entire set of connected
+ * objects, one needs to set the DRCFLAG.
+ *
  * Short description:\n
  * <ul>
  * <li> Lists for pins and vias, lines, arcs, pads and for polygons are
@@ -203,7 +212,7 @@ add_object_to_list (ListType *list, int type, void *ptr1, void *ptr2, void *ptr3
    * how to use the SELECTEDFLAG.
    */
   if (drc && !TEST_FLAG (SELECTEDFLAG, object)){
-	DBG_MSG("Found new object, returning early\n");
+	  DBG_MSG("Found new object, returning early\n");
     return (SetThing (type, ptr1, ptr2, ptr3));
   }
   return false;
@@ -408,6 +417,18 @@ struct pv_info
   jmp_buf env;
 };
 
+struct lo_info
+{
+  Cardinal layer;
+  LineType *line;
+  PadType *pad;
+  ArcType *arc;
+  PolygonType *polygon;
+  RatType *rat;
+  int flag;
+  jmp_buf env;
+};
+
 static int
 LOCtoPVline_callback (const BoxType * b, void *cl)
 {
@@ -539,6 +560,17 @@ LookupLOConnectionsToPVList (int flag, bool AndRats)
 
       /* get pointer to data */
       info.pv = PVLIST_ENTRY (PVList.Location);
+      
+      /* If this is the second run (drc = true), only follow objects that have
+       * the DRCFLAG set. */
+      /* Skip objects without DRCFLAG on 2nd run through */
+      if (drc)
+      {
+        if(!TEST_FLAG(DRCFLAG, info.pv))  continue;
+        drc_object_id_list_reset_with(drc_current_violation_list,
+                                      PIN_TYPE, info.pv->ID);
+      }
+      
       search_box = expand_bounds (&info.pv->BoundingBox);
 
       /* check pads */
@@ -603,6 +635,7 @@ LookupLOConnectionsToLOList (int flag, bool AndRats)
     lineposition[MAX_LAYER],
     polyposition[MAX_LAYER], arcposition[MAX_LAYER], padposition[2];
 
+  struct lo_info loinfo;
   /* copy the current LO list positions; the original data is changed
    * by 'LookupPVConnectionsToLOList()' which has to check the same
    * list entries plus the new ones
@@ -655,24 +688,52 @@ LookupLOConnectionsToLOList (int flag, bool AndRats)
                 {
                   /* try all new lines */
                   position = &lineposition[layer];
-                  for (; *position < LineList[layer].Number; (*position)++)
+                  for (; *position < LineList[layer].Number; (*position)++){
+                    loinfo.line = LINELIST_ENTRY(layer, *position);
+                    /* Skip objects without DRCFLAG on 2nd run through */
+                    if (drc)
+                    {
+                      if(!TEST_FLAG(DRCFLAG, loinfo.line))  continue;
+                      drc_object_id_list_reset_with(drc_current_violation_list,
+                                                    LINE_TYPE, loinfo.line->ID);
+                    }
                     if (LookupLOConnectionsToLine
-                        (LINELIST_ENTRY (layer, *position), group, flag, true, AndRats))
+                        (loinfo.line, group, flag, true, AndRats))
                       return (true);
+                  }
 
                   /* try all new arcs */
                   position = &arcposition[layer];
-                  for (; *position < ArcList[layer].Number; (*position)++)
-                    if (LookupLOConnectionsToArc
-                        (ARCLIST_ENTRY (layer, *position), group, flag, AndRats))
+                  for (; *position < ArcList[layer].Number; (*position)++){
+                    loinfo.arc = ARCLIST_ENTRY(layer, *position);
+                    /* Skip objects without DRCFLAG on 2nd run through */
+                    if (drc)
+                    {
+                      if(!TEST_FLAG(DRCFLAG, loinfo.arc))  continue;
+                      drc_object_id_list_reset_with(drc_current_violation_list,
+                                                    ARC_TYPE, loinfo.arc->ID);
+                    }
+                    if (LookupLOConnectionsToArc(loinfo.arc, group, flag,
+                                                 AndRats))
                       return (true);
+                  }
 
                   /* try all new polygons */
                   position = &polyposition[layer];
-                  for (; *position < PolygonList[layer].Number; (*position)++)
+                  for (; *position < PolygonList[layer].Number; (*position)++){
+                    loinfo.polygon = POLYGONLIST_ENTRY(layer, *position);
+                    /* Skip objects without DRCFLAG on 2nd run through */
+                    if (drc)
+                    {
+                      if(!TEST_FLAG(DRCFLAG, loinfo.polygon))  continue;
+                      drc_object_id_list_reset_with(drc_current_violation_list,
+                                                    POLYGON_TYPE,
+                                                    loinfo.polygon->ID);
+                    }
                     if (LookupLOConnectionsToPolygon
-                        (POLYGONLIST_ENTRY (layer, *position), group, flag, AndRats))
+                        (loinfo.polygon, group, flag, AndRats))
                       return (true);
+                  }
                 }
               else
                 {
@@ -685,10 +746,19 @@ LookupLOConnectionsToLOList (int flag, bool AndRats)
                       return false;
                     }
                   position = &padposition[layer];
-                  for (; *position < PadList[layer].Number; (*position)++)
-                    if (LookupLOConnectionsToPad
-                        (PADLIST_ENTRY (layer, *position), group, flag, AndRats))
+                  for (; *position < PadList[layer].Number; (*position)++){
+                    loinfo.pad = PADLIST_ENTRY(layer, *position);
+                    /* Skip objects without DRCFLAG on 2nd run through */
+                    if (drc)
+                    {
+                      if(!TEST_FLAG(DRCFLAG, loinfo.pad))  continue;
+                      drc_object_id_list_reset_with(drc_current_violation_list,
+                                                    PAD_TYPE, loinfo.pad->ID);
+                    }
+                    if (LookupLOConnectionsToPad(loinfo.pad, group, flag,
+                                                 AndRats))
                       return (true);
+                  }
                 }
             }
         }
@@ -781,6 +851,17 @@ LookupPVConnectionsToPVList (int flag)
 
       /* get pointer to data */
       info.pv = PVLIST_ENTRY (PVList.Location);
+      /* Only follow objects that have the DRC flag set. */
+      if (drc)
+      {
+        if(!TEST_FLAG(DRCFLAG, info.pv)){
+          PVList.Location++;
+          continue;
+        }
+        drc_object_id_list_reset_with(drc_current_violation_list,
+                                      PIN_TYPE, info.pv->ID);
+      }
+
       search_box = expand_bounds ((BoxType *)info.pv);
 
       if (setjmp (info.env) == 0)
@@ -798,18 +879,6 @@ LookupPVConnectionsToPVList (int flag)
   PVList.Location = save_place;
   return (false);
 }
-
-struct lo_info
-{
-  Cardinal layer;
-  LineType *line;
-  PadType *pad;
-  ArcType *arc;
-  PolygonType *polygon;
-  RatType *rat;
-  int flag;
-  jmp_buf env;
-};
 
 static int
 pv_line_callback (const BoxType * b, void *cl)
@@ -971,6 +1040,18 @@ LookupPVConnectionsToLOList (int flag, bool AndRats)
           BoxType search_box;
 
           info.line = LINELIST_ENTRY (layer_no, LineList[layer_no].Location);
+          
+          if (drc)
+          {
+            if (!TEST_FLAG(DRCFLAG, info.line))
+            {
+              LineList[layer_no].Location++;
+              continue;
+            }
+            drc_object_id_list_reset_with(drc_current_violation_list,
+                                          LINE_TYPE, info.line->ID);
+          }
+          
           search_box = expand_bounds ((BoxType *)info.line);
 
           if (setjmp (info.env) == 0)
@@ -992,6 +1073,17 @@ LookupPVConnectionsToLOList (int flag, bool AndRats)
           BoxType search_box;
 
           info.arc = ARCLIST_ENTRY (layer_no, ArcList[layer_no].Location);
+          
+          if (drc)
+          {
+            if(!TEST_FLAG(DRCFLAG, info.arc)){
+              ArcList[layer_no].Location++;
+              continue;
+            }
+            drc_object_id_list_reset_with(drc_current_violation_list,
+                                          ARC_TYPE, info.arc->ID);
+          }
+          
           search_box = expand_bounds ((BoxType *)info.arc);
 
           if (setjmp (info.env) == 0)
@@ -1014,6 +1106,17 @@ LookupPVConnectionsToLOList (int flag, bool AndRats)
           BoxType search_box;
 
           info.polygon = POLYGONLIST_ENTRY (layer_no, PolygonList[layer_no].Location);
+          
+          if (drc)
+          {
+            if(!TEST_FLAG(DRCFLAG, info.polygon)){
+              PolygonList[layer_no].Location++;
+              continue;
+            }
+            drc_object_id_list_reset_with(drc_current_violation_list,
+                                          POLYGON_TYPE, info.polygon->ID);
+          }
+          
           search_box = expand_bounds ((BoxType *)info.polygon);
 
           if (setjmp (info.env) == 0)
@@ -1049,6 +1152,17 @@ LookupPVConnectionsToLOList (int flag, bool AndRats)
 
           info.layer = layer_no;
           info.pad = PADLIST_ENTRY (layer_no, PadList[layer_no].Location);
+          
+          if (drc)
+          {
+            if(!TEST_FLAG(DRCFLAG, info.pad)){
+              PadList[layer_no].Location++;
+              continue;
+            }
+            drc_object_id_list_reset_with(drc_current_violation_list,
+                                          PAD_TYPE, info.pad->ID);
+          }
+          
           search_box = expand_bounds ((BoxType *)info.pad);
 
           if (setjmp (info.env) == 0)
@@ -1936,18 +2050,28 @@ reassign_no_drc_flags (void)
 /*!
  * \brief Loops till no more connections are found.
  *
+ * Only objects that have the DRCFLAG set will be searched for connections.
+ * If flag contains the DRCFLAG, then object that are found will also be
+ * searched for connections, and the connection list will propagate to include
+ * all connected objects. If flag does not contain DRCFLAG, then objects that
+ * do not have DRCFLAG set will serve as terminal objects and will stop the
+ * propagation of the connection search.
+ *
  * is_drc - sets the global drc variable. This will cause the connection
- * building algorithm to stop if something new is found. 
+ * building algorithm to stop if something new is found. This should only be
+ * set to true by DRC related algorithms!
  */
 bool
-DoIt (int flag, bool AndRats, bool AndDraw, bool is_drc)
+DoIt (int flag, Coord bloat, bool AndRats, bool AndDraw, bool is_drc)
 {
   bool newone = false;
   int nloops = 0;
+  Bloat = bloat;
   drc = is_drc;
 
   DBG_MSG("Doing it...\n");
   reassign_no_drc_flags ();
+  
   do
     {
       /* Lookup connections; these are the steps (2) to (4)
@@ -1968,10 +2092,16 @@ DoIt (int flag, bool AndRats, bool AndDraw, bool is_drc)
     }
   /* Keep executing the lookup untill no new objects are found. */
   while (!newone && !ListsEmpty (AndRats));
-  DBG_MSG("   ... it took %d loops to find %d connected objects.",
+  DBG_MSG("   ... it took %d loops to find %d connected objects.\n",
           nloops, ObjectsInLists());
   if (AndDraw)
     Draw ();
+  /* calling functions may be elsewhere without access to reset the DRC
+   * variable. Since non-DRC functions may also use these routines, we reset it
+   * here, allowing other searches to propagate to completion. All of the DRC
+   * routines call this function directly and can set is_drc if they want to.
+   */
+  drc = false;
   return (newone);
 }
 
@@ -1997,7 +2127,7 @@ PrintAndSelectUnusedPinsAndPadsOfElement (ElementType *Element, FILE * FP, int f
             int i;
             if (ADD_PV_TO_LIST (pin, flag))
               return true;
-            DoIt (flag, true, true, drc);
+            DoIt (flag, 0, true, true, drc);
             number = PadList[TOP_SIDE].Number
               + PadList[BOTTOM_SIDE].Number + PVList.Number;
             /* the pin has no connection if it's the only
@@ -2041,7 +2171,7 @@ PrintAndSelectUnusedPinsAndPadsOfElement (ElementType *Element, FILE * FP, int f
         if (ADD_PAD_TO_LIST (TEST_FLAG (ONSOLDERFLAG, pad)
                              ? BOTTOM_SIDE : TOP_SIDE, pad, flag))
           return true;
-        DoIt (flag, true, true, drc);
+        DoIt (flag, 0, true, true, drc);
         number = PadList[TOP_SIDE].Number
           + PadList[BOTTOM_SIDE].Number + PVList.Number;
         /* the pin has no connection if it's the only
@@ -2133,7 +2263,7 @@ PrintElementConnections (ElementType *Element, FILE * FP, int flag, bool AndDraw
       }
     if (ADD_PV_TO_LIST (pin, flag))
       return true;
-    DoIt (flag, true, AndDraw, drc);
+    DoIt (flag, 0, true, AndDraw, drc);
     /* printout all found connections */
     PrintPinConnections (FP, true);
     PrintPadConnections (TOP_SIDE, FP, false);
@@ -2158,7 +2288,7 @@ PrintElementConnections (ElementType *Element, FILE * FP, int flag, bool AndDraw
     layer = TEST_FLAG (ONSOLDERFLAG, pad) ? BOTTOM_SIDE : TOP_SIDE;
     if (ADD_PAD_TO_LIST (layer, pad, flag))
       return true;
-    DoIt (flag, true, AndDraw, drc);
+    DoIt (flag, 0, true, AndDraw, drc);
     /* print all found connections */
     PrintPadConnections (layer, FP, true);
     PrintPadConnections (layer ==
@@ -2414,7 +2544,7 @@ LookupConnection (Coord X, Coord Y, bool AndDraw, Coord Range, int flag,
    * This is step (1) from the description
    */
   ListStart (type, ptr1, ptr2, ptr3, flag);
-  DoIt (flag, AndRats, AndDraw, drc);
+  DoIt (flag, 0, AndRats, AndDraw, drc);
   if (AndDraw)
     IncrementUndoSerialNumber ();
   User = false;
@@ -2436,7 +2566,7 @@ LookupConnectionByPin (int type, void *ptr1)
   InitConnectionLookup ();
   ListStart (type, NULL, ptr1, NULL, FOUNDFLAG);
 
-  DoIt (FOUNDFLAG, true, false, drc);
+  DoIt (FOUNDFLAG, 0, true, false, drc);
 
   FreeConnectionLookupMemory ();
 }
@@ -2453,7 +2583,7 @@ RatFindHook (int type, void *ptr1, void *ptr2, void *ptr3,
   User = undo;
   DumpList ();
   ListStart (type, ptr1, ptr2, ptr3, flag);
-  DoIt (flag, AndRats, false, drc);
+  DoIt (flag, 0, AndRats, false, drc);
   User = false;
 }
 
@@ -2684,9 +2814,8 @@ start_do_it_and_dump (int type, void *ptr1, void *ptr2, void *ptr3,
 {
   bool result;
   DBG_MSG("Entering...\n");
-  Bloat = bloat;
   ListStart (type, ptr1, ptr2, ptr3, flag);
-  result = DoIt (flag, true, AndDraw, is_drc);
+  result = DoIt (flag, bloat, true, AndDraw, is_drc);
   DumpList ();
   return result;
 }

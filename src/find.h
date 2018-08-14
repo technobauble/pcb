@@ -58,7 +58,7 @@ void RatFindHook (int, void *, void *, void *, bool, int flag, bool);
 void LookupConnectionByPin (int , void *);
 
 bool ListStart (int type, void *ptr1, void *ptr2, void *ptr3, int flag);
-bool DoIt (int flag, bool AndRats, bool AndDraw, bool is_drc);
+bool DoIt (int flag, Coord bloat, bool AndRats, bool AndDraw, bool is_drc);
 void DumpList (void);
 bool start_do_it_and_dump (int type, void *ptr1, void *ptr2, void *ptr3,
                       int flag, bool AndDraw,

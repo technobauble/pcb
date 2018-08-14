@@ -65,9 +65,15 @@ DrcViolationType
   violation->have_measured = have_measured;
   violation->measured_value = measured_value;
   violation->required_value = required_value;
+  /* need to make a copy of these */
   violation->object_count = object_count;
-  violation->object_id_list = object_id_list;
-  violation->object_type_list = object_type_list;
+  violation->object_id_list =
+        (long int *)malloc(object_count * sizeof(long int));
+  memcpy(violation->object_id_list, object_id_list,
+         object_count * sizeof(long int));
+  violation->object_type_list = (int *)malloc(object_count * sizeof(int));
+  memcpy(violation->object_type_list, object_type_list,
+         object_count * sizeof(int));
 
   return violation;
 }
@@ -77,6 +83,8 @@ pcb_drc_violation_free (DrcViolationType *violation)
 {
   free (violation->title);
   free (violation->explanation);
+  free (violation->object_id_list);
+  free (violation->object_type_list);
   free (violation);
 }
 
@@ -159,12 +167,86 @@ throw_drc_dialog(void)
   return r;
 }
 
+/*
+ * DRC object id list constructor
+ */
+drc_object_id_list * drc_object_id_list_new(int n){
+  drc_object_id_list * list =
+        (drc_object_id_list*) malloc(sizeof(drc_object_id_list));
+  list->id_list = (long *)malloc(n*sizeof(long));
+  list->type_list = (int*)malloc(n*sizeof(int));
+  list->size = n;
+  drc_object_id_list_clear(list);
+  return list;
+}
+
+/*
+ * DRC object id list destructor
+ */
+void drc_object_id_list_delete(drc_object_id_list * list){
+  free(list->id_list);
+  free(list->type_list);
+  free(list);
+}
+
+void drc_object_id_list_clear(drc_object_id_list * list)
+{
+  memset(list->id_list, 0, list->size * sizeof(long));
+  memset(list->type_list, 0, list->size * sizeof(int));
+  list->count = 0;
+}
+
+/*
+ * DRC object id list expandor.
+ * Can also be used as a copy constructor if n is 0.
+ */
+drc_object_id_list * drc_object_id_list_expand(drc_object_id_list * list, int n)
+{
+  /* Allocate memory for a new larger list */
+  drc_object_id_list * new_list = drc_object_id_list_new(list->size + n);
+  /* Copy the contents of the old list to the new list */
+  memcpy(new_list->id_list, list->id_list, list->size*sizeof(long));
+  memcpy(new_list->type_list, list->type_list, list->size*sizeof(int));
+  new_list->count = list->count;
+  /* Delete the old list */
+  drc_object_id_list_delete(list);
+  return new_list;
+}
+
+/*
+ * DRC object id list appender
+ */
+drc_object_id_list * drc_object_id_list_append(drc_object_id_list * list,
+                                          int type, long id){
+  if (list->count == list->size)
+    list = drc_object_id_list_expand(list, 1);
+  list->id_list[list->count] = id;
+  list->type_list[list->count] = type;
+  list->count++;
+  return list;
+}
+
+void drc_object_id_list_reset_with(drc_object_id_list * list, int type, long id)
+{
+  drc_object_id_list_clear(list);
+  drc_object_id_list_append(list, type, id);
+}
+
+drc_object_id_list * drc_object_id_list_append_thing(drc_object_id_list * list)
+{
+  void *thing_ptr1, *thing_ptr2, *thing_ptr3;
+  int thing_type = GetThing(&thing_ptr1, &thing_ptr2, &thing_ptr3);
+  return drc_object_id_list_append(list,
+                                   thing_type,
+                                   ((AnyObjectType *)thing_ptr3)->ID);
+}
+
 /*!
  * \brief Build a list of the of offending items by ID.
  *
  * (Currently just "thing").
  */
-static void
+void
 BuildObjectList (int *object_count, long int **object_id_list, int **object_type_list)
 {
   void *thing_ptr1, *thing_ptr2, *thing_ptr3;
@@ -213,7 +295,7 @@ SetThing (int type, void *ptr1, void *ptr2, void *ptr3)
   thing_ptr2 = ptr2;
   thing_ptr3 = ptr3;
   thing_type = type;
-  return true;
+  return ((AnyObjectType *)ptr3)->ID;;
 }
 
 int GetThing(void **ptr1, void **ptr2, void **ptr3){
@@ -240,11 +322,7 @@ static bool
 DRCFind (int What, void *ptr1, void *ptr2, void *ptr3)
 {
   Coord x, y;
-  int object_count;
-  long int *object_id_list;
-  int *object_type_list;
   DrcViolationType *violation;
-  int flag;
 
   DBG_MSG("Entering...\n");
 
@@ -286,43 +364,45 @@ DRCFind (int What, void *ptr1, void *ptr2, void *ptr3)
 	   * type for each seed object.
 	   */
       DBG_MSG("Building nominal object list:\n");
-      if (start_do_it_and_dump (What, ptr1, ptr2, ptr3,
-                                FOUNDFLAG, true, 0, true))
+      ListStart(What, ptr1, ptr2, ptr3, FOUNDFLAG);
+      while (DoIt (FOUNDFLAG, 0, true, false, true))
         {
-          ClearFlagOnAllObjects (false, FOUNDFLAG | SELECTEDFLAG);
 
-          /* As nearly as I can tell, this is used to undo the flag changes.
-           Why isn't this done the first time around? */
-          User = true;
-          start_do_it_and_dump (What, ptr1, ptr2, ptr3, 
-				                SELECTEDFLAG, true, -PCB->Shrink, false);
-          start_do_it_and_dump (What, ptr1, ptr2, ptr3, 
-				                FOUNDFLAG, true, 0, true);
-          User = false;
           drcerr_count++;
           LocateError (&x, &y);
-          BuildObjectList (&object_count, &object_id_list, &object_type_list);
-          violation = pcb_drc_violation_new (_("Potential for broken trace"),
-                                             _("Insufficient overlap between objects can lead to broken tracks\n"
-                                               "due to registration errors with old wheel style photo-plotters."),
-                                             x, y,
-                                             0,     /* ANGLE OF ERROR UNKNOWN */
-                                             FALSE, /* MEASUREMENT OF ERROR UNKNOWN */
-                                             0,     /* MAGNITUDE OF ERROR UNKNOWN */
-                                             PCB->Shrink,
-                                             object_count,
-                                             object_id_list,
-                                             object_type_list);
+          drc_current_violation_list =
+              drc_object_id_list_append_thing(drc_current_violation_list);
+          violation = pcb_drc_violation_new (
+                        _("Potential for broken trace"),
+                        _("Insufficient overlap between objects can lead to "
+                          "broken tracks\ndue to registration errors with old "
+                          "wheel style photo-plotters."),
+                          x, y,
+                          0,     /* ANGLE OF ERROR UNKNOWN */
+                          FALSE, /* MEASUREMENT OF ERROR UNKNOWN */
+                          0,     /* MAGNITUDE OF ERROR UNKNOWN */
+                          PCB->Shrink,
+                          drc_current_violation_list->count,
+                          drc_current_violation_list->id_list,
+                          drc_current_violation_list->type_list);
           append_drc_violation (violation);
           pcb_drc_violation_free (violation);
-          free (object_id_list);
-          free (object_type_list);
-
-          if (!throw_drc_dialog())
-            return (true);
-          IncrementUndoSerialNumber ();
-          Undo (true);
         }
+      DumpList();
+      ClearFlagOnAllObjects (false, FOUNDFLAG | SELECTEDFLAG);
+      
+      /* As nearly as I can tell, this is used to undo the flag changes.
+       Why isn't this done the first time around? */
+      User = true;
+      start_do_it_and_dump (What, ptr1, ptr2, ptr3,
+                            SELECTEDFLAG, true, -PCB->Shrink, false);
+      start_do_it_and_dump (What, ptr1, ptr2, ptr3,
+                            FOUNDFLAG, true, 0, false);
+      User = false;
+      if (!throw_drc_dialog())
+        return (true);
+      IncrementUndoSerialNumber ();
+      Undo (true);
     }
   
   /* now check the bloated condition 
@@ -331,19 +411,17 @@ DRCFind (int What, void *ptr1, void *ptr2, void *ptr3)
    */
 
   /* Reset all of the flags */
-  ClearFlagOnAllObjects (false, FOUNDFLAG | SELECTEDFLAG);
+  ClearFlagOnAllObjects (false, DRCFLAG | FOUNDFLAG | SELECTEDFLAG);
 
   /* Set the DRC and SELECTED flags on all objects that overlap with the
    * passed object. Here we do the nominal case first, because it will
    * presumably have fewer objects than the bloated case.
    *
    * See above for additional notes.
-   *
-   * TODO: Why is the DRCFLAG used above, but not here?
    */
   DBG_MSG("Building nominal object list:\n");
   start_do_it_and_dump (What, ptr1, ptr2, ptr3, /* seed object */
-		                SELECTEDFLAG, /* flags to set */
+		                DRCFLAG | SELECTEDFLAG, /* flags to set */
 						false, /* AndDraw ? */
 						0, /* bloat amount */
 						false); /* is_drc */
@@ -353,47 +431,42 @@ DRCFind (int What, void *ptr1, void *ptr2, void *ptr3)
    * something connected to the original object. 
    *
    * See above for additional notes. 
-   *
-   * TODO: Why is this a while loop when the above is an if?
    */
   DBG_MSG("Building bloated object list:\n");
-  flag = FOUNDFLAG;
-  while (start_do_it_and_dump (What, ptr1, ptr2, ptr3, FOUNDFLAG, true, PCB->Bloat, true))
+  ListStart(What, ptr1, ptr2, ptr3, FOUNDFLAG);
+  while (DoIt (FOUNDFLAG, PCB->Bloat, true, false, true))
     {
-      /* make the flag changes undoable */
-      ClearFlagOnAllObjects (false, FOUNDFLAG | SELECTEDFLAG);
-      User = true;
-      start_do_it_and_dump (What, ptr1, ptr2, ptr3, SELECTEDFLAG, true, PCB->Bloat, false);
-      start_do_it_and_dump (What, ptr1, ptr2, ptr3, FOUNDFLAG, true, 0, true);
-      User = false;
       drcerr_count++;
       LocateError (&x, &y);
-      BuildObjectList (&object_count, &object_id_list, &object_type_list);
-      violation = pcb_drc_violation_new (_("Copper areas too close"),
-                                         _("Circuits that are too close may bridge during imaging, etching,\n"
-                                           "plating, or soldering processes resulting in a direct short."),
-                                         x, y,
-                                         0,     /* ANGLE OF ERROR UNKNOWN */
-                                         FALSE, /* MEASUREMENT OF ERROR UNKNOWN */
-                                         0,     /* MAGNITUDE OF ERROR UNKNOWN */
-                                         PCB->Bloat,
-                                         object_count,
-                                         object_id_list,
-                                         object_type_list);
+      drc_current_violation_list =
+      drc_object_id_list_append_thing(drc_current_violation_list);
+      violation = pcb_drc_violation_new (
+                    _("Copper areas too close"),
+                    _("Circuits that are too close may bridge during imaging, "
+                      "etching,\nplating, or soldering processes resulting in "
+                      "a direct short."),
+                    x, y,
+                    0,     /* ANGLE OF ERROR UNKNOWN */
+                    FALSE, /* MEASUREMENT OF ERROR UNKNOWN */
+                    0,     /* MAGNITUDE OF ERROR UNKNOWN */
+                    PCB->Bloat,
+                    drc_current_violation_list->count,
+                    drc_current_violation_list->id_list,
+                    drc_current_violation_list->type_list);
       append_drc_violation (violation);
       pcb_drc_violation_free (violation);
-      free (object_id_list);
-      free (object_type_list);
-      if (!throw_drc_dialog())
-        return (true);
-      IncrementUndoSerialNumber ();
-      Undo (true);
-      /* highlight the rest of the encroaching net so it's not reported again */
-      flag = FOUNDFLAG | SELECTEDFLAG;
-      start_do_it_and_dump (thing_type, thing_ptr1, thing_ptr2, thing_ptr3, flag, true, 0, false);
-      ListStart (What, ptr1, ptr2, ptr3, flag);
     }
   DumpList ();
+  /* make the flag changes undoable */
+  ClearFlagOnAllObjects (false, DRCFLAG | FOUNDFLAG | SELECTEDFLAG);
+  User = true;
+  start_do_it_and_dump (What, ptr1, ptr2, ptr3, SELECTEDFLAG, true, 0, false);
+  start_do_it_and_dump (What, ptr1, ptr2, ptr3, FOUNDFLAG, true, PCB->Bloat, false);
+  User = false;
+  if (!throw_drc_dialog())
+    return (true);
+  IncrementUndoSerialNumber ();
+  Undo (true);
   ClearFlagOnAllObjects (false, FOUNDFLAG | SELECTEDFLAG);
   return (false);
 }
@@ -519,10 +592,10 @@ drc_warning_violation(void)
           "Connects->Optimize rats nest (O hotkey) and watch for messages.\n"),
         /* All remaining arguments are not relevant to this application.  */
         0, 0, 0, TRUE, 0, 0, 0, NULL, NULL);
-  append_drc_violation (violation);
   return violation;
 }
 
+drc_object_id_list * drc_current_violation_list = NULL;
 /*!
  * \brief Check for DRC violations.
  *
@@ -545,10 +618,14 @@ DRCAll (void)
 
   reset_drc_dialog_message();
 
+  /* Should this happen somewhere in drc.[c,h]? */
+  if (!drc_current_violation_list)
+    drc_current_violation_list = drc_object_id_list_new(2);
+  
   /* Warn user that DRC doesn't catch everything... */
   violation = drc_warning_violation();
+  append_drc_violation (violation);
   pcb_drc_violation_free (violation);
-
 
   if (!throw_drc_dialog())
     return (true);

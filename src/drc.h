@@ -35,6 +35,26 @@
 
 #include "global.h"
 
+typedef struct drc_object_id_list
+{
+  int count; /* number of objects actually in list */
+  int size; /* allocated size of list */
+  long int *id_list;
+  int *type_list;
+} drc_object_id_list;
+
+extern drc_object_id_list * drc_current_violation_list;
+
+drc_object_id_list * drc_object_id_list_new(int n);
+void drc_object_id_list_delete(drc_object_id_list * list);
+void drc_object_id_list_clear(drc_object_id_list * list);
+drc_object_id_list * drc_object_id_list_expand(drc_object_id_list * list,
+                                               int n);
+drc_object_id_list * drc_object_id_list_append(drc_object_id_list * list,
+                                               int type, long id);
+void drc_object_id_list_reset_with(drc_object_id_list * list,
+                                   int type, long id);
+
 typedef struct drc_violation_st
 {
   char *title;
