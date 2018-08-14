@@ -890,6 +890,9 @@ NotifyLine (void)
   switch (Crosshair.AttachedLine.State)
     {
     case STATE_FIRST:		/* first point */
+      /* Only allow rats to be drawn between pins and pads.
+       * If we're in rat mode, and the user clicks on something else, don't
+       * do anything. */
       if (PCB->RatDraw && SearchScreen (Crosshair.X, Crosshair.Y,
 					PAD_TYPE | PIN_TYPE, &ptr1, &ptr1,
 					&ptr1) == NO_TYPE)
