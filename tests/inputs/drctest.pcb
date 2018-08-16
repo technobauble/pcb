@@ -1,9 +1,9 @@
-# release: pcb v4.1.2-g5d286130
+# release: pcb v4.1.2-gf18456be
 
 # To read pcb files, the pcb version (or the git source date) must be >= the file version
 FileVersion[20091103]
 
-PCB["" 1000.00mil 1000.00mil]
+PCB["" 4000.00mil 2000.00mil]
 
 Grid[1.00mil 0.0000 0.0000 1]
 PolyArea[3100.006200]
@@ -787,44 +787,186 @@ Symbol['~' 12.00mil]
 )
 Attribute("PCB::grid::unit" "mil")
 Attribute("PCB::grid::size" "1.00mil")
-Via[473.00mil 390.00mil 40.00mil 20.00mil 0.0000 20.00mil "" ""]
-Via[559.00mil 390.00mil 40.00mil 20.00mil 0.0000 20.00mil "" "thermal(0X)"]
-Via[391.00mil 380.00mil 40.00mil 20.00mil 0.0000 20.00mil "" ""]
-Via[100.00mil 100.00mil 40.00mil 20.00mil 0.0000 20.00mil "" ""]
+Via[100.00mil 200.00mil 40.00mil 20.00mil 0.0000 20.00mil "" ""]
+Via[1804.00mil 112.00mil 40.00mil 20.00mil 0.0000 20.00mil "" ""]
+Via[1890.00mil 112.00mil 40.00mil 20.00mil 0.0000 20.00mil "" "thermal(0X)"]
+Via[1722.00mil 102.00mil 40.00mil 20.00mil 0.0000 20.00mil "" ""]
+Via[100.00mil 1100.00mil 40.00mil 20.00mil 0.0000 20.00mil "" ""]
+Via[2100.00mil 200.00mil 40.00mil 20.00mil 0.0000 20.00mil "" ""]
+Via[3000.00mil 200.00mil 40.00mil 20.00mil 0.0000 20.00mil "" ""]
+Via[3000.00mil 1100.00mil 40.00mil 20.00mil 0.0000 20.00mil "" ""]
+Via[1100.00mil 200.00mil 40.00mil 20.00mil 0.0000 20.00mil "" ""]
+Via[1100.00mil 1100.00mil 40.00mil 20.00mil 0.0000 20.00mil "" ""]
+Via[2100.00mil 1100.00mil 40.00mil 20.00mil 0.0000 20.00mil "" ""]
 Layer(1 "top" "copper")
 (
-	Line[100.00mil 100.00mil 100.00mil 408.00mil 10.00mil 20.00mil "found,clearline"]
-	Line[104.00mil 127.00mil 104.00mil 142.00mil 10.00mil 20.00mil "clearline"]
-	Line[96.00mil 127.00mil 96.00mil 142.00mil 10.00mil 20.00mil "clearline"]
-	Line[95.00mil 157.00mil 95.00mil 172.00mil 10.00mil 20.00mil "clearline"]
-	Line[105.00mil 157.00mil 105.00mil 172.00mil 10.00mil 20.00mil "clearline"]
-	Line[109.00mil 187.00mil 109.00mil 202.00mil 10.00mil 20.00mil "clearline"]
-	Line[91.00mil 187.00mil 91.00mil 202.00mil 10.00mil 20.00mil "clearline"]
-	Line[111.00mil 217.00mil 111.00mil 227.00mil 10.00mil 20.00mil "clearline"]
-	Line[89.00mil 217.00mil 89.00mil 227.00mil 10.00mil 20.00mil "found,clearline"]
-	Line[115.00mil 241.00mil 115.00mil 251.00mil 10.00mil 20.00mil "clearline"]
-	Line[85.00mil 241.00mil 85.00mil 251.00mil 10.00mil 20.00mil "clearline"]
+	Line[96.00mil 250.00mil 96.00mil 300.00mil 10.00mil 20.00mil "clearline"]
+	Line[100.00mil 200.00mil 100.00mil 900.00mil 10.00mil 20.00mil "clearline"]
+	Line[104.00mil 250.00mil 104.00mil 300.00mil 10.00mil 20.00mil "clearline"]
+	Line[95.00mil 350.00mil 95.00mil 400.00mil 10.00mil 20.00mil "clearline"]
+	Line[105.00mil 350.00mil 105.00mil 400.00mil 10.00mil 20.00mil "clearline"]
+	Line[90.00mil 450.00mil 90.00mil 500.00mil 10.00mil 20.00mil "clearline"]
+	Line[110.00mil 450.00mil 110.00mil 500.00mil 10.00mil 20.00mil "clearline"]
+	Line[85.00mil 550.00mil 85.00mil 600.00mil 10.00mil 20.00mil "clearline"]
+	Line[115.00mil 550.00mil 115.00mil 600.00mil 10.00mil 20.00mil "clearline"]
+	Line[96.00mil 1150.00mil 46.00mil 1150.00mil 10.00mil 20.00mil "clearline"]
+	Line[100.00mil 1100.00mil 100.00mil 1800.00mil 10.00mil 20.00mil "clearline"]
+	Line[104.00mil 1150.00mil 154.00mil 1150.00mil 10.00mil 20.00mil "clearline"]
+	Line[95.00mil 1250.00mil 45.00mil 1250.00mil 10.00mil 20.00mil "clearline"]
+	Line[105.00mil 1250.00mil 155.00mil 1250.00mil 10.00mil 20.00mil "clearline"]
+	Line[90.00mil 1350.00mil 39.00mil 1350.00mil 10.00mil 20.00mil "clearline"]
+	Line[110.00mil 1350.00mil 160.00mil 1350.00mil 10.00mil 20.00mil "clearline"]
+	Line[85.00mil 1450.00mil 35.00mil 1450.00mil 10.00mil 20.00mil "clearline"]
+	Line[115.00mil 1450.00mil 165.00mil 1450.00mil 10.00mil 20.00mil "clearline"]
+	Line[3000.00mil 200.00mil 3000.00mil 900.00mil 10.00mil 20.00mil "clearline"]
+	Line[3000.00mil 1100.00mil 3000.00mil 1800.00mil 10.00mil 20.00mil "clearline"]
+	Line[1100.00mil 200.00mil 1100.00mil 900.00mil 10.00mil 20.00mil "clearline"]
+	Line[1100.00mil 1100.00mil 1100.00mil 1800.00mil 10.00mil 20.00mil "clearline"]
+	Line[2100.00mil 200.00mil 2100.00mil 900.00mil 10.00mil 20.00mil ""]
+	Line[2100.00mil 1100.00mil 2100.00mil 1800.00mil 10.00mil 20.00mil "clearline"]
+	Arc[2946.00mil 250.00mil 50.00mil 50.00mil 10.00mil 20.00mil 90.000000 90.000000 "clearline"]
+	Arc[3054.00mil 250.00mil 50.00mil 50.00mil 10.00mil 20.00mil 0.000000 90.000000 "clearline"]
+	Arc[2945.00mil 350.00mil 50.00mil 50.00mil 10.00mil 20.00mil 90.000000 90.000000 "clearline"]
+	Arc[3055.00mil 350.00mil 50.00mil 50.00mil 10.00mil 20.00mil 0.000000 90.000000 "clearline"]
+	Arc[2940.00mil 450.00mil 50.00mil 50.00mil 10.00mil 20.00mil 90.000000 90.000000 "clearline"]
+	Arc[3060.00mil 450.00mil 50.00mil 50.00mil 10.00mil 20.00mil 0.000000 90.000000 "clearline"]
+	Arc[2935.00mil 550.00mil 50.00mil 50.00mil 10.00mil 20.00mil 90.000000 90.000000 "clearline"]
+	Arc[3065.00mil 550.00mil 50.00mil 50.00mil 10.00mil 20.00mil 0.000000 90.000000 "clearline"]
+	Arc[2996.00mil 1200.00mil 50.00mil 50.00mil 10.00mil 20.00mil 270.000000 90.000000 "clearline"]
+	Arc[3004.00mil 1200.00mil 50.00mil 50.00mil 10.00mil 20.00mil -180.000000 90.000000 "clearline"]
+	Arc[2995.00mil 1300.00mil 50.00mil 50.00mil 10.00mil 20.00mil 270.000000 90.000000 "clearline"]
+	Arc[3005.00mil 1300.00mil 50.00mil 50.00mil 10.00mil 20.00mil 180.000000 90.000000 "clearline"]
+	Arc[2990.00mil 1400.00mil 50.00mil 50.00mil 10.00mil 20.00mil 270.000000 90.000000 "clearline"]
+	Arc[3010.00mil 1400.00mil 50.00mil 50.00mil 10.00mil 20.00mil 180.000000 90.000000 "clearline"]
+	Arc[2985.00mil 1500.00mil 50.00mil 50.00mil 10.00mil 20.00mil 270.000000 90.000000 "clearline"]
+	Arc[3015.00mil 1500.00mil 50.00mil 50.00mil 10.00mil 20.00mil 180.000000 90.000000 "clearline"]
+	Arc[1046.00mil 250.00mil 50.00mil 50.00mil 10.00mil 20.00mil 90.000000 90.000000 "clearline"]
+	Arc[1154.00mil 250.00mil 50.00mil 50.00mil 10.00mil 20.00mil 0.000000 90.000000 "clearline"]
+	Arc[1045.00mil 350.00mil 50.00mil 50.00mil 10.00mil 20.00mil 90.000000 90.000000 "clearline"]
+	Arc[1155.00mil 350.00mil 50.00mil 50.00mil 10.00mil 20.00mil 0.000000 90.000000 "clearline"]
+	Arc[1040.00mil 450.00mil 50.00mil 50.00mil 10.00mil 20.00mil 90.000000 90.000000 "clearline"]
+	Arc[1160.00mil 450.00mil 50.00mil 50.00mil 10.00mil 20.00mil 0.000000 90.000000 "clearline"]
+	Arc[1035.00mil 550.00mil 50.00mil 50.00mil 10.00mil 20.00mil 90.000000 90.000000 "clearline"]
+	Arc[1165.00mil 550.00mil 50.00mil 50.00mil 10.00mil 20.00mil 0.000000 90.000000 "clearline"]
+	Arc[1096.00mil 1200.00mil 50.00mil 50.00mil 10.00mil 20.00mil 270.000000 90.000000 "clearline"]
+	Arc[1104.00mil 1200.00mil 50.00mil 50.00mil 10.00mil 20.00mil -180.000000 90.000000 "clearline"]
+	Arc[1095.00mil 1300.00mil 50.00mil 50.00mil 10.00mil 20.00mil 270.000000 90.000000 "clearline"]
+	Arc[1105.00mil 1300.00mil 50.00mil 50.00mil 10.00mil 20.00mil 180.000000 90.000000 "clearline"]
+	Arc[1090.00mil 1400.00mil 50.00mil 50.00mil 10.00mil 20.00mil 270.000000 90.000000 "clearline"]
+	Arc[1110.00mil 1400.00mil 50.00mil 50.00mil 10.00mil 20.00mil 180.000000 90.000000 "clearline"]
+	Arc[1085.00mil 1500.00mil 50.00mil 50.00mil 10.00mil 20.00mil 270.000000 90.000000 "clearline"]
+	Arc[1115.00mil 1500.00mil 50.00mil 50.00mil 10.00mil 20.00mil 180.000000 90.000000 "clearline"]
 	Polygon("clearpoly")
 	(
-		[439.00mil 360.00mil] [507.00mil 360.00mil] [507.00mil 425.00mil] [439.00mil 425.00mil] 
+		[1770.00mil 82.00mil] [1838.00mil 82.00mil] [1838.00mil 147.00mil] [1770.00mil 147.00mil] 
 	)
 	Polygon("clearpoly")
 	(
-		[525.00mil 360.00mil] [593.00mil 360.00mil] [593.00mil 425.00mil] [525.00mil 425.00mil] 
+		[1856.00mil 82.00mil] [1924.00mil 82.00mil] [1924.00mil 147.00mil] [1856.00mil 147.00mil] 
+	)
+	Polygon("clearpoly")
+	(
+		[2045.00mil 450.00mil] [2095.00mil 450.00mil] [2095.00mil 500.00mil] [2045.00mil 500.00mil] 
+	)
+	Polygon("clearpoly")
+	(
+		[2105.00mil 450.00mil] [2155.00mil 450.00mil] [2155.00mil 500.00mil] [2105.00mil 500.00mil] 
+	)
+	Polygon("clearpoly")
+	(
+		[2099.00mil 250.00mil] [2149.00mil 250.00mil] [2149.00mil 300.00mil] [2099.00mil 300.00mil] 
+	)
+	Polygon("clearpoly")
+	(
+		[2051.00mil 250.00mil] [2101.00mil 250.00mil] [2101.00mil 300.00mil] [2051.00mil 300.00mil] 
+	)
+	Polygon("clearpoly")
+	(
+		[2100.00mil 350.00mil] [2150.00mil 350.00mil] [2150.00mil 400.00mil] [2100.00mil 400.00mil] 
+	)
+	Polygon("clearpoly")
+	(
+		[2050.00mil 350.00mil] [2100.00mil 350.00mil] [2100.00mil 400.00mil] [2050.00mil 400.00mil] 
+	)
+	Polygon("clearpoly")
+	(
+		[2040.00mil 550.00mil] [2090.00mil 550.00mil] [2090.00mil 600.00mil] [2040.00mil 600.00mil] 
+	)
+	Polygon("clearpoly")
+	(
+		[2110.00mil 550.00mil] [2160.00mil 550.00mil] [2160.00mil 600.00mil] [2110.00mil 600.00mil] 
+	)
+	Polygon("clearpoly")
+	(
+		[2045.00mil 1350.00mil] [2095.00mil 1350.00mil] [2095.00mil 1400.00mil] [2045.00mil 1400.00mil] 
+	)
+	Polygon("clearpoly")
+	(
+		[2105.00mil 1350.00mil] [2155.00mil 1350.00mil] [2155.00mil 1400.00mil] [2105.00mil 1400.00mil] 
+	)
+	Polygon("clearpoly")
+	(
+		[2099.00mil 1150.00mil] [2149.00mil 1150.00mil] [2149.00mil 1200.00mil] [2099.00mil 1200.00mil] 
+	)
+	Polygon("clearpoly")
+	(
+		[2051.00mil 1150.00mil] [2101.00mil 1150.00mil] [2101.00mil 1200.00mil] [2051.00mil 1200.00mil] 
+	)
+	Polygon("clearpoly")
+	(
+		[2100.00mil 1250.00mil] [2150.00mil 1250.00mil] [2150.00mil 1300.00mil] [2100.00mil 1300.00mil] 
+	)
+	Polygon("clearpoly")
+	(
+		[2050.00mil 1250.00mil] [2100.00mil 1250.00mil] [2100.00mil 1300.00mil] [2050.00mil 1300.00mil] 
+	)
+	Polygon("clearpoly")
+	(
+		[2040.00mil 1450.00mil] [2090.00mil 1450.00mil] [2090.00mil 1500.00mil] [2040.00mil 1500.00mil] 
+	)
+	Polygon("clearpoly")
+	(
+		[2110.00mil 1450.00mil] [2160.00mil 1450.00mil] [2160.00mil 1500.00mil] [2110.00mil 1500.00mil] 
 	)
 )
 Layer(2 "ground" "copper")
 (
-	Line[104.00mil 271.00mil 104.00mil 286.00mil 10.00mil 20.00mil "clearline"]
-	Line[96.00mil 271.00mil 96.00mil 286.00mil 10.00mil 20.00mil "clearline"]
-	Line[95.00mil 301.00mil 95.00mil 316.00mil 10.00mil 20.00mil "clearline"]
-	Line[105.00mil 301.00mil 105.00mil 316.00mil 10.00mil 20.00mil "clearline"]
-	Line[109.00mil 331.00mil 109.00mil 346.00mil 10.00mil 20.00mil "clearline"]
-	Line[91.00mil 331.00mil 91.00mil 346.00mil 10.00mil 20.00mil "clearline"]
-	Line[111.00mil 361.00mil 111.00mil 371.00mil 10.00mil 20.00mil "clearline"]
-	Line[89.00mil 361.00mil 89.00mil 371.00mil 10.00mil 20.00mil "clearline"]
-	Line[115.00mil 385.00mil 115.00mil 395.00mil 10.00mil 20.00mil "clearline"]
-	Line[85.00mil 385.00mil 85.00mil 395.00mil 10.00mil 20.00mil "clearline"]
+	Line[135.00mil 200.00mil 135.00mil 900.00mil 10.00mil 20.00mil "clearline"]
+	Line[105.00mil 650.00mil 105.00mil 700.00mil 10.00mil 20.00mil "clearline"]
+	Line[114.00mil 750.00mil 114.00mil 800.00mil 10.00mil 20.00mil "clearline"]
+	Line[135.00mil 1100.00mil 135.00mil 1800.00mil 10.00mil 20.00mil "clearline"]
+	Line[105.00mil 1550.00mil 155.00mil 1550.00mil 10.00mil 20.00mil "clearline"]
+	Line[114.00mil 1650.00mil 164.00mil 1650.00mil 10.00mil 20.00mil "clearline"]
+	Line[2135.00mil 200.00mil 2135.00mil 900.00mil 10.00mil 20.00mil ""]
+	Line[3035.00mil 200.00mil 3035.00mil 900.00mil 10.00mil 20.00mil "clearline"]
+	Line[3035.00mil 1100.00mil 3035.00mil 1800.00mil 10.00mil 20.00mil "clearline"]
+	Line[1135.00mil 200.00mil 1135.00mil 900.00mil 10.00mil 20.00mil "clearline"]
+	Line[1135.00mil 1100.00mil 1135.00mil 1800.00mil 10.00mil 20.00mil "clearline"]
+	Line[2135.00mil 1100.00mil 2135.00mil 1800.00mil 10.00mil 20.00mil ""]
+	Arc[3055.00mil 650.00mil 50.00mil 50.00mil 10.00mil 20.00mil 0.000000 90.000000 "clearline"]
+	Arc[3064.00mil 750.00mil 50.00mil 50.00mil 10.00mil 20.00mil 0.000000 90.000000 "clearline"]
+	Arc[3005.00mil 1600.00mil 50.00mil 50.00mil 10.00mil 20.00mil 180.000000 90.000000 "clearline"]
+	Arc[3014.00mil 1700.00mil 50.00mil 50.00mil 10.00mil 20.00mil 180.000000 90.000000 "clearline"]
+	Arc[1155.00mil 650.00mil 50.00mil 50.00mil 10.00mil 20.00mil 0.000000 90.000000 "clearline"]
+	Arc[1164.00mil 750.00mil 50.00mil 50.00mil 10.00mil 20.00mil 0.000000 90.000000 "clearline"]
+	Arc[1105.00mil 1600.00mil 50.00mil 50.00mil 10.00mil 20.00mil 180.000000 90.000000 "clearline"]
+	Arc[1114.00mil 1700.00mil 50.00mil 50.00mil 10.00mil 20.00mil 180.000000 90.000000 "clearline"]
+	Polygon("clearpoly")
+	(
+		[2105.00mil 650.00mil] [2155.00mil 650.00mil] [2155.00mil 700.00mil] [2105.00mil 700.00mil] 
+	)
+	Polygon("clearpoly")
+	(
+		[2114.00mil 750.00mil] [2164.00mil 750.00mil] [2164.00mil 800.00mil] [2114.00mil 800.00mil] 
+	)
+	Polygon("clearpoly")
+	(
+		[2105.00mil 1550.00mil] [2155.00mil 1550.00mil] [2155.00mil 1600.00mil] [2105.00mil 1600.00mil] 
+	)
+	Polygon("clearpoly")
+	(
+		[2114.00mil 1650.00mil] [2164.00mil 1650.00mil] [2164.00mil 1700.00mil] [2114.00mil 1700.00mil] 
+	)
 )
 Layer(3 "signal2" "copper")
 (
@@ -849,9 +991,80 @@ Layer(9 "bottom silk" "silk")
 )
 Layer(10 "top silk" "silk")
 (
-	Text[8.00mil 3.00mil 0 50 "Bloat: 5 mil" "clearline"]
-	Text[8.00mil 42.00mil 0 50 "Shrink: 5 mil" "clearline"]
-	Text[125.00mil 119.00mil 0 50 "PASS" "clearline"]
-	Text[141.00mil 232.00mil 0 50 "PASS" "clearline"]
-	Text[137.00mil 182.00mil 0 50 "FAIL" "clearline"]
+	Text[133.00mil 256.00mil 0 50 "PASS: 6 mil overlap (< shrink)" "clearline"]
+	Text[135.00mil 356.00mil 0 50 "FAIL: 5 mil overlap (= shrink)" "clearline"]
+	Text[135.00mil 456.00mil 0 50 "FAIL: 0 mil separation (> shrink, < bloat)" "clearline"]
+	Text[133.00mil 556.00mil 0 50 "PASS: 5 mil separation (= bloat)" "clearline"]
+	Text[132.00mil 656.00mil 0 50 "PASS: < shrink on different layer" "clearline"]
+	Text[7.00mil 143.00mil 0 49 "Line-to-line clearance" "clearline"]
+	Text[132.00mil 759.00mil 0 50 "PASS: < bloat on different layer" "clearline"]
+	Text[132.00mil 386.00mil 0 51 "Potential for broken trace" "clearline"]
+	Text[135.00mil 487.00mil 0 51 "Copper areas too close" "clearline"]
+	Text[133.00mil 1156.00mil 0 50 "PASS: 6 mil overlap (< shrink)" "clearline"]
+	Text[135.00mil 1256.00mil 0 50 "FAIL: 5 mil overlap (= shrink)" "clearline"]
+	Text[135.00mil 1356.00mil 0 50 "FAIL: 0 mil separation (> shrink, < bloat)" "clearline"]
+	Text[133.00mil 1456.00mil 0 50 "PASS: 5 mil separation (= bloat)" "clearline"]
+	Text[132.00mil 1556.00mil 0 50 "PASS: < shrink on different layer" "clearline"]
+	Text[7.00mil 1043.00mil 0 49 "Line-to-line clearance" "clearline"]
+	Text[132.00mil 1659.00mil 0 50 "PASS: < bloat on different layer" "clearline"]
+	Text[132.00mil 1286.00mil 0 51 "Potential for broken trace" "clearline"]
+	Text[135.00mil 1387.00mil 0 51 "Copper areas too close" "clearline"]
+	Text[7.00mil -5.00mil 0 122 "DRC Test" "clearline"]
+	Text[369.00mil 3.00mil 0 50 "Bloat: 5 mil" "clearline"]
+	Text[369.00mil 42.00mil 0 50 "Shrink: 5 mil" "clearline"]
+	Text[2133.00mil 256.00mil 0 50 "PASS: 6 mil overlap (< shrink)" "clearline"]
+	Text[2135.00mil 356.00mil 0 50 "FAIL: 5 mil overlap (= shrink)" "clearline"]
+	Text[2135.00mil 456.00mil 0 50 "FAIL: 0 mil separation (> shrink, < bloat)" "clearline"]
+	Text[2133.00mil 556.00mil 0 50 "PASS: 5 mil separation (= bloat)" "clearline"]
+	Text[2132.00mil 656.00mil 0 50 "PASS: < shrink on different layer" "clearline"]
+	Text[2132.00mil 759.00mil 0 50 "PASS: < bloat on different layer" "clearline"]
+	Text[2132.00mil 386.00mil 0 51 "Potential for broken trace" "clearline"]
+	Text[2135.00mil 487.00mil 0 51 "Copper areas too close" "clearline"]
+	Text[3033.00mil 256.00mil 0 50 "PASS: 6 mil overlap (< shrink)" "clearline"]
+	Text[3035.00mil 356.00mil 0 50 "FAIL: 5 mil overlap (= shrink)" "clearline"]
+	Text[3035.00mil 456.00mil 0 50 "FAIL: 0 mil separation (> shrink, < bloat)" "clearline"]
+	Text[3033.00mil 556.00mil 0 50 "PASS: 5 mil separation (= bloat)" "clearline"]
+	Text[3032.00mil 656.00mil 0 50 "PASS: < shrink on different layer" "clearline"]
+	Text[2907.00mil 143.00mil 0 49 "Line-to-arc clearance" "clearline"]
+	Text[3032.00mil 759.00mil 0 50 "PASS: < bloat on different layer" "clearline"]
+	Text[3032.00mil 386.00mil 0 51 "Potential for broken trace" "clearline"]
+	Text[3035.00mil 487.00mil 0 51 "Copper areas too close" "clearline"]
+	Text[3033.00mil 1156.00mil 0 50 "PASS: 6 mil overlap (< shrink)" "clearline"]
+	Text[3035.00mil 1256.00mil 0 50 "FAIL: 5 mil overlap (= shrink)" "clearline"]
+	Text[3035.00mil 1356.00mil 0 50 "FAIL: 0 mil separation (> shrink, < bloat)" "clearline"]
+	Text[3033.00mil 1456.00mil 0 50 "PASS: 5 mil separation (= bloat)" "clearline"]
+	Text[3032.00mil 1556.00mil 0 50 "PASS: < shrink on different layer" "clearline"]
+	Text[2907.00mil 1043.00mil 0 49 "Line-to-arc clearance" "clearline"]
+	Text[3032.00mil 1659.00mil 0 50 "PASS: < bloat on different layer" "clearline"]
+	Text[3032.00mil 1286.00mil 0 51 "Potential for broken trace" "clearline"]
+	Text[3035.00mil 1387.00mil 0 51 "Copper areas too close" "clearline"]
+	Text[1133.00mil 256.00mil 0 50 "PASS: 6 mil overlap (< shrink)" "clearline"]
+	Text[1135.00mil 356.00mil 0 50 "FAIL: 5 mil overlap (= shrink)" "clearline"]
+	Text[1135.00mil 456.00mil 0 50 "FAIL: 0 mil separation (> shrink, < bloat)" "clearline"]
+	Text[1133.00mil 556.00mil 0 50 "PASS: 5 mil separation (= bloat)" "clearline"]
+	Text[1132.00mil 656.00mil 0 50 "PASS: < shrink on different layer" "clearline"]
+	Text[1007.00mil 143.00mil 0 49 "Line-to-arc clearance" "clearline"]
+	Text[1132.00mil 759.00mil 0 50 "PASS: < bloat on different layer" "clearline"]
+	Text[1132.00mil 386.00mil 0 51 "Potential for broken trace" "clearline"]
+	Text[1135.00mil 487.00mil 0 51 "Copper areas too close" "clearline"]
+	Text[1133.00mil 1156.00mil 0 50 "PASS: 6 mil overlap (< shrink)" "clearline"]
+	Text[1135.00mil 1256.00mil 0 50 "FAIL: 5 mil overlap (= shrink)" "clearline"]
+	Text[1135.00mil 1356.00mil 0 50 "FAIL: 0 mil separation (> shrink, < bloat)" "clearline"]
+	Text[1133.00mil 1456.00mil 0 50 "PASS: 5 mil separation (= bloat)" "clearline"]
+	Text[1132.00mil 1556.00mil 0 50 "PASS: < shrink on different layer" "clearline"]
+	Text[1007.00mil 1043.00mil 0 49 "Line-to-arc clearance" "clearline"]
+	Text[1132.00mil 1659.00mil 0 50 "PASS: < bloat on different layer" "clearline"]
+	Text[1132.00mil 1286.00mil 0 51 "Potential for broken trace" "clearline"]
+	Text[1135.00mil 1387.00mil 0 51 "Copper areas too close" "clearline"]
+	Text[2133.00mil 1156.00mil 0 50 "PASS: 6 mil overlap (< shrink)" "clearline"]
+	Text[2135.00mil 1256.00mil 0 50 "FAIL: 5 mil overlap (= shrink)" "clearline"]
+	Text[2135.00mil 1356.00mil 0 50 "FAIL: 0 mil separation (> shrink, < bloat)" "clearline"]
+	Text[2133.00mil 1456.00mil 0 50 "PASS: 5 mil separation (= bloat)" "clearline"]
+	Text[2132.00mil 1556.00mil 0 50 "PASS: < shrink on different layer" "clearline"]
+	Text[2132.00mil 1659.00mil 0 50 "PASS: < bloat on different layer" "clearline"]
+	Text[2132.00mil 1286.00mil 0 51 "Potential for broken trace" "clearline"]
+	Text[2135.00mil 1387.00mil 0 51 "Copper areas too close" "clearline"]
+	Text[2135.00mil 183.00mil 0 50 "Join set" "clearline"]
+	Text[2135.00mil 1090.00mil 0 50 "Join clear" "clearline"]
+	Text[1643.00mil 1875.00mil 0 100 "Why is the poly clearance 10 for the line?" "clearline"]
 )
