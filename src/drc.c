@@ -38,6 +38,7 @@
 #include "error.h"
 #include "find.h"
 #include "misc.h"
+#include "object_list.h"
 #include "pcb_geometry.h"
 #include "polygon.h"
 #include "pcb-printf.h"
@@ -79,14 +80,63 @@ DrcViolationType
 }
 
 void
-pcb_drc_violation_free (DrcViolationType *violation)
+pcb_drc_violation_clear (DrcViolationType *violation)
 {
   free (violation->title);
   free (violation->explanation);
   free (violation->object_id_list);
   free (violation->object_type_list);
+}
+
+void
+pcb_drc_violation_free (DrcViolationType *violation)
+{
+  pcb_drc_violation_clear(violation);
   free (violation);
 }
+
+void pcb_drc_violation_copy(DrcViolationType * dest, DrcViolationType * src)
+{
+  memcpy(dest, src, sizeof(DrcViolationType));
+  dest->title = strdup(src->title);
+  dest->explanation = strdup(src->explanation);
+  dest->object_id_list =
+      (long int *)malloc(dest->object_count * sizeof(long int));
+  memcpy(dest->object_id_list, src->object_id_list,
+         dest->object_count * sizeof(long int));
+  dest->object_type_list = (int *)malloc(dest->object_count * sizeof(int));
+  memcpy(dest->object_type_list, src->object_type_list,
+         dest->object_count * sizeof(int));
+}
+
+void
+pcb_drc_violation_print(DrcViolationType * violation)
+{
+  int i = 0;
+  fprintf(stdout, "title: %s\n", violation->title);
+  fprintf(stdout, "explanation: %s\n", violation->explanation);
+  fprintf(stdout, "location: (x, y) = (%ld, %ld), angle = %f\n",
+                  violation->x, violation->y, violation->angle);
+  fprintf(stdout, "have_measured: %s\n",
+                  violation->have_measured ? "true":"false");
+  fprintf(stdout, "measured value: %ld\n", violation->measured_value);
+  fprintf(stdout, "required value: %ld\n", violation->required_value);
+  fprintf(stdout, "object count: %d\n", violation->object_count);
+  fprintf(stdout, "object IDs:\n");
+  for (i = 0; i < violation->object_count; i++)
+    fprintf(stdout, "%ld ", violation->object_id_list[i]);
+  fprintf(stdout, "\n");
+  fprintf(stdout, "object types:\n");
+  for (i = 0; i < violation->object_count; i++)
+    fprintf(stdout, "%d ", violation->object_type_list[i]);
+  fprintf(stdout, "\n");
+}
+
+object_operations drc_violation_operations = {
+  .copy_object = &pcb_drc_violation_copy,
+  .clear_object = &pcb_drc_violation_clear,
+  .delete_object = &pcb_drc_violation_free
+};
 
 static GString *drc_dialog_message;
 
@@ -114,9 +164,23 @@ append_drc_dialog_message(const char *fmt, ...)
   g_free (new_str);
 }
 
+object_list * drc_violation_list = NULL;
+
 void
 append_drc_violation (DrcViolationType *violation)
 {
+  DrcViolationType * tempViolation;
+  if (!drc_violation_list){
+    drc_violation_list = object_list_new(10, sizeof(DrcViolationType));
+    drc_violation_list->ops = &drc_violation_operations;
+  }
+  drc_violation_list = object_list_append(drc_violation_list, violation);
+  tempViolation =
+      (DrcViolationType*) object_list_get_item(drc_violation_list,
+                                               drc_violation_list->count-1);
+  pcb_drc_violation_print(tempViolation);
+  DBG_MSG("violation list has %d items\n", drc_violation_list->count);
+  
   if (gui->drc_gui != NULL)
     {
       gui->drc_gui->append_drc_violation (violation);
