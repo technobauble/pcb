@@ -27,8 +27,8 @@ typedef struct object_list
 object_list * object_list_new(int n, unsigned item_size);
 void object_list_delete(object_list * list);
 void object_list_clear(object_list * list);
-object_list * object_list_expand(object_list * list, int n);
-object_list * object_list_append(object_list * list, void * item);
+void object_list_expand(object_list * list, int n);
+void object_list_append(object_list * list, void * item);
 void object_list_describe(object_list * list);
 void * object_list_get_item(object_list * list, int n);
 #endif /* object_list_h */
