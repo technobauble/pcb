@@ -80,8 +80,9 @@ DrcViolationType
 }
 
 void
-pcb_drc_violation_clear (DrcViolationType *violation)
+pcb_drc_violation_clear (void * v)
 {
+  DrcViolationType * violation = (DrcViolationType *) v;
   free (violation->title);
   free (violation->explanation);
   free (violation->object_id_list);
@@ -95,8 +96,10 @@ pcb_drc_violation_free (DrcViolationType *violation)
   free (violation);
 }
 
-void pcb_drc_violation_copy(DrcViolationType * dest, DrcViolationType * src)
+void pcb_drc_violation_copy(void * d, void * s)
 {
+  DrcViolationType * dest = (DrcViolationType *)d;
+  DrcViolationType * src = (DrcViolationType *)s;
   memcpy(dest, src, sizeof(DrcViolationType));
   dest->title = strdup(src->title);
   dest->explanation = strdup(src->explanation);
@@ -110,26 +113,27 @@ void pcb_drc_violation_copy(DrcViolationType * dest, DrcViolationType * src)
 }
 
 void
-pcb_drc_violation_print(DrcViolationType * violation)
+pcb_drc_violation_print(FILE* fp, DrcViolationType * violation)
 {
   int i = 0;
-  fprintf(stdout, "title: %s\n", violation->title);
-  fprintf(stdout, "explanation: %s\n", violation->explanation);
-  fprintf(stdout, "location: (x, y) = (%ld, %ld), angle = %f\n",
+  if (fp == NULL) fp = stdout;
+  fprintf(fp, "title: %s\n", violation->title);
+  fprintf(fp, "explanation: %s\n", violation->explanation);
+  fprintf(fp, "location: (x, y) = (%ld, %ld), angle = %f\n",
                   violation->x, violation->y, violation->angle);
-  fprintf(stdout, "have_measured: %s\n",
+  fprintf(fp, "have_measured: %s\n",
                   violation->have_measured ? "true":"false");
-  fprintf(stdout, "measured value: %ld\n", violation->measured_value);
-  fprintf(stdout, "required value: %ld\n", violation->required_value);
-  fprintf(stdout, "object count: %d\n", violation->object_count);
-  fprintf(stdout, "object IDs:\n");
+  fprintf(fp, "measured value: %ld\n", violation->measured_value);
+  fprintf(fp, "required value: %ld\n", violation->required_value);
+  fprintf(fp, "object count: %d\n", violation->object_count);
+  fprintf(fp, "object IDs:\n");
   for (i = 0; i < violation->object_count; i++)
-    fprintf(stdout, "%ld ", violation->object_id_list[i]);
-  fprintf(stdout, "\n");
-  fprintf(stdout, "object types:\n");
+    fprintf(fp, "%ld ", violation->object_id_list[i]);
+  fprintf(fp, "\n");
+  fprintf(fp, "object types:\n");
   for (i = 0; i < violation->object_count; i++)
-    fprintf(stdout, "%d ", violation->object_type_list[i]);
-  fprintf(stdout, "\n");
+    fprintf(fp, "%d ", violation->object_type_list[i]);
+  fprintf(fp, "\n");
 }
 
 object_operations drc_violation_operations = {
@@ -170,15 +174,11 @@ void
 append_drc_violation (DrcViolationType *violation)
 {
   DrcViolationType * tempViolation;
-  if (!drc_violation_list){
-    drc_violation_list = object_list_new(10, sizeof(DrcViolationType));
-    drc_violation_list->ops = &drc_violation_operations;
-  }
-  drc_violation_list = object_list_append(drc_violation_list, violation);
+  object_list_append(drc_violation_list, violation);
   tempViolation =
       (DrcViolationType*) object_list_get_item(drc_violation_list,
                                                drc_violation_list->count-1);
-  pcb_drc_violation_print(tempViolation);
+  pcb_drc_violation_print(stdout, tempViolation);
   DBG_MSG("violation list has %d items\n", drc_violation_list->count);
   
   if (gui->drc_gui != NULL)
@@ -680,6 +680,12 @@ DRCAll (void)
 
   DBG_MSG("Entering...\n");
 
+  if (!drc_violation_list){
+    drc_violation_list = object_list_new(10, sizeof(DrcViolationType));
+    drc_violation_list->ops = &drc_violation_operations;
+  } else {
+    object_list_clear(drc_violation_list);
+  }
   reset_drc_dialog_message();
 
   /* Should this happen somewhere in drc.[c,h]? */
@@ -1314,8 +1320,35 @@ ActionDRCheck (int argc, char **argv, Coord x, Coord y)
   return 0;
 }
 
+static int
+ActionDRCPrint (int argc, char **argv, Coord x, Coord y)
+{
+  int i=0, len=0;
+  FILE * fp;
+  char starliner[81];
+  char buffer[80];
+  
+  memset(starliner, '*', 80);
+  starliner[80] = '\n';
+  if (argc == 1) fp = fopen(argv[0], "w");
+  else fp = stdout;
+  
+  for (i=0; i < drc_violation_list->count; i++){
+    len = sprintf(buffer, "Violation %d", i);
+    fprintf(fp, starliner);
+    fprintf(fp, "%*s\n", 40+len/2, buffer);
+    fprintf(fp, starliner);
+    pcb_drc_violation_print(fp,
+           (DrcViolationType*) object_list_get_item(drc_violation_list,i));
+    fprintf(fp, "\n");
+  }
+  if (argc == 1) fclose(fp);
+  return 0;
+}
+
 HID_Action drc_action_list[] = {
-  {"DRC", 0, ActionDRCheck, drc_help, drc_syntax}
+  {"DRC", 0, ActionDRCheck, drc_help, drc_syntax},
+  {"DRCPrint", 0, ActionDRCPrint, 0, 0}
 };
 
 REGISTER_ACTIONS (drc_action_list)
