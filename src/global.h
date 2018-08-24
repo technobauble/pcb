@@ -85,8 +85,6 @@ typedef double Angle;		/*!< Degrees. */
 /* Internationalization support. */
 #include "gettext.h"
 
-#define DEBUG
-
 #if defined(DEBUG) //&& DEBUG > 0
  #define DBG_MSG(fmt, args...) fprintf(stderr, "DEBUG: %s:%d:%s(): " fmt, \
     __FILE__, __LINE__, __func__, ##args)
