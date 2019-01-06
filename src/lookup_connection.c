@@ -3192,14 +3192,15 @@ lookup_connections_to_object (DRCObject * seed, int depth)
   object_list * list = object_list_new (10, sizeof (DRCObject));
   /* This is the list of places we'll look, generated for each object */
   object_list * search_list = object_list_new (10, sizeof (SearchDefinition));
+  /* Keep track of the starting location of each iteration */
+  object_list * bookmarks = object_list_new(10, sizeof(int));
   /* loop counters */
   int d=0, i=0;
   /* Use this to keep track of the starting locations of each round*/
-  int * bookmarks = malloc (sizeof (int) * (depth+1));
   DRCObject * obj;
   BoxType search_box;
 
-  bookmarks[0] = 0;
+  object_list_append(bookmarks, &d); /* first is at 0, d is convenient */
   object_list_append (list, seed);
 
   /* Add searches for pins and vias */
@@ -3207,10 +3208,12 @@ lookup_connections_to_object (DRCObject * seed, int depth)
   for (d=1; d <= depth; d++)
   {
     /* Note the starting location for this round of lookups. */
-    bookmarks[d] = list->count; 
+    object_list_append(bookmarks, &list->count); 
 
     /* Loop over the new objects in the list. */
-    for (i=bookmarks[d-1]; i < bookmarks[d]; i++)
+    for (i=*(int*)object_list_get_item(bookmarks, d-1); 
+         i < *(int*)object_list_get_item(bookmarks, d); 
+         i++)
     {
       obj = object_list_get_item (list, i);
 
