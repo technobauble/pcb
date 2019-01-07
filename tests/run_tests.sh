@@ -837,8 +837,8 @@ for t in $all_tests ; do
           pcb_files="${pcb_files} ${f}"
           ;;
         *)
-          echo "$f is not a supported input file"
-          exit 1
+          echo "input file \"$f\" has no file extension"
+          continue
           ;;
       esac
     done
