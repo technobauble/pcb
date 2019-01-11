@@ -200,11 +200,10 @@ scad_export_include_files (void)
 *
 ***********************************************************************/
 static void
-scad_imported_model_name (char *model, char *name, int size, bool simple)
+scad_imported_model_name (char *model, char *name, int size)
 {
 
-  sprintf (name, "%s%s%s%s", model, (simple) ? "-" : "",
-	   (simple) ? SCADSIMPLEMODELS : "", SCAD_STL_EXT);
+  sprintf (name, "%s%s", model, SCAD_STL_EXT);
 }
 
 static void
@@ -217,7 +216,7 @@ scad_close_model (FILE * f)
 }
 
 static FILE *
-scad_open_model (char *model, char *first_line, int size, bool simple)
+scad_open_model (char *model, char *first_line, int size)
 {
   int l;
   FILE *f = NULL;
@@ -225,23 +224,21 @@ scad_open_model (char *model, char *first_line, int size, bool simple)
 
   l =
     strlen (pcblibdir) + 1 + strlen (MODELBASE) + 1 + strlen (SCADBASE) + 1 +
-    strlen (SCADSIMPLEMODELS) + 1 + strlen (model) + 1 + strlen (SCAD_EXT);
+    strlen (model) + 1 + strlen (SCAD_EXT);
   if ((cmd = (char *) malloc (l * sizeof (char))) != NULL)
     {
-      sprintf (cmd, "%s%s%s%s%s%s%s%s%s%s", pcblibdir, PCB_DIR_SEPARATOR_S,
+      sprintf (cmd, "%s%s%s%s%s%s%s%s", pcblibdir, PCB_DIR_SEPARATOR_S,
 	       MODELBASE, PCB_DIR_SEPARATOR_S, SCADBASE, PCB_DIR_SEPARATOR_S,
-	       model, (simple) ? "-" : "", (simple) ? SCADSIMPLEMODELS : "",
-	       SCAD_EXT);
+	       model, SCAD_EXT);
 
       f = fopen (cmd, "r");
 #if 0
       if (!f)
 	{
-	  sprintf (cmd, "%s%s%s%s%s%s%s%s%s%s", pcblibdir,
+	  sprintf (cmd, "%s%s%s%s%s%s%s%s", pcblibdir,
 		   PCB_DIR_SEPARATOR_S, MODELBASE, PCB_DIR_SEPARATOR_S,
 		   SCADBASE, PCB_DIR_SEPARATOR_S,
-		   (simple) ? SCADSIMPLEMODELS : "",
-		   (simple) ? PCB_DIR_SEPARATOR_S : "", model, SCAD_EXT);
+		   model, SCAD_EXT);
 	  f = fopen (cmd, "r");
 	}
 #endif
@@ -527,7 +524,7 @@ scad_export_bbox (ElementType * element)
   fprintf (scad_output, "{\n");
 
   fprintf (scad_output,
-	   "translate ([%f, %f, %f]) color ([0.2, 0.2, 0.2]) cube ([%f,%f,%f],true);\n",
+	   "translate ([%f, %f, %f]) color ([0.4, 0.4, 0.4]) cube ([%f,%f,%f],true);\n",
 	   scad_scale_coord ((float) ox), scad_scale_coord ((float) oy),
 	   scad_scale_coord ((float) t / 2.), scad_scale_coord ((float) w),
 	   scad_scale_coord ((float) h), scad_scale_coord ((float) t));
@@ -538,21 +535,21 @@ scad_export_bbox (ElementType * element)
 
 static void
 scad_writeout_element (ElementType * element, char *name, int model_type,
-		       bool imported, bool simple)
+		       bool imported)
 {
   FILE *f = NULL;
   char line[2048];
 
   if (imported)
     {
-      scad_imported_model_name (name, line, sizeof (line), simple);
+      scad_imported_model_name (name, line, sizeof (line));
       scad_export_model (model_type, element, imported, f, line,
 			 sizeof (line));
     }
   else
     {
       /* if model is defined, try to open it */
-      f = scad_open_model (name, line, sizeof (line), simple);
+      f = scad_open_model (name, line, sizeof (line));
 
       if (f)
 	{
@@ -569,7 +566,7 @@ scad_writeout_element (ElementType * element, char *name, int model_type,
 * - exports both models
 ************************************************************/
 static void
-scad_export_element (ElementType * element, bool simple)
+scad_export_element (ElementType * element)
 {
   char *model_name, *s;
   bool imported_model;
@@ -584,7 +581,7 @@ scad_export_element (ElementType * element, bool simple)
   if (model_name)
     {
       scad_writeout_element (element, model_name, SCAD_STANDARD,
-			     imported_model, simple);
+			     imported_model);
     }
   else
     {
@@ -594,7 +591,7 @@ scad_export_element (ElementType * element, bool simple)
       if (model_name)
 	{
 	  scad_writeout_element (element, model_name, SCAD_STANDARD,
-				 imported_model, simple);
+				 imported_model);
 	}
       else
 	{
@@ -603,7 +600,7 @@ scad_export_element (ElementType * element, bool simple)
 	  if (model_name)
 	    {
 	      scad_writeout_element (element, model_name, SCAD_STANDARD,
-				     imported_model, simple);
+				     imported_model);
 	    }
 	}
     }
@@ -618,7 +615,7 @@ scad_export_element (ElementType * element, bool simple)
   if (model_name)
     {
       scad_writeout_element (element, model_name, SCAD_OVERLAY,
-			     imported_model, simple);
+			     imported_model);
     }
 
   return;
@@ -645,8 +642,7 @@ scad_process_components (int mode)
   {
     if ((mode == SCAD_COMPONENT_SIMPLE) || (mode == SCAD_COMPONENT_REALISTIC))
       {
-	scad_export_element (element,
-			     (mode == SCAD_COMPONENT_SIMPLE) ? 1 : 0);
+	scad_export_element (element);
       }
     else
       {

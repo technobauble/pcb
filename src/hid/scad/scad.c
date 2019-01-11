@@ -600,7 +600,7 @@ scad_do_export (HID_Attr_Val * options)
       return;
     }
 
-  scad_write_prologue (PCB->Filename);
+  scad_write_prologue ((opt_exp_component==2)?true:false);
 
   memset (group_data, 0, sizeof (group_data));
 #ifdef SOLDER_LAYER

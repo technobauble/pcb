@@ -38,7 +38,7 @@
 #define MODELBASE "models"
 #define SCADBASE "scad"
 #define SCADSCRIPTS "scripts"
-#define SCADSIMPLEMODELS "simple"
+//#define SCADSIMPLEMODELS "simple"
 
 
 /* dimensions (nanometer version) and colors*/
@@ -130,7 +130,7 @@ typedef struct
 
 extern FILE *scad_output;
 
-extern void scad_write_prologue ();
+extern void scad_write_prologue (bool simple_models);
 extern void scad_generate_holes ();
 extern void scad_generate_plating ();
 extern void scad_generate_board ();

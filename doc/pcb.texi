@@ -2219,12 +2219,12 @@ Following parameters can be used to customize final 3D model:
 @item
 @emph{Realistic models} - high-quality 3D models. Realistic models are created as OpenSCAD source files. File with the model definition is resolved by contents of respective attributed or by contents of @emph{Description} field.
 @item
-@emph{Simple models} - simplified models, sufficient for mechanical modelling. Realistic models are created as OpenSCAD source files. File with the model definition is resolved as for realistic models, with @code{-simple} suffix automatically appended.
+@emph{Simple models} - simplified models, sufficient for mechanical modelling. Simple models are defined in the same file as realistic models. Global variable @code{global_simple_models} is used to differentiate between simple and realistic models.
 @item
-@emph{Box models} - create component models as simple boxes. These models do not require external models, they are completely described by @code{Footprint::BoundingBox} attribute.
+@emph{Box models} - create component models as simple boxes. These models do not require external models, they are completely described by @code{Footprint::BoundingBox} attribute. The @code{Footprint::BoundingBox} attribute should be defined only for mechanically significant components (connectors, heatsinks...), it should be not used for small components (like SMD resistors).
 @end itemize
 
-The types of models used is selectable during export. Currently there is no fallback from one category to another implemented.
+The model variant is selected during export. Currently there is no fallback from one category to another implemented.
 
 
 @subsubsection Processing of component models
@@ -2248,7 +2248,8 @@ attribute @code{OpenSCAD::Overlay} - this attribute specifies secondary model (o
 All attributes can be attached to components placed already on board or they can be part of library footprints. Complete list of attributes will be described later. 
 
 
-If @emph{Simple} models are selected, the suffix @code{-simple} is added to model name. For example, for @emph{Realistic} model with name @code{0805.scad} we should define corresponding @emph{Simple} model @code{0805-simple.scad}.
+If @emph{Simple} models are selected, the global variable @code{global_simple_models} is set to @code{true}. For @emph{Realistic} models it's value is set to @code{false}. OpenSCAD model should conditionally create both variants.
+Variable is located at beginning of the output file and can be changed manually to switch from simple to realistic model without re-exporting the model.
 
 The component rotation is not stored in internal data structures. To identify the correct model rotation we need to define @code{Footprint::RotationTracking} attribute. It's value can be maintained automatically. It can be adjusted manually as well.
 
@@ -2277,7 +2278,7 @@ The model definitions can include other OpenSCAD source files. @b{Only one level
 The OpenSCAD exporter removes all 1st level @code{include} directives from model definitions and collects the included file names. After all components are processed, the include files are embedded into output file.
 If the include file cannot be found or opened, new @code{include} directive is emitted. There is always only one copy of the include file embedded in final file.
 
-Here is example of simple model. It illustrates the recommended model design - parametrized model prototype is defined in separate include file and it is instantiated in the component model file.
+Here is example of typical model, including both realistic and simple variants. It illustrates the recommended model design - parametrized model prototype is defined in separate include file and it is instantiated in the component model file.
 @sp 1
 @smallexample
 /* File: RES0805.scad            */
@@ -2289,7 +2290,8 @@ chip_r (
     L=2.05,
     T=0.35,
     W=1.25,
-    H=0.50
+    H=0.50,
+    simple=global_simple_models
 );
 /* EOF */
 
@@ -2301,17 +2303,22 @@ module chip_r(
     T=0.35,
     W=1.25,
     H=0.50,
+    simple=false,
     padcolor=[0.9,0.9,0.9],
     bodycolor=[1,1,0.9],
-    topcolor=[0.0,0.0,0.0],
+    topcolor=[0.0,0.0,0.0]
 ) @{
     module chippad() @{
         color(padcolor)cube([T,W,H],center=true);
     @}
-    color(bodycolor) translate([0,0,H/2.]) cube([L-2*T+0.1,W-0.1,H-0.1],center=true);
-    color(topcolor) translate([0,0,H-0.05]) cube([L-2*T,W-0.2,0.05],center=true);
-    translate ([-L/2.+T/2.,0,H/2.]) chippad();
-    translate ([L/2.-T/2.,0,H/2.]) chippad();
+    if (simple)  @{
+        color(bodycolor) translate([0,0,H/2.]) cube([L,W,H],center=true);
+    @} else @{
+        color(bodycolor) translate([0,0,H/2.]) cube([L-2*T+0.1,W-0.1,H-0.1],center=true);
+        color(topcolor) translate([0,0,H-0.05]) cube([L-2*T,W-0.2,0.05],center=true);
+        translate ([-L/2.+T/2.,0,H/2.]) chippad();
+        translate ([L/2.-T/2.,0,H/2.]) chippad();
+    @}
 @}
 /* EOF */
 @end smallexample
@@ -2326,7 +2333,7 @@ contains filename of original footprint, without @code{.fp} extension.
 .
 @item @code{Footprint::BoundingBox}
 Specifies the dimensions of the box model. This attribute is used when "Boxes" output option is selected. Attribute specifies size and offset of the box.
-Value: @code{x_size y_size z_size x_offset y_offset} or @code{x_size y_size z_size}. All dimensions accept UOM, for example @emph{"2mm 2mm 1mm"}. Optinal offset specifies distance of box center from component x-mark.
+Value: @code{x_size y_size z_height x_offset y_offset} or @code{x_size y_size z_height}. All dimensions accept UOM, for example @emph{"2mm 2mm 1mm"}. Optinal offset specifies distance of box center from component x-mark.
 @item @code{OpenSCAD::Model}
 Model name (without extension). It can contain relative path inside model library tree.
 @c @item @code{OpenSCAD::Model:type}

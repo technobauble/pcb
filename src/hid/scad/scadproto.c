@@ -63,9 +63,13 @@
 
 
 void
-scad_write_prologue ()
+scad_write_prologue (bool simple_models)
 {
   fputs ("//SCAD\n\n", scad_output);
+
+  fputs ("global_simple_models = ", scad_output);
+  fputs ((simple_models)?"true":"false", scad_output);
+  fputs (";\n\n", scad_output);
 
   fputs
     ("module line_segment_r(length, width, thickness, x, y, a, bd, c1, c2) {\n"
