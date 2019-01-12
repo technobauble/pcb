@@ -813,56 +813,53 @@ contour_bounds_touch (const BoxType * b, void *cl)
    * faster, so we want to do that on the bigger contour.
    */
   if (pa->Count < pb->Count)
-    {
-      rtree_over = pb;
-      looping_over = pa;
-    }
+  {
+    rtree_over = pb;
+    looping_over = pa;
+  }
   else
-    {
-      rtree_over = pa;
-      looping_over = pb;
-    }
+  {
+    rtree_over = pa;
+    looping_over = pb;
+  }
 
   av = &looping_over->head;
-  do				/* Loop over the nodes in the smaller contour */
-    {
-      /* check this edge for any insertions */
-      double dx;
-      info.v = av;
-      /* compute the slant for region trimming */
-      dx = av->next->point[0] - av->point[0];
-      if (dx == 0)
-	info.m = 0;
-      else
-	{
-	  info.m = (av->next->point[1] - av->point[1]) / dx;
-	  info.b = av->point[1] - info.m * av->point[0];
-	}
-      box.X2 = (box.X1 = av->point[0]) + 1;
-      box.Y2 = (box.Y1 = av->point[1]) + 1;
+  do  /* Loop over the nodes in the smaller contour */
+  {
+    /* check this edge for any insertions */
+    double dx;
+    info.v = av;
+    /* compute the slant for region trimming */
+    dx = av->next->point[0] - av->point[0];
+    if (dx == 0)
+	    info.m = 0;
+    else
+	  {
+	    info.m = (av->next->point[1] - av->point[1]) / dx;
+	    info.b = av->point[1] - info.m * av->point[0];
+	  }
+    box.X2 = (box.X1 = av->point[0]) + 1;
+    box.Y2 = (box.Y1 = av->point[1]) + 1;
 
-      /* fill in the segment in info corresponding to this node */
-      if (setjmp (info.sego) == 0)
-	{
-	  r_search (looping_over->tree, &box, NULL, get_seg, &info);
-	  assert (0);
-	}
+    /* fill in the segment in info corresponding to this node */
+    if (setjmp (info.sego) == 0)
+	  {
+	    r_search (looping_over->tree, &box, NULL, get_seg, &info);
+	    assert (0);
+	  }
 
-      /* If we're going to have another pass anyway, skip this */
-      if (info.s->intersected && info.node_insert_list != NULL)
-	continue;
+    /* If we're going to have another pass anyway, skip this */
+    if (info.s->intersected && info.node_insert_list != NULL)  continue;
 
-      if (setjmp (restart))
-	continue;
+    if (setjmp (restart))  continue;
 
-      /* NB: If this actually hits anything, we are teleported back to the beginning */
-      info.tree = rtree_over->tree;
-      if (info.tree)
-	if (UNLIKELY (r_search (info.tree, &info.s->box,
-				seg_in_region, seg_in_seg, &info)))
-	  assert (0); /* XXX: Memory allocation failure */
-    }
-  while ((av = av->next) != &looping_over->head);
+    /* NB: If this actually hits anything, we are teleported back to the beginning */
+    info.tree = rtree_over->tree;
+    if (info.tree)
+      if (UNLIKELY (r_search (info.tree, &info.s->box,
+                              seg_in_region, seg_in_seg, &info)))
+        assert (0); /* XXX: Memory allocation failure */
+  } while ((av = av->next) != &looping_over->head);
 
   c_info->node_insert_list = info.node_insert_list;
   if (info.need_restart)
@@ -892,58 +889,58 @@ intersect_impl (jmp_buf * jb, POLYAREA * b, POLYAREA * a, int add)
     }
 
   for (pa = a->contours; pa; pa = pa->next)	/* Loop over the contours of POLYAREA "a" */
-    {
-      BoxType sb;
-      jmp_buf out;
-      int retval;
+  {
+    BoxType sb; /* search box */
+    jmp_buf out;
+    int retval;
 
-      c_info.getout = NULL;
-      c_info.pa = pa;
+    c_info.getout = NULL;
+    c_info.pa = pa;
 
-      if (!add)
-	{
-	  retval = setjmp (out);
-	  if (retval)
+    if (!add)
+	  {
+	    retval = setjmp (out);
+	    if (retval)
 	    {
 	      /* The intersection test short-circuited back here,
 	       * we need to clean up, then longjmp to jb */
 	      longjmp (*jb, retval);
 	    }
-	  c_info.getout = &out;
-	}
+	    c_info.getout = &out;
+	  }
 
-      sb.X1 = pa->xmin;
-      sb.Y1 = pa->ymin;
-      sb.X2 = pa->xmax + 1;
-      sb.Y2 = pa->ymax + 1;
+    sb.X1 = pa->xmin;
+    sb.Y1 = pa->ymin;
+    sb.X2 = pa->xmax + 1;
+    sb.Y2 = pa->ymax + 1;
 
-      r_search (b->contour_tree, &sb, NULL, contour_bounds_touch, &c_info);
-      if (c_info.need_restart)
-	need_restart = 1;
-    }
+    r_search (b->contour_tree, &sb, NULL, contour_bounds_touch, &c_info);
+    if (c_info.need_restart)
+	    need_restart = 1;
+  }
 
   /* Process any deferred node insersions */
   task = c_info.node_insert_list;
   while (task != NULL)
-    {
-      insert_node_task *next = task->next;
+  {
+    insert_node_task *next = task->next;
 
-      /* Do insersion */
-      task->new_node->prev = task->node_seg->v;
-      task->new_node->next = task->node_seg->v->next;
-      task->node_seg->v->next->prev = task->new_node;
-      task->node_seg->v->next = task->new_node;
-      task->node_seg->p->Count++;
+    /* Do insersion */
+    task->new_node->prev = task->node_seg->v;
+    task->new_node->next = task->node_seg->v->next;
+    task->node_seg->v->next->prev = task->new_node;
+    task->node_seg->v->next = task->new_node;
+    task->node_seg->p->Count++;
 
-      cntrbox_adjust (task->node_seg->p, task->new_node->point);
-      if (adjust_tree (task->node_seg->p->tree, task->node_seg))
-	assert (0); /* XXX: Memory allocation failure */
+    cntrbox_adjust (task->node_seg->p, task->new_node->point);
+    if (adjust_tree (task->node_seg->p->tree, task->node_seg))
+	    assert (0); /* XXX: Memory allocation failure */
 
-      need_restart = 1; /* Any new nodes could intersect */
+    need_restart = 1; /* Any new nodes could intersect */
 
-      free (task);
-      task = next;
-    }
+    free (task);
+    task = next;
+  }
 
   return need_restart;
 }
@@ -967,39 +964,34 @@ M_POLYAREA_intersect (jmp_buf * e, POLYAREA * afst, POLYAREA * bfst, int add)
   if (a == NULL || b == NULL)
     error (err_bad_parm);
   do
-    {
-      do
-	{
-	  if (a->contours->xmax >= b->contours->xmin &&
-	      a->contours->ymax >= b->contours->ymin &&
-	      a->contours->xmin <= b->contours->xmax &&
-	      a->contours->ymin <= b->contours->ymax)
+  {
+    do
+	  {
+      /* If the bounding box of A is entirely inside the bounding box of B */
+	    if (a->contours->xmax >= b->contours->xmin &&
+	        a->contours->ymax >= b->contours->ymin &&
+	        a->contours->xmin <= b->contours->xmax &&
+	        a->contours->ymin <= b->contours->ymax)
 	    {
-	      if (UNLIKELY (intersect (e, a, b, add)))
-		error (err_no_memory);
+	      if (UNLIKELY (intersect (e, a, b, add)))  error (err_no_memory);
 	    }
-	}
-      while (add && (a = a->f) != afst);
-      for (curcB = b->contours; curcB != NULL; curcB = curcB->next)
-	if (curcB->Flags.status == ISECTED)
-	  {
-	    the_list = add_descriptors (curcB, 'B', the_list);
-	    if (UNLIKELY (the_list == NULL))
-	      error (err_no_memory);
-	  }
-    }
-  while (add && (b = b->f) != bfst);
+	  } while (add && (a = a->f) != afst);
+    for (curcB = b->contours; curcB != NULL; curcB = curcB->next)
+	    if (curcB->Flags.status == ISECTED)
+      {
+	      the_list = add_descriptors (curcB, 'B', the_list);
+	      if (UNLIKELY (the_list == NULL))  error (err_no_memory);
+	    }
+  } while (add && (b = b->f) != bfst);
   do
-    {
-      for (curcA = a->contours; curcA != NULL; curcA = curcA->next)
-	if (curcA->Flags.status == ISECTED)
-	  {
-	    the_list = add_descriptors (curcA, 'A', the_list);
-	    if (UNLIKELY (the_list == NULL))
-	      error (err_no_memory);
-	  }
-    }
-  while (add && (a = a->f) != afst);
+  {
+    for (curcA = a->contours; curcA != NULL; curcA = curcA->next)
+	    if (curcA->Flags.status == ISECTED)
+	    {
+	      the_list = add_descriptors (curcA, 'A', the_list);
+	      if (UNLIKELY (the_list == NULL))  error (err_no_memory);
+	    }
+  } while (add && (a = a->f) != afst);
 }				/* M_POLYAREA_intersect */
 
 static inline int

@@ -95,9 +95,13 @@ struct VNODE
     Vector point;
 };
 
+/* This structure defines a segment of a polygon contour. ??????????????
+ * The structure is a linked list that
+ * */
 typedef struct PLINE PLINE;
 struct PLINE
 {
+  /* segment bounding box */
     Coord xmin, ymin, xmax, ymax;
     PLINE *next;
     VNODE head;
@@ -133,8 +137,11 @@ void poly_ExclVertex(VNODE * node);
 typedef struct POLYAREA POLYAREA;
 struct POLYAREA
 {
+  /* this type is a double linked list, forward, backwards */
     POLYAREA *f, *b;
-    PLINE *contours;
+  /* The PLINE segments that outline the poly area, linked list */
+    PLINE *contours; /* ???????????????? */ 
+   /* rtree of segment bounding boxes, for faster searching */
     rtree_t *contour_tree;
 };
 
