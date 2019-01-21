@@ -1082,15 +1082,18 @@ LineArcIntersect (LineType *Line, ArcType *Arc)
   
   /* minimum distance from the line to the center of the arc, times the
    * length of the line (D2*L from search.c equations) */
-  d = dx * dy1 - dy * dx1;      
-  d *= d;  /* (D2*L)^2 */
+  d = dx * dy1 - dy * dx1;
+  /* Shorten D2 a little to account for the line's thickness,
+   * d = D2*L - Line->Thickness * L = (D2 - Line->Thickness) * L
+   * */
+  d -= Line->Thickness * l;
+  d *= d;  /* ((D2 - Line->Thickness)*L)^2 */
 
-  /* Check the outer edge of the arc first. 
-   * Note: I'm not not entirely sure that this is the right way to
-   *       incorporate the line thickness...
+  /* Check the outer edge of the arc. If it can't intersect, then nothing
+   * can.
    * */
   Radius =
-    Arc->Width + MAX (0.5 * (Arc->Thickness + Line->Thickness) + Bloat, 0.0);
+    Arc->Width + MAX (0.5 * Arc->Thickness + Bloat, 0.0);
   Radius *= Radius;
 
   /* If the argument to the square root is negative, then the arc is too far
@@ -1145,9 +1148,9 @@ LineArcIntersect (LineType *Line, ArcType *Arc)
 
   /* check arc end points */
   box = GetArcEnds (Arc);
-  if (IsPointInPad (box->X1, box->Y1, Arc->Thickness * 0.5 + Bloat, (PadType *)Line))
+  if (IsPointInPad (box->X1, box->Y1, MAX (Arc->Thickness * 0.5 + Bloat, 0), (PadType *)Line))
     return true;
-  if (IsPointInPad (box->X2, box->Y2, Arc->Thickness * 0.5 + Bloat, (PadType *)Line))
+  if (IsPointInPad (box->X2, box->Y2, MAX (Arc->Thickness * 0.5 + Bloat, 0), (PadType *)Line))
     return true;
   return false;
 }
