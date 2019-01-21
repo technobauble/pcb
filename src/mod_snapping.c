@@ -1,29 +1,29 @@
-//
-//  mod_snapping.c
-//  
-//  A plugin to change the snapping behavior when a modifier key is pressed.
-//
-//  Created by Parker, Charles W. on 7/11/18.
-//
-//  Build from pcb/src with:
-//  Linux:
-//  gcc -fPIC -shared -o myplugin.so \
-//       myplugin.c -I.. -I/opt/local/include/glib-2.0 \
-//       -I/opt/local/lib/glib-2.0/include -DHAVE_CONFIG_H
-//  MacOS:
-//  gcc -fPIC -dynamiclib -Wl,-undefined,dynamic_lookup -o myplugin.so \
-//       myplugin.c -I.. -I/opt/local/include/glib-2.0 \
-//       -I/opt/local/lib/glib-2.0/include -DHAVE_CONFIG_H
-//
-//  Make sure that the resulting shared object file (dynamic library) produces
-//  the following output from the "file" function:
-//  $ file myplugin.so
-//  Linux:
-//  myplugin.so: ELF 64-bit LSB shared object, x86-64, version 1 (SYSV), dynamically linked, with debug_info, not stripped
-//  MacOS:
-//  myplugin.so: Mach-O 64-bit dynamically linked shared library x86_64
-//
-//
+/*
+ *  mod_snapping.c
+ *
+ *  A plugin to change the snapping behavior when a modifier key is pressed.
+ *
+ *  Created by Parker, Charles W. on 7/11/18.
+ *
+ *  Build from pcb/src with:
+ *  Linux:
+ *  gcc -fPIC -shared -o myplugin.so \
+ *       myplugin.c -I.. -I/opt/local/include/glib-2.0 \
+ *       -I/opt/local/lib/glib-2.0/include -DHAVE_CONFIG_H
+ *  MacOS:
+ *  gcc -fPIC -dynamiclib -Wl,-undefined,dynamic_lookup -o myplugin.so \
+ *       myplugin.c -I.. -I/opt/local/include/glib-2.0 \
+ *       -I/opt/local/lib/glib-2.0/include -DHAVE_CONFIG_H
+ *
+ *  Make sure that the resulting shared object file (dynamic library) produces
+ *  the following output from the "file" function:
+ *  $ file myplugin.so
+ *  Linux:
+ *  myplugin.so: ELF 64-bit LSB shared object, x86-64, version 1 (SYSV), dynamically linked, with debug_info, not stripped
+ *  MacOS:
+ *  myplugin.so: Mach-O 64-bit dynamically linked shared library x86_64
+ *
+ */
 
 #include <stdio.h>
 
@@ -139,6 +139,8 @@ static int mod_snapping_initialized = 0;
 
 static gulong mod_snap_key_press_handler;
 static gulong mod_snap_key_release_handler;
+
+void mod_snapping_plugin_init();
 
 static const char mod_snap_enable_help[] = "Enable or disable the mod_snap plugin";
 static const char mod_snap_enable_syntax[] = "ModSnapEnable(true|false)";
