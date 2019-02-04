@@ -298,7 +298,7 @@ Export layers in the order shown on screen.
 */
   {"screen-layer-order", "Export layers in the order shown on screen",
    HID_Boolean, 0, 0, {0, 0, 0}, 0, 0},
-#define HA_as_shown 5
+#define HA_screen_layer_order 5
 
 /* %start-doc options "93 PNG Options"
 @ftable @code
@@ -542,6 +542,9 @@ parse_bloat (const char *str)
   bloat = GetValueEx (str, NULL, NULL, extra_units, "");
 }
 
+/*!
+ * \brief Setup png export parameters, and write output file
+ */
 void
 png_hid_export_to_file (FILE * the_file, HID_Attr_Val * options)
 {
@@ -558,6 +561,7 @@ png_hid_export_to_file (FILE * the_file, HID_Attr_Val * options)
   region.X2 = PCB->MaxWidth;
   region.Y2 = PCB->MaxHeight;
 
+  /* If we're only outputting the visible area... */
   if (options[HA_only_visible].int_value)
     bounds = GetDataBoundingBox (PCB->Data);    
   else
@@ -566,76 +570,96 @@ png_hid_export_to_file (FILE * the_file, HID_Attr_Val * options)
   memset (print_group, 0, sizeof (print_group));
   memset (print_layer, 0, sizeof (print_layer));
 
+  /* If there's anything on a particular layer, flag that group to be drawn. */
   for (i = 0; i < max_copper_layer; i++)
-    {
-      LayerType *layer = PCB->Data->Layer + i;
-      if (layer->LineN || layer->TextN || layer->ArcN || layer->PolygonN)
-	print_group[GetLayerGroupNumberByNumber (i)] = 1;
-    }
+  {
+    LayerType *layer = PCB->Data->Layer + i;
+    if (layer->LineN || layer->TextN || layer->ArcN || layer->PolygonN)
+	    print_group[GetLayerGroupNumberByNumber (i)] = 1;
+  }
+  /* We'll always draw the top and bottom layers. */
   print_group[GetLayerGroupNumberBySide (BOTTOM_SIDE)] = 1;
   print_group[GetLayerGroupNumberBySide (TOP_SIDE)] = 1;
+  
+  /* Now flag all the layers in each layer group that we're going to draw. */
   for (i = 0; i < max_copper_layer; i++)
     if (print_group[GetLayerGroupNumberByNumber (i)])
       print_layer[i] = 1;
 
+  /* Save state */
   memcpy (saved_layer_stack, LayerStack, sizeof (LayerStack));
   save_flags = PCB->Flags;
   saved_show_bottom_side = Settings.ShowBottomSide;
 
-  as_shown = options[HA_as_shown].int_value;
+  as_shown = options[HA_screen_layer_order].int_value;
   fill_holes = options[HA_fill_holes].int_value;
 
-  if (!options[HA_as_shown].int_value)
-    {
-      CLEAR_FLAG (SHOWMASKFLAG, PCB);
-      Settings.ShowBottomSide = 0;
+  /* If we're exporting in physical order. */
+  if (!options[HA_screen_layer_order].int_value)
+  {
+    /* Turn off the soldermask. */
+    CLEAR_FLAG (SHOWMASKFLAG, PCB);
+    Settings.ShowBottomSide = 0;
 
-      top_group = GetLayerGroupNumberBySide (TOP_SIDE);
-      bottom_group = GetLayerGroupNumberBySide (BOTTOM_SIDE);
-      qsort (LayerStack, max_copper_layer, sizeof (LayerStack[0]), layer_stack_sort);
+    /* Rebuild the layer stack in the physical order. */
+    top_group = GetLayerGroupNumberBySide (TOP_SIDE);
+    bottom_group = GetLayerGroupNumberBySide (BOTTOM_SIDE);
+    qsort (LayerStack, max_copper_layer, sizeof (LayerStack[0]), layer_stack_sort);
 
-      CLEAR_FLAG(THINDRAWFLAG, PCB);
-      CLEAR_FLAG(THINDRAWPOLYFLAG, PCB);
+    /* Turn of thin drawing. */
+    CLEAR_FLAG(THINDRAWFLAG, PCB);
+    CLEAR_FLAG(THINDRAWPOLYFLAG, PCB);
 
-      if (photo_mode)
-	{
-	  int i, n=0;
-	  SET_FLAG (SHOWMASKFLAG, PCB);
-	  photo_has_inners = 0;
-	  if (top_group < bottom_group)
-	    for (i = top_group; i <= bottom_group; i++)
+    if (photo_mode)
+	  {
+	    int i, n=0;
+	    SET_FLAG (SHOWMASKFLAG, PCB);
+      
+      /* Look through all the inner layers groups to see if we have to
+       * draw any
+       * */
+	    photo_has_inners = 0;
+	    if (top_group < bottom_group)
+	      for (i = top_group; i <= bottom_group; i++)
 	      {
-		photo_groups[n++] = i;
-		if (i != top_group && i != bottom_group
-		    && ! IsLayerGroupEmpty (i))
-		  photo_has_inners = 1;
+		      photo_groups[n++] = i;
+		      if (i != top_group && i != bottom_group && ! IsLayerGroupEmpty (i))
+		        photo_has_inners = 1;
 	      }
-	  else
-	    for (i = top_group; i >= bottom_group; i--)
+      
+      else
+	      for (i = top_group; i >= bottom_group; i--)
 	      {
-		photo_groups[n++] = i;
-		if (i != top_group && i != bottom_group
-		    && ! IsLayerGroupEmpty (i))
-		  photo_has_inners = 1;
+		      photo_groups[n++] = i;
+		      if (i != top_group && i != bottom_group && ! IsLayerGroupEmpty (i))
+		        photo_has_inners = 1;
 	      }
-	  if (!photo_has_inners)
+      /* end if (top_group < bottom_group) */
+      
+      /* If there are no inner layers to draw, then just draw the top and
+       * bottom groups.
+       * */
+	    if (!photo_has_inners)
 	    {
 	      photo_groups[1] = photo_groups[n - 1];
 	      n = 2;
 	    }
-	  photo_ngroups = n;
-
-	  if (photo_flip)
+	    photo_ngroups = n;
+      
+      /* If we're rendering the bottom side, then reverse the order.
+       * */
+	    if (photo_flip)
 	    {
 	      for (i=0, n=photo_ngroups-1; i<n; i++, n--)
-		{
-		  int tmp = photo_groups[i];
-		  photo_groups[i] = photo_groups[n];
-		  photo_groups[n] = tmp;
-		}
+		    {
+		      int tmp = photo_groups[i];
+		      photo_groups[i] = photo_groups[n];
+		      photo_groups[n] = tmp;
+		    }
       } // end if (photo_flip)
-  } // end if (photo_mode)
-    } // end if (!options[HA_as_shown].int_value)
+    } // end if (photo_mode)
+  } // end if (!options[HA_screen_layer_order].int_value)
+  
   linewidth = -1;
   lastbrush = (gdImagePtr)((void *) -1);
   lastcap = -1;
@@ -644,19 +668,24 @@ png_hid_export_to_file (FILE * the_file, HID_Attr_Val * options)
 
   in_mono = options[HA_mono].int_value;
 
+  /* If we're not in photomode, and we're supposed to draw the bottom, we still
+   * have to reverse the layer order.
+   * */
   if (!photo_mode && Settings.ShowBottomSide)
-    {
-      int i, j;
-      for (i=0, j=max_copper_layer-1; i<j; i++, j--)
-	{
-	  int k = LayerStack[i];
-	  LayerStack[i] = LayerStack[j];
-	  LayerStack[j] = k;
-	}
-    }
+  {
+    int i, j;
+    for (i=0, j=max_copper_layer-1; i<j; i++, j--)
+	  {
+	    int k = LayerStack[i];
+	    LayerStack[i] = LayerStack[j];
+	    LayerStack[j] = k;
+	  }
+  }
 
+  /* Now call the core routine that does all the actual drawing. */
   hid_expose_callback (&png_hid, bounds, 0);
 
+  /* Restore state. */
   memcpy (LayerStack, saved_layer_stack, sizeof (LayerStack));
   PCB->Flags = save_flags;
   Settings.ShowBottomSide = saved_show_bottom_side;
@@ -795,165 +824,165 @@ png_do_export (HID_Attr_Val * options)
   bool format_error = false;
 
   if (color_cache)
-    {
-      free (color_cache);
-      color_cache = NULL;
-    }
-
+  {
+    free (color_cache);
+    color_cache = NULL;
+  }
+  
   if (brush_cache)
-    {
-      free (brush_cache);
-      brush_cache = NULL;
-    }
-
+  {
+    free (brush_cache);
+    brush_cache = NULL;
+  }
+  
   if (!options)
-    {
-      png_get_export_options (0);
-      for (i = 0; i < NUM_OPTIONS; i++)
-	png_values[i] = png_attribute_list[i].default_val;
-      options = png_values;
-    }
-
+  {
+    png_get_export_options (0);
+    for (i = 0; i < NUM_OPTIONS; i++)
+      png_values[i] = png_attribute_list[i].default_val;
+    options = png_values;
+  }
+  
   if (options[HA_photo_mode].int_value
       || options[HA_ben_mode].int_value)
-    {
-      photo_mode = 1;
-      options[HA_mono].int_value = 1;
-      options[HA_as_shown].int_value = 0;
-      memset (photo_copper, 0, sizeof(photo_copper));
-      photo_silk = photo_mask = photo_drill = 0;
-      photo_outline = 0;
-      if (options[HA_photo_flip_x].int_value
-	  || options[HA_ben_flip_x].int_value)
-	photo_flip = PHOTO_FLIP_X;
-      else if (options[HA_photo_flip_y].int_value
-	       || options[HA_ben_flip_y].int_value)
-	photo_flip = PHOTO_FLIP_Y;
-      else
-	photo_flip = 0;
-    }
+  {
+    photo_mode = 1;
+    options[HA_mono].int_value = 1;
+    options[HA_screen_layer_order].int_value = 0;
+    memset (photo_copper, 0, sizeof(photo_copper));
+    photo_silk = photo_mask = photo_drill = 0;
+    photo_outline = 0;
+    if (options[HA_photo_flip_x].int_value
+        || options[HA_ben_flip_x].int_value)
+      photo_flip = PHOTO_FLIP_X;
+    else if (options[HA_photo_flip_y].int_value
+             || options[HA_ben_flip_y].int_value)
+      photo_flip = PHOTO_FLIP_Y;
+    else
+      photo_flip = 0;
+  }
   else
     photo_mode = 0;
-
+  
   filename = options[HA_pngfile].str_value;
   if (!filename)
     filename = "pcb-out.png";
-
+  
   /* figure out width and height of the board */
   if (options[HA_only_visible].int_value)
+  {
+    bbox = GetDataBoundingBox (PCB->Data);
+    if (bbox == NULL)
     {
-      bbox = GetDataBoundingBox (PCB->Data);
-      if (bbox == NULL)
-        {
-          fprintf (stderr, _("ERROR:  Unable to determine bounding box limits\n"));
-          fprintf (stderr, _("ERROR:  Does the file contain any data?\n"));
-          return;
-        }
-      x_shift = bbox->X1;
-      y_shift = bbox->Y1;
-      h = bbox->Y2 - bbox->Y1;
-      w = bbox->X2 - bbox->X1;
+      fprintf (stderr, _("ERROR:  Unable to determine bounding box limits\n"));
+      fprintf (stderr, _("ERROR:  Does the file contain any data?\n"));
+      return;
     }
+    x_shift = bbox->X1;
+    y_shift = bbox->Y1;
+    h = bbox->Y2 - bbox->Y1;
+    w = bbox->X2 - bbox->X1;
+  }
   else
-    {
-      x_shift = 0;
-      y_shift = 0;
-      h = PCB->MaxHeight;
-      w = PCB->MaxWidth;
-    }
-
+  {
+    x_shift = 0;
+    y_shift = 0;
+    h = PCB->MaxHeight;
+    w = PCB->MaxWidth;
+  }
+  
   /*
    * figure out the scale factor we need to make the image
    * fit in our specified PNG file size
    */
   xmax = ymax = dpi = 0;
   if (options[HA_dpi].int_value != 0)
+  {
+    dpi = options[HA_dpi].int_value;
+    if (dpi < 0)
     {
-      dpi = options[HA_dpi].int_value;
-      if (dpi < 0)
-	{
-	  fprintf (stderr, "ERROR:  dpi may not be < 0\n");
-	  return;
-	}
+      fprintf (stderr, "ERROR:  dpi may not be < 0\n");
+      return;
     }
-
+  }
+  
   if (options[HA_xmax].int_value > 0)
-    {
-      xmax = options[HA_xmax].int_value;
-      dpi = 0;
-    }
-
+  {
+    xmax = options[HA_xmax].int_value;
+    dpi = 0;
+  }
+  
   if (options[HA_ymax].int_value > 0)
-    {
-      ymax = options[HA_ymax].int_value;
-      dpi = 0;
-    }
-
+  {
+    ymax = options[HA_ymax].int_value;
+    dpi = 0;
+  }
+  
   if (options[HA_xymax].int_value > 0)
-    {
-      dpi = 0;
-      if (options[HA_xymax].int_value < xmax || xmax == 0)
-	xmax = options[HA_xymax].int_value;
-      if (options[HA_xymax].int_value < ymax || ymax == 0)
-	ymax = options[HA_xymax].int_value;
-    }
-
+  {
+    dpi = 0;
+    if (options[HA_xymax].int_value < xmax || xmax == 0)
+      xmax = options[HA_xymax].int_value;
+    if (options[HA_xymax].int_value < ymax || ymax == 0)
+      ymax = options[HA_xymax].int_value;
+  }
+  
   if (xmax < 0 || ymax < 0)
-    {
-      fprintf (stderr, "ERROR:  xmax and ymax may not be < 0\n");
-      return;
-    }
-    
+  {
+    fprintf (stderr, "ERROR:  xmax and ymax may not be < 0\n");
+    return;
+  }
+  
   if (dpi > 0)
-    {
-      /*
-       * a scale of 1  means 1 pixel is 1 inch
-       * a scale of 10 means 1 pixel is 10 inches
-       */
-      scale = round(INCH_TO_COORD(1) / (double) dpi);
-      w = w / scale;
-      h = h / scale;
-    }
+  {
+    /*
+     * a scale of 1  means 1 pixel is 1 inch
+     * a scale of 10 means 1 pixel is 10 inches
+     */
+    scale = round(INCH_TO_COORD(1) / (double) dpi);
+    w = w / scale;
+    h = h / scale;
+  }
   else if( xmax == 0 && ymax == 0)
-    {
-      fprintf(stderr, "ERROR:  You may not set both xmax, ymax,"
-	      "and xy-max to zero\n");
-      return;
-    }
+  {
+    fprintf(stderr, "ERROR:  You may not set both xmax, ymax,"
+            "and xy-max to zero\n");
+    return;
+  }
   else
+  {
+    if (ymax == 0
+        || ( (xmax > 0)
+            && ((w / xmax) > (h / ymax)) ) )
     {
-      if (ymax == 0 
-	  || ( (xmax > 0) 
-	       && ((w / xmax) > (h / ymax)) ) )
-	{
-	  scale = w / xmax;
-	  h = h / scale;
-	  w = xmax;
-	}
-      else
-	{
-	  scale = h / ymax;
-	  w = w / scale;
-	  h = ymax;
-	}
+      scale = w / xmax;
+      h = h / scale;
+      w = xmax;
     }
-
+    else
+    {
+      scale = h / ymax;
+      w = w / scale;
+      h = ymax;
+    }
+  }
+  
   im = gdImageCreate (w, h);
-  if (im == NULL) 
-    {
-      Message ("%s():  gdImageCreate(%d, %d) returned NULL.  Aborting export.\n", __FUNCTION__, w, h);
-      return;
-    }
+  if (im == NULL)
+  {
+    Message ("%s():  gdImageCreate(%d, %d) returned NULL.  Aborting export.\n", __FUNCTION__, w, h);
+    return;
+  }
   
   master_im = im;
-
+  
   parse_bloat (options[HA_bloat].str_value);
-
-  /* 
+  
+  /*
    * Allocate white and black -- the first color allocated
    * becomes the background color
    */
-
+  
   white = (color_struct *) malloc (sizeof (color_struct));
   white->r = white->g = white->b = 255;
   if (options[HA_use_alpha].int_value)
@@ -961,240 +990,243 @@ png_do_export (HID_Attr_Val * options)
   else
     white->a = 0;
   white->c = gdImageColorAllocateAlpha (im, white->r, white->g, white->b, white->a);
-  if (white->c == BADC) 
-    {
-      Message ("%s():  gdImageColorAllocateAlpha() returned NULL.  Aborting export.\n", __FUNCTION__);
-      return;
-    }
-
+  if (white->c == BADC)
+  {
+    Message ("%s():  gdImageColorAllocateAlpha() returned NULL.  Aborting export.\n", __FUNCTION__);
+    return;
+  }
+  
   gdImageFilledRectangle (im, 0, 0, gdImageSX (im), gdImageSY (im), white->c);
-
+  
   black = (color_struct *) malloc (sizeof (color_struct));
   black->r = black->g = black->b = black->a = 0;
   black->c = gdImageColorAllocate (im, black->r, black->g, black->b);
-  if (black->c == BADC) 
-    {
-      Message ("%s():  gdImageColorAllocateAlpha() returned NULL.  Aborting export.\n", __FUNCTION__);
-      return;
-    }
-
+  if (black->c == BADC)
+  {
+    Message ("%s():  gdImageColorAllocateAlpha() returned NULL.  Aborting export.\n", __FUNCTION__);
+    return;
+  }
+  
   f = fopen (filename, "wb");
   if (!f)
-    {
-      perror (filename);
-      return;
-    }
-
-  if (!options[HA_as_shown].int_value)
+  {
+    perror (filename);
+    return;
+  }
+  
+  /* Save the current layer stack if we're going to change it. */
+  if (!options[HA_screen_layer_order].int_value)
     hid_save_and_show_layer_ons (save_ons);
-
+  
   png_hid_export_to_file (f, options);
-
-  if (!options[HA_as_shown].int_value)
+  
+  /* Restore the layer stack. */
+  if (!options[HA_screen_layer_order].int_value)
     hid_restore_layer_ons (save_ons);
-
+  
+  /* If we're in photo mode, add all the shadows/highlights. */
   if (photo_mode)
-    {
-      int x, y;
-      color_struct white, black, fr4;
-
-      rgb (&white, 255, 255, 255);
-      rgb (&black, 0, 0, 0);
-      rgb (&fr4, 70, 70, 70);
-
-      im = master_im;
-
-      if (photo_copper[photo_groups[0]])
-        ts_bs (photo_copper[photo_groups[0]]);
-      if (photo_silk)
-        ts_bs (photo_silk);
-      if (photo_mask)
-        ts_bs_sm (photo_mask);
-
-      if (photo_outline && have_outline) {
-	int black=gdImageColorResolve(photo_outline, 0x00, 0x00, 0x00);
-
-	// go all the way around the image, trying to fill the outline
-	for (x=0; x<gdImageSX(im); x++) {
-	  gdImageFillToBorder(photo_outline, x, 0, black, black);
-	  gdImageFillToBorder(photo_outline, x, gdImageSY(im)-1, black, black);
-	}
-	for (y=1; y<gdImageSY(im)-1; y++) {
-	  gdImageFillToBorder(photo_outline, 0, y, black, black);
-	  gdImageFillToBorder(photo_outline, gdImageSX(im)-1, y, black, black);
-
-	}
+  {
+    int x, y;
+    color_struct white, black, fr4;
+    
+    rgb (&white, 255, 255, 255);
+    rgb (&black, 0, 0, 0);
+    rgb (&fr4, 70, 70, 70);
+    
+    im = master_im;
+    
+    if (photo_copper[photo_groups[0]])
+      ts_bs (photo_copper[photo_groups[0]]);
+    if (photo_silk)
+      ts_bs (photo_silk);
+    if (photo_mask)
+      ts_bs_sm (photo_mask);
+    
+    if (photo_outline && have_outline) {
+      int black=gdImageColorResolve(photo_outline, 0x00, 0x00, 0x00);
+      
+      // go all the way around the image, trying to fill the outline
+      for (x=0; x<gdImageSX(im); x++) {
+        gdImageFillToBorder(photo_outline, x, 0, black, black);
+        gdImageFillToBorder(photo_outline, x, gdImageSY(im)-1, black, black);
       }
-
-
-      for (x=0; x<gdImageSX (im); x++) 
-	{
-	  for (y=0; y<gdImageSY (im); y++)
-	    {
-	      color_struct p, cop;
-	      color_struct mask_colour, silk_colour;
-	      int cc, mask, silk;
-	      int transparent;
-	     
-	      if (photo_outline && have_outline) {
-		transparent=gdImageGetPixel(photo_outline, x, y);	      
-	      } else {
-		transparent=0;
-	      }
-
-	      mask = photo_mask ? gdImageGetPixel (photo_mask, x, y) : 0;
-	      silk = photo_silk ? gdImageGetPixel (photo_silk, x, y) : 0;
-
-	      if (photo_copper[photo_groups[1]]
-		  && gdImageGetPixel (photo_copper[photo_groups[1]], x, y))
-		rgb (&cop, 40, 40, 40);
-	      else
-		rgb (&cop, 100, 100, 110);
-
-	      if (photo_ngroups == 2)
-		blend (&cop, 0.3, &cop, &fr4);
-	      
-              if (photo_copper[photo_groups[0]])
-                cc = gdImageGetPixel (photo_copper[photo_groups[0]], x, y);
-              else
-                cc = 0;
-
-	      if (cc)
-		{
-		  int r;
-		  
-		  if (mask)
-		    rgb (&cop, 220, 145, 230);
-		  else
-		    {
-		      if (options[HA_photo_plating].int_value == PLATING_GOLD)
-			{
-			  // ENIG
-			  rgb (&cop, 185, 146, 52);
-
-			  // increase top shadow to increase shininess
-			  if (cc == TOP_SHADOW)
-			    blend (&cop, 0.7, &cop, &white);
-			}
-		      else if (options[HA_photo_plating].int_value == PLATING_TIN)
-			{
-			  // tinned
-			  rgb (&cop, 140, 150, 160);
-
-			  // add some variation to make it look more matte
-			  r = (rand() % 5 - 2) * 2;
-			  cop.r += r;
-			  cop.g += r;
-			  cop.b += r;
-			}
-		      else if (options[HA_photo_plating].int_value == PLATING_SILVER)
-			{
-			  // silver
-			  rgb (&cop, 192, 192, 185);
-
-			  // increase top shadow to increase shininess
-			  if (cc == TOP_SHADOW)
-			    blend (&cop, 0.7, &cop, &white);
-			}
-		      else if (options[HA_photo_plating].int_value == PLATING_COPPER)
-			{
-			  // copper
-			  rgb (&cop, 184, 115, 51);
-
-			  // increase top shadow to increase shininess
-			  if (cc == TOP_SHADOW)
-			    blend (&cop, 0.7, &cop, &white);
-			}
-		    }
-		  
-		  if (cc == TOP_SHADOW)
-		    blend (&cop, 0.7, &cop, &white);
-		  if (cc == BOTTOM_SHADOW)
-		    blend (&cop, 0.7, &cop, &black);
-		}
-
-	      if (photo_drill && !gdImageGetPixel (photo_drill, x, y)) 
-		{		
-		  rgb (&p, 0, 0, 0);
-		  transparent=1;
-		}
-	      else if (silk)
-		{
-		  silk_colour = silk_colours[options[HA_photo_silk_colour].int_value];
-		  blend (&p, 1.0, &silk_colour, &silk_colour);
-		  if (silk == TOP_SHADOW)
-		    add (&p, 1.0, &p, 1.0, &silk_top_shadow);
-		  else if (silk == BOTTOM_SHADOW)
-		    subtract (&p, 1.0, &p, 1.0, &silk_bottom_shadow);
-		}
-	      else if (mask)
-		{
-		  p = cop;
-		  mask_colour = mask_colours[options[HA_photo_mask_colour].int_value];
-		  multiply (&p, &p, &mask_colour);
-		  add (&p, 1, &p, 0.2, &mask_colour);
-		  if (mask == TOP_SHADOW)
-		    blend (&p, 0.7, &p, &white);
-		  if (mask == BOTTOM_SHADOW)
-		    blend (&p, 0.7, &p, &black);
-		}
-	      else
-		p = cop;
-	      
-	      if (options[HA_use_alpha].int_value) {
-
-		cc = (transparent)?\
-		  gdImageColorResolveAlpha(im, 0, 0, 0, 127):\
-		  gdImageColorResolveAlpha(im, p.r, p.g, p.b, 0);
-
-	      } else {
-		cc = (transparent)?\
-		  gdImageColorResolve(im, 0, 0, 0):\
-		  gdImageColorResolve(im, p.r, p.g, p.b);
-	      }		  
-
-	      if (photo_flip == PHOTO_FLIP_X)
-		gdImageSetPixel (im, gdImageSX (im) - x - 1, y, cc);
-	      else if (photo_flip == PHOTO_FLIP_Y)
-		gdImageSetPixel (im, x, gdImageSY (im) - y - 1, cc);
-	      else
-		gdImageSetPixel (im, x, y, cc);
-	    }
-	}
+      for (y=1; y<gdImageSY(im)-1; y++) {
+        gdImageFillToBorder(photo_outline, 0, y, black, black);
+        gdImageFillToBorder(photo_outline, gdImageSX(im)-1, y, black, black);
+        
+      }
     }
-
+    
+    
+    for (x=0; x<gdImageSX (im); x++)
+    {
+      for (y=0; y<gdImageSY (im); y++)
+      {
+        color_struct p, cop;
+        color_struct mask_colour, silk_colour;
+        int cc, mask, silk;
+        int transparent;
+        
+        if (photo_outline && have_outline) {
+          transparent=gdImageGetPixel(photo_outline, x, y);
+        } else {
+          transparent=0;
+        }
+        
+        mask = photo_mask ? gdImageGetPixel (photo_mask, x, y) : 0;
+        silk = photo_silk ? gdImageGetPixel (photo_silk, x, y) : 0;
+        
+        if (photo_copper[photo_groups[1]]
+            && gdImageGetPixel (photo_copper[photo_groups[1]], x, y))
+          rgb (&cop, 40, 40, 40);
+        else
+          rgb (&cop, 100, 100, 110);
+        
+        if (photo_ngroups == 2)
+          blend (&cop, 0.3, &cop, &fr4);
+        
+        if (photo_copper[photo_groups[0]])
+          cc = gdImageGetPixel (photo_copper[photo_groups[0]], x, y);
+        else
+          cc = 0;
+        
+        if (cc)
+        {
+          int r;
+          
+          if (mask)
+            rgb (&cop, 220, 145, 230);
+          else
+          {
+            if (options[HA_photo_plating].int_value == PLATING_GOLD)
+            {
+              // ENIG
+              rgb (&cop, 185, 146, 52);
+              
+              // increase top shadow to increase shininess
+              if (cc == TOP_SHADOW)
+                blend (&cop, 0.7, &cop, &white);
+            }
+            else if (options[HA_photo_plating].int_value == PLATING_TIN)
+            {
+              // tinned
+              rgb (&cop, 140, 150, 160);
+              
+              // add some variation to make it look more matte
+              r = (rand() % 5 - 2) * 2;
+              cop.r += r;
+              cop.g += r;
+              cop.b += r;
+            }
+            else if (options[HA_photo_plating].int_value == PLATING_SILVER)
+            {
+              // silver
+              rgb (&cop, 192, 192, 185);
+              
+              // increase top shadow to increase shininess
+              if (cc == TOP_SHADOW)
+                blend (&cop, 0.7, &cop, &white);
+            }
+            else if (options[HA_photo_plating].int_value == PLATING_COPPER)
+            {
+              // copper
+              rgb (&cop, 184, 115, 51);
+              
+              // increase top shadow to increase shininess
+              if (cc == TOP_SHADOW)
+                blend (&cop, 0.7, &cop, &white);
+            }
+          }
+          
+          if (cc == TOP_SHADOW)
+            blend (&cop, 0.7, &cop, &white);
+          if (cc == BOTTOM_SHADOW)
+            blend (&cop, 0.7, &cop, &black);
+        }
+        
+        if (photo_drill && !gdImageGetPixel (photo_drill, x, y))
+        {
+          rgb (&p, 0, 0, 0);
+          transparent=1;
+        }
+        else if (silk)
+        {
+          silk_colour = silk_colours[options[HA_photo_silk_colour].int_value];
+          blend (&p, 1.0, &silk_colour, &silk_colour);
+          if (silk == TOP_SHADOW)
+            add (&p, 1.0, &p, 1.0, &silk_top_shadow);
+          else if (silk == BOTTOM_SHADOW)
+            subtract (&p, 1.0, &p, 1.0, &silk_bottom_shadow);
+        }
+        else if (mask)
+        {
+          p = cop;
+          mask_colour = mask_colours[options[HA_photo_mask_colour].int_value];
+          multiply (&p, &p, &mask_colour);
+          add (&p, 1, &p, 0.2, &mask_colour);
+          if (mask == TOP_SHADOW)
+            blend (&p, 0.7, &p, &white);
+          if (mask == BOTTOM_SHADOW)
+            blend (&p, 0.7, &p, &black);
+        }
+        else
+          p = cop;
+        
+        if (options[HA_use_alpha].int_value) {
+          
+          cc = (transparent)?\
+          gdImageColorResolveAlpha(im, 0, 0, 0, 127):\
+          gdImageColorResolveAlpha(im, p.r, p.g, p.b, 0);
+          
+        } else {
+          cc = (transparent)?\
+          gdImageColorResolve(im, 0, 0, 0):\
+          gdImageColorResolve(im, p.r, p.g, p.b);
+        }
+        
+        if (photo_flip == PHOTO_FLIP_X)
+          gdImageSetPixel (im, gdImageSX (im) - x - 1, y, cc);
+        else if (photo_flip == PHOTO_FLIP_Y)
+          gdImageSetPixel (im, x, gdImageSY (im) - y - 1, cc);
+        else
+          gdImageSetPixel (im, x, y, cc);
+      }
+    }
+  } /* if photo_mode */
+  
   /* actually write out the image */
   fmt = filetypes[options[HA_filetype].int_value];
-
+  
   if (fmt == NULL)
     format_error = true;
   else if (strcmp (fmt, FMT_gif) == 0)
 #ifdef HAVE_GDIMAGEGIF
     gdImageGif (im, f);
 #else
-    format_error = true;
+  format_error = true;
 #endif
   else if (strcmp (fmt, FMT_jpg) == 0)
 #ifdef HAVE_GDIMAGEJPEG
     gdImageJpeg (im, f, -1);
 #else
-    format_error = true;
+  format_error = true;
 #endif
   else if (strcmp (fmt, FMT_png) == 0)
 #ifdef HAVE_GDIMAGEPNG
     gdImagePng (im, f);
 #else
-    format_error = true;
+  format_error = true;
 #endif
   else
     format_error = true;
-
+  
   if (format_error)
     fprintf (stderr, "Error:  Invalid graphic file format."
-                     "  This is a bug.  Please report it.\n");
-
+             "  This is a bug.  Please report it.\n");
+  
   fclose (f);
-
+  
   gdImageDestroy (im);
 }
 

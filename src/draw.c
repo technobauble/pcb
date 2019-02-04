@@ -430,23 +430,22 @@ hole_callback (const BoxType * b, void *cl)
     hi = (hole_info *)cl;
 
   if (hi->drill_pair)
-    {
-      if (hi->group_from != 0
-          || hi->group_to != 0)
-	{
-          if (VIA_IS_BURIED (pv))
-            {
-              if (hi->group_from == GetLayerGroupNumberByNumber (pv->BuriedFrom)
-                  && hi->group_to == GetLayerGroupNumberByNumber (pv->BuriedTo))
+  {
+    if (hi->group_from != 0 || hi->group_to != 0)
+	  {
+      if (VIA_IS_BURIED (pv))
+      {
+        if (hi->group_from == GetLayerGroupNumberByNumber (pv->BuriedFrom)
+           && hi->group_to == GetLayerGroupNumberByNumber (pv->BuriedTo))
 	        goto via_ok;
 	    }
-	}
-      else
-        if (!VIA_IS_BURIED (pv))
-	  goto via_ok;
-
-      return 1;
-    }
+	  }
+    else
+      if (!VIA_IS_BURIED (pv))
+	      goto via_ok;
+    
+    return 1;
+  }
 
 via_ok:
   if ((hi->plated == 0 && !TEST_FLAG (HOLEFLAG, pv)) ||
@@ -457,40 +456,42 @@ via_ok:
      return 1;
 
   if (TEST_FLAG (THINDRAWFLAG, PCB))
+  {
+    if (!TEST_FLAG (HOLEFLAG, pv))
     {
-      if (!TEST_FLAG (HOLEFLAG, pv))
-        {
-          gui->graphics->set_line_cap (Output.fgGC, Round_Cap);
-          gui->graphics->set_line_width (Output.fgGC, 0);
-          gui->graphics->draw_arc (Output.fgGC,
-                                   pv->X, pv->Y, pv->DrillingHole / 2,
-                                   pv->DrillingHole / 2, 0, 360);
-        }
-    }
-  else
-    if (ViaIsOnAnyVisibleLayer (pv))
-      gui->graphics->fill_circle (Output.bgGC, pv->X, pv->Y, pv->DrillingHole / 2);
-    else
-      {
-          gui->graphics->set_line_cap (Output.fgGC, Round_Cap);
-          gui->graphics->set_line_width (Output.fgGC, 0);
-          gui->graphics->draw_arc (Output.fgGC,
-                                   pv->X, pv->Y, pv->DrillingHole / 2,
-                                   pv->DrillingHole / 2, 0, 360);
-      }
-
-  if (TEST_FLAG (HOLEFLAG, pv))
-    {
-      set_object_color ((AnyObjectType *) pv,
-                        PCB->WarnColor, PCB->ViaSelectedColor,
-                        NULL, NULL, Settings.BlackColor);
-
       gui->graphics->set_line_cap (Output.fgGC, Round_Cap);
       gui->graphics->set_line_width (Output.fgGC, 0);
       gui->graphics->draw_arc (Output.fgGC,
                                pv->X, pv->Y, pv->DrillingHole / 2,
                                pv->DrillingHole / 2, 0, 360);
     }
+  }
+  else /* Not thin drawing */
+  {
+    if (ViaIsOnAnyVisibleLayer (pv))
+      gui->graphics->fill_circle (Output.bgGC, pv->X, pv->Y, pv->DrillingHole / 2);
+    else
+    {
+      gui->graphics->set_line_cap (Output.fgGC, Round_Cap);
+      gui->graphics->set_line_width (Output.fgGC, 0);
+      gui->graphics->draw_arc (Output.fgGC,
+                               pv->X, pv->Y, pv->DrillingHole / 2,
+                               pv->DrillingHole / 2, 0, 360);
+    }
+  }
+
+  if (TEST_FLAG (HOLEFLAG, pv))
+  {
+    set_object_color ((AnyObjectType *) pv,
+                      PCB->WarnColor, PCB->ViaSelectedColor,
+                      NULL, NULL, Settings.BlackColor);
+
+    gui->graphics->set_line_cap (Output.fgGC, Round_Cap);
+    gui->graphics->set_line_width (Output.fgGC, 0);
+    gui->graphics->draw_arc (Output.fgGC,
+                             pv->X, pv->Y, pv->DrillingHole / 2,
+                             pv->DrillingHole / 2, 0, 360);
+  }
   return 1;
 }
 
@@ -689,18 +690,21 @@ DrawEverything (const BoxType *drawn_area)
     {
       CountHoles (&plated, &unplated, drawn_area);
 
+      /* Draw all of the normal plated holes. */
       if (plated && gui->set_layer ("plated-drill", SL (PDRILL, 0), 0))
         {
           DrawHoles (true, false, drawn_area, 0, 0);
           gui->end_layer ();
         }
 
+      /* Draw all of the normal unplated holes. */
       if (unplated && gui->set_layer ("unplated-drill", SL (UDRILL, 0), 0))
         {
           DrawHoles (false, true, drawn_area, 0, 0);
           gui->end_layer ();
         }
 
+      /* Draw all of the blind/buried vias. */
       for (g_from = 0; g_from < (max_group - 1); g_from++)
         for (g_to = g_from+1 ; g_to < max_group; g_to++ )
 	  {
@@ -712,6 +716,7 @@ DrawEverything (const BoxType *drawn_area)
                 gui->end_layer ();
               }
 
+      /* Is an unplated blind/buried via a thing? */
 	    sprintf (s, "unplated-drill_%02d-%02d", g_from+1, g_to+1);
             if (unplated && gui->set_layer (s, SL (UDRILL, 0), 0))
               {
