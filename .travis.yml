@@ -1,0 +1,46 @@
+language: c
+
+compiler: gcc
+
+os:
+  - linux
+#  - osx
+
+branches:
+  - master
+  - travis-ci
+  - /^pcb-.*-RELEASE/
+  - /^LP.*/
+  - /home\/cparker\/.*  
+
+addons:
+  apt:
+    packages: 
+      - gettext 
+      - autopoint 
+      - intltool 
+      - libgtk2.0-dev 
+      - libgtkglext1-dev 
+      - libgd-dev
+      - gerbv
+  homebrew:
+    packages:
+      - gettext
+      - autoconf
+      - autogen
+      - intltool
+      - gtk+
+      - gtkglext
+      - gd
+      - gerbv
+
+before_script:
+  - ./autogen.sh
+
+script:
+  - ./configure --disable-doc --disable-dbus --disable-update-desktop-database 
+    && make && make check && make distcheck
+
+after_failure:
+  - cat src/unittest.log
+  - cat tests/test-suite.log
