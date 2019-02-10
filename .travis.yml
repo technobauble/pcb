@@ -1,10 +1,16 @@
 language: c
+
 compiler: gcc
+
 os:
   - linux
   - osx
+
 branches:
   - master
   - /^pcb-.*-RELEASE/
   - /^LP.*/
   - /home\/cparker\/.*  
+
+before_script:
+  - ./autogen.sh
