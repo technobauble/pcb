@@ -12,5 +12,9 @@ branches:
   - /^LP.*/
   - /home\/cparker\/.*  
 
+addons:
+  apt:
+    packages: gettext autopoint
+
 before_script:
   - ./autogen.sh
