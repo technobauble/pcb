@@ -23,6 +23,16 @@ addons:
       - libgtkglext1-dev 
       - libgd-dev
       - gerbv
+  homebrew:
+    packages:
+      - gettext
+      - autoconf
+      - autogen
+      - intltool
+      - gtk+
+      - gtkglext
+      - gd
+      - gerbv
 
 before_script:
   - ./autogen.sh
@@ -30,7 +40,8 @@ before_script:
 script:
   - ./configure --disable-doc --disable-dbus --disable-update-desktop-database 
     && make && make check && make distcheck
-
-after_failure:
-  - [ -f src/unittest.log ] && cat src/unittest.log
-  - [ -f tests/test-suite.log ] && cat tests/test-suite.log
+  - cat src/unittest.log
+  - cat tests/test-suite.log
+#after_failure:
+#  - [ -f src/unittest.log ] && cat src/unittest.log
+#  - [ -f tests/test-suite.log ] && cat tests/test-suite.log
