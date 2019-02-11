@@ -8,6 +8,7 @@ os:
 
 branches:
   - master
+  - travis-ci
   - /^pcb-.*-RELEASE/
   - /^LP.*/
   - /home\/cparker\/.*  
