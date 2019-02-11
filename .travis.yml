@@ -29,4 +29,4 @@ before_script:
 
 script:
   - ./configure --disable-doc --disable-dbus --disable-update-desktop-database 
-    && ./make && ./make check && ./make distcheck
+    && make && make check && make distcheck
