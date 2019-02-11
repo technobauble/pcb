@@ -14,7 +14,7 @@ branches:
 
 addons:
   apt:
-    packages: gettext autopoint
+    packages: gettext autopoint intltool
 
 before_script:
   - ./autogen.sh
