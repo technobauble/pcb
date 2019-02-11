@@ -15,7 +15,14 @@ branches:
 
 addons:
   apt:
-    packages: gettext autopoint intltool libgtk2.0-dev libgtkglext1-dev
+    packages: 
+      - gettext 
+      - autopoint 
+      - intltool 
+      - libgtk2.0-dev 
+      - libgtkglext1-dev 
+      - libgd-dev
+      - gerbv
 
 before_script:
   - ./autogen.sh
