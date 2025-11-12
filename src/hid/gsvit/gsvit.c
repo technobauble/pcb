@@ -1297,7 +1297,7 @@ gsvit_xml_out (char *gsvit_basename)
   int len;
   time_t t;
 
-  len = strlen (gsvit_basename) + 4;
+  len = strlen (gsvit_basename) + 5;  /* ".xem" (4 chars) + null terminator */
   buf = (char *) malloc (sizeof (*buf) * len);
 
   sprintf (buf, "%s.xem", gsvit_basename);
