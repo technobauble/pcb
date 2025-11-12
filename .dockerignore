@@ -1,0 +1,51 @@
+# Git directory
+.git
+.gitignore
+
+# Build artifacts
+*.o
+*.lo
+*.la
+*.a
+*.so
+*.so.*
+.deps
+.libs
+autom4te.cache
+config.log
+config.status
+configure
+Makefile
+Makefile.in
+*.pc
+stamp-h1
+
+# Test outputs
+tests/*.log
+tests/outputs
+
+# Documentation builds
+doc/*.pdf
+doc/*.html
+doc/*.info
+doc/*.dvi
+
+# IDE and editor files
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+
+# CI/CD
+.github
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Other
+*.tar.gz
+*.zip

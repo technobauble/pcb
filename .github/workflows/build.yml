@@ -1,0 +1,186 @@
+name: Build and Test
+
+on:
+  push:
+    branches: [ master, "claude/**" ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build-linux:
+    name: Linux Build (${{ matrix.config.name }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - name: "GTK GUI"
+            configure_flags: "--with-gui=gtk --disable-doc --disable-dbus --disable-update-desktop-database"
+
+          - name: "GTK + OpenGL"
+            configure_flags: "--with-gui=gtk --enable-gl --disable-doc --disable-dbus --disable-update-desktop-database"
+
+          - name: "Lesstif GUI"
+            configure_flags: "--with-gui=lesstif --disable-doc --disable-dbus --disable-update-desktop-database"
+
+          - name: "Batch (Headless)"
+            configure_flags: "--with-gui=batch --disable-doc --disable-dbus --disable-update-desktop-database"
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Full history for version detection
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential \
+          autoconf \
+          automake \
+          autopoint \
+          gettext \
+          intltool \
+          flex \
+          bison \
+          m4 \
+          gawk \
+          libglib2.0-dev \
+          libgtk2.0-dev \
+          libgtkglext1-dev \
+          libgd-dev \
+          libdbus-1-dev \
+          gerbv \
+          imagemagick \
+          lesstif2-dev \
+          libxmu-dev \
+          libxrender-dev \
+          libxinerama-dev \
+          wish
+
+    - name: Cache autotools
+      uses: actions/cache@v4
+      with:
+        path: |
+          autom4te.cache
+          aclocal.m4
+        key: ${{ runner.os }}-autotools-${{ hashFiles('configure.ac', 'acinclude.m4') }}
+
+    - name: Run autogen.sh
+      run: ./autogen.sh
+
+    - name: Configure
+      run: |
+        ./configure ${{ matrix.config.configure_flags }}
+
+    - name: Build
+      run: make -j$(nproc)
+
+    - name: Run tests
+      run: make check
+      continue-on-error: false
+
+    - name: Upload test logs on failure
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-logs-${{ matrix.config.name }}
+        path: |
+          src/unittest.log
+          tests/test-suite.log
+          tests/*.log
+        retention-days: 7
+
+    - name: Run distcheck
+      if: matrix.config.name == 'Batch (Headless)'
+      run: make distcheck
+      continue-on-error: true
+
+    - name: Upload build artifacts
+      if: matrix.config.name == 'GTK GUI'
+      uses: actions/upload-artifact@v4
+      with:
+        name: pcb-linux-gtk
+        path: |
+          src/pcb
+        retention-days: 7
+
+  code-quality:
+    name: Code Quality Checks
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          cppcheck \
+          clang-tidy \
+          build-essential \
+          autoconf \
+          automake \
+          autopoint \
+          gettext \
+          intltool \
+          flex \
+          bison \
+          m4 \
+          gawk \
+          libglib2.0-dev \
+          libgtk2.0-dev \
+          libgd-dev
+
+    - name: Run cppcheck
+      run: |
+        cppcheck --enable=warning,style,performance,portability \
+          --error-exitcode=0 \
+          --inline-suppr \
+          --suppress=missingIncludeSystem \
+          --quiet \
+          src/ 2>&1 | tee cppcheck-report.txt
+      continue-on-error: true
+
+    - name: Upload cppcheck report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: cppcheck-report
+        path: cppcheck-report.txt
+        retention-days: 30
+
+    - name: Check for obsolete C keywords
+      run: |
+        echo "Checking for obsolete 'register' keyword..."
+        if grep -r "register " src/ --include="*.c" --include="*.h"; then
+          echo "::warning::Found obsolete 'register' keyword in code"
+        fi
+      continue-on-error: true
+
+    - name: Check for CVS artifacts
+      run: |
+        echo "Checking for CVS artifacts..."
+        if find . -name ".cvsignore" | grep -q .; then
+          echo "::warning::Found CVS .cvsignore files that should be removed"
+          find . -name ".cvsignore"
+        fi
+      continue-on-error: true
+
+  build-summary:
+    name: Build Summary
+    needs: [build-linux, code-quality]
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+    - name: Check build status
+      run: |
+        if [ "${{ needs.build-linux.result }}" != "success" ]; then
+          echo "::error::Linux builds failed"
+          exit 1
+        fi
+        echo "All builds completed successfully!"
