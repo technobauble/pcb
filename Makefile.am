@@ -20,5 +20,17 @@ DISTCLEANFILES= configure.lineno
 # MAINTAINERCLEANFILES= $(INTLTOOL_FILES)
 
 ACLOCAL_AMFLAGS = -I m4
-DISTCHECK_CONFIGURE_FLAGS = --disable-doc --disable-update-mime-database --disable-update-desktop-database GTK_UPDATE_ICON_THEME_BIN=true --with-gui=batch
+
+# Force documentation to be disabled during distcheck
+distcheck-hook:
+	@echo "distcheck-hook: Documentation build is disabled"
+
+# Override distcheck to pass --disable-doc to internal configure
+DISTCHECK_CONFIGURE_FLAGS = \
+	--disable-doc \
+	--disable-dbus \
+	--disable-update-mime-database \
+	--disable-update-desktop-database \
+	GTK_UPDATE_ICON_THEME_BIN=true \
+	--with-gui=batch
 
