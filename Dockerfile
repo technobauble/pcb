@@ -37,6 +37,7 @@ RUN apt-get update && apt-get install -y \
     libdbus-1-dev \
     # Testing tools
     gerbv \
+    ghostscript \
     imagemagick \
     # Utilities
     wish \

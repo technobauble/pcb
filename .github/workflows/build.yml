@@ -49,6 +49,7 @@ jobs:
           libgd-dev \
           libdbus-1-dev \
           gerbv \
+          ghostscript \
           imagemagick \
           wish \
           tcl
