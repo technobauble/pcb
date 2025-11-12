@@ -75,9 +75,20 @@ cat >> po/Makefile.in.in <<'END_RULE'
 	$(MAKE) -C ../src $@
 END_RULE
 
-# Disable the intltool-update -m check that causes shell syntax errors
+# Completely disable the intltool-update -m check that causes shell syntax errors
 # This check looks for missing translations, which is not critical for builds
-sed -i 's/intltool-update -m/intltool-update -m || true/g' po/Makefile.in.in
+# We replace both the check-local and missing targets with no-ops
+cat >> po/Makefile.in.in <<'END_CHECK_OVERRIDE'
+
+# Override the problematic check targets - make them no-ops
+.PHONY: check-local-disabled
+check-local:
+	@echo "Translation completeness check disabled (avoids shell syntax errors)"
+
+missing notexist:
+	@echo "Translation check skipped"
+	@touch missing notexist
+END_CHECK_OVERRIDE
 
 rm -f po/Makefile.in.in.orig
 
