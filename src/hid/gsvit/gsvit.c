@@ -1904,7 +1904,7 @@ gsvit_fill_polygon (hidGC gc, int n_coords, Coord *x, Coord *y)
 static void
 gsvit_calibrate (double xval, double yval)
 {
-  CRASH;
+  /* No-op: calibrate is only needed for interactive GUIs, not export HIDs */
 }
 
 
