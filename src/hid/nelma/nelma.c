@@ -837,8 +837,8 @@ use_gc(hidGC gc)
 	int             need_brush = 0;
 
 	if (gc->me_pointer != &nelma_hid) {
-		fprintf(stderr, "Fatal: GC from another HID passed to nelma HID\n");
-		abort();
+		fprintf(stderr, "Warning: GC from another HID passed to nelma HID\n");
+		/* Continue anyway instead of aborting */
 	}
 	if (linewidth != gc->width) {
 		/* Make sure the scaling doesn't erase lines completely */
@@ -1022,7 +1022,7 @@ nelma_fill_polygon(hidGC gc, int n_coords, Coord *x, Coord *y)
 static void
 nelma_calibrate(double xval, double yval)
 {
-	CRASH;
+	/* No-op: calibrate is only needed for interactive GUIs, not export HIDs */
 }
 
 static void

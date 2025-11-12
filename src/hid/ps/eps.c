@@ -645,7 +645,7 @@ eps_fill_rect (hidGC gc, Coord x1, Coord y1, Coord x2, Coord y2)
 static void
 eps_calibrate (double xval, double yval)
 {
-  CRASH;
+  /* No-op: calibrate is only needed for interactive GUIs, not export HIDs */
 }
 
 static void

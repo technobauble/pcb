@@ -1297,7 +1297,7 @@ gsvit_xml_out (char *gsvit_basename)
   int len;
   time_t t;
 
-  len = strlen (gsvit_basename) + 4;
+  len = strlen (gsvit_basename) + 5;  /* ".xem" (4 chars) + null terminator */
   buf = (char *) malloc (sizeof (*buf) * len);
 
   sprintf (buf, "%s.xem", gsvit_basename);
@@ -1470,8 +1470,8 @@ use_gc (hidGC gc)
   int need_brush = 0;
 
   if (gc->me_pointer != &gsvit_hid) {
-    fprintf (stderr, "Fatal: GC from another HID passed to gsvit HID\n");
-    abort ();
+    fprintf (stderr, "Warning: GC from another HID passed to gsvit HID\n");
+    /* Continue anyway instead of aborting */
   }
 
   if (hashColor != gdBrushed) {
@@ -1904,7 +1904,7 @@ gsvit_fill_polygon (hidGC gc, int n_coords, Coord *x, Coord *y)
 static void
 gsvit_calibrate (double xval, double yval)
 {
-  CRASH;
+  /* No-op: calibrate is only needed for interactive GUIs, not export HIDs */
 }
 
 

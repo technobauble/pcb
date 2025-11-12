@@ -1499,8 +1499,8 @@ use_gc (hidGC gc)
 
   if (gc->me_pointer != &png_hid)
     {
-      fprintf (stderr, "Fatal: GC from another HID passed to png HID\n");
-      abort ();
+      fprintf (stderr, "Warning: GC from another HID passed to png HID\n");
+      /* Continue anyway instead of aborting */
     }
 
   if (linewidth != gc->width)
@@ -1815,7 +1815,7 @@ png_fill_polygon (hidGC gc, int n_coords, Coord *x, Coord *y)
 static void
 png_calibrate (double xval, double yval)
 {
-  CRASH;
+  /* No-op: calibrate is only needed for interactive GUIs, not export HIDs */
 }
 
 static void

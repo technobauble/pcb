@@ -272,6 +272,11 @@ pass=0
 skip=0
 tot=0
 
+# lists to track which tests failed/passed/skipped
+failed_tests=""
+passed_tests=""
+skipped_tests=""
+
 ##########################################################################
 #
 # config summary
@@ -762,6 +767,7 @@ for t in $all_tests ; do
     if test "X${name}" = "X" ; then
 	echo "ERROR:  Specified test ${t} does not appear to exist"
 	skip=`expr $skip + 1`
+	skipped_tests="${skipped_tests} ${t}"
 	continue
     fi
     
@@ -777,6 +783,7 @@ for t in $all_tests ; do
 	if test "X${have_display}" = "Xno" ; then
 		echo "Skipping action test because there is currently no X display available"
 		skip=`expr $skip + 1`
+		skipped_tests="${skipped_tests} ${t}"
 		continue
 	fi
     else
@@ -794,6 +801,7 @@ for t in $all_tests ; do
     if test $? -ne 0 ; then
 	echo "$0:  Could not create run directory ${rundir}"
 	skip=`expr $skip + 1`
+	skipped_tests="${skipped_tests} ${t}"
 	continue
     fi
 
@@ -820,6 +828,7 @@ for t in $all_tests ; do
     if test "$missing_files" = "yes" ; then
 	echo "${t} had missing input files.  Skipping test"
 	skip=`expr $skip + 1`
+	skipped_tests="${skipped_tests} ${t}"
 	continue
     fi
     
@@ -853,6 +862,7 @@ for t in $all_tests ; do
     if test $pcb_rc -ne 0 ; then
 	echo "${PCB} returned ${pcb_rc}.  This is a failure."
 	fail=`expr $fail + 1`
+	failed_tests="${failed_tests} ${t}"
 	continue
     fi
 
@@ -963,12 +973,15 @@ for t in $all_tests ; do
 	if test $test_failed = yes ; then
 	    echo "FAIL"
 	    fail=`expr $fail + 1`
+	    failed_tests="${failed_tests} ${t}"
 	elif test $test_skipped = yes ; then
 	    echo "SKIPPED"
 	    skip=`expr $skip + 1`
+	    skipped_tests="${skipped_tests} ${t}"
 	else
 	    echo "PASSED"
 	    pass=`expr $pass + 1`
+	    passed_tests="${passed_tests} ${t}"
 	fi
 
     fi
@@ -977,6 +990,22 @@ done
 
 show_sep
 echo "Passed $pass, failed $fail, skipped $skip out of $tot tests."
+
+if test $fail -ne 0 ; then
+    show_sep
+    echo "FAILED TESTS:"
+    for t in $failed_tests ; do
+	echo "  - $t"
+    done
+fi
+
+if test $skip -ne 0 ; then
+    show_sep
+    echo "SKIPPED TESTS:"
+    for t in $skipped_tests ; do
+	echo "  - $t"
+    done
+fi
 
 rc=0
 if test $fail -ne 0 ; then

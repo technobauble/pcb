@@ -1995,11 +1995,10 @@ main (int argc, char *argv[])
   setbuf (stdout, 0);
   InitPaths (argv[0]);
 
+#ifdef ENABLE_NLS
   bindtextdomain (GETTEXT_PACKAGE, LOCALEDIR);
   textdomain (GETTEXT_PACKAGE);
   bind_textdomain_codeset (GETTEXT_PACKAGE, "UTF-8");
-
-#ifdef ENABLE_NLS
   setlocale (LC_ALL, "");
   setlocale (LC_NUMERIC, "C");
 #endif

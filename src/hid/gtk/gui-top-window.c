@@ -1853,9 +1853,11 @@ ghid_parse_arguments (int *argc, char ***argv)
 	Settings.AutoPlace = 1;
     }
 
+#ifdef ENABLE_NLS
   bindtextdomain (PACKAGE, LOCALEDIR);
   textdomain (PACKAGE);
   bind_textdomain_codeset (PACKAGE, "UTF-8");
+#endif
 
   icon = gdk_pixbuf_new_from_xpm_data ((const gchar **) icon_bits);
   gtk_window_set_default_icon (icon);

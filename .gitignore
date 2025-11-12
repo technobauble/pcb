@@ -1,8 +1,28 @@
+# ============================================
+# PCB CAD - Git Ignore Configuration
+# ============================================
+
+# Build artifacts
 Makefile
 Makefile.in
+*.o
+*.lo
+*.la
+*.a
+*.so
+*.so.*
 *.cache
 *.tar.gz
+*.tar.bz2
+*.tar.xz
+*.zip
 *.log
+.deps
+.libs
+stamp-*
+*.stamp
+
+# Autotools generated files
 /config.*
 /configure
 /aclocal.m4
@@ -10,11 +30,153 @@ ABOUT-NLS
 /intl
 /intltool-*
 /mkinstalldirs
-.deps
-stamp-*
-*.stamp
 /missing
-*.backup
+/install-sh
+/depcomp
+/compile
+/ylwrap
 test-driver
-doc/*.eps
+autom4te.cache/
+
+# Build directories
+build/
+.build-cache/
+
+# Generated source files
+*.tab.c
+*.tab.h
+lex.yy.c
+
+# Backup files
+*.backup
 *~
+*.swp
+*.swo
+.*.swp
+.*.swo
+
+# Documentation artifacts
+doc/*.pdf
+doc/*.html
+doc/*.info
+doc/*.dvi
+doc/*.aux
+doc/*.cp
+doc/*.fn
+doc/*.ky
+doc/*.pg
+doc/*.toc
+doc/*.tp
+doc/*.vr
+doc/*.eps
+
+# Test outputs
+tests/*.log
+tests/test-suite.log
+tests/outputs/
+
+# IDE and Editor files
+# VS Code
+.vscode/
+*.code-workspace
+
+# IntelliJ / CLion
+.idea/
+*.iml
+*.iws
+*.ipr
+cmake-build-*/
+
+# Vim
+[._]*.s[a-v][a-z]
+[._]*.sw[a-p]
+[._]s[a-rt-v][a-z]
+[._]ss[a-gi-z]
+[._]sw[a-p]
+Session.vim
+.netrwhist
+
+# Emacs
+\#*\#
+.\#*
+*.elc
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Kate
+*.kate-swp
+.*.kate-swp
+
+# OS specific files
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Linux
+.directory
+.Trash-*
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+
+# Package manager artifacts
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Python (for build scripts)
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+.Python
+venv/
+ENV/
+
+# Debugging artifacts
+core
+core.*
+*.core
+vgcore.*
+*.stackdump
+
+# Coverage reports
+*.gcov
+*.gcda
+*.gcno
+coverage/
+*.coverage
+
+# Static analysis
+.cppcheck/
+*.plist
+
+# Local configuration
+local.mk
+.local/
+
+# Docker volumes (if persisted locally)
+.docker-data/
+
+# Security - Never commit these
+*.key
+*.pem
+*.p12
+secrets.yml
+.env.local
+.env.*.local
+credentials.json

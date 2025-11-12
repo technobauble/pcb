@@ -254,8 +254,6 @@ EXTRA_DIST= \
 	$(srcdir)/hid/ps/hid.conf \
 	gpcb-menu.res.in \
 	pcb-menu.res.in \
-	gpcb-menu.res.h \
-	pcb-menu.res.h \
 	pcbtest.sh.in \
 	dbus.xml
 

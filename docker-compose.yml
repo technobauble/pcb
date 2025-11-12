@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  pcb-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pcb-development
+    volumes:
+      # Mount the entire project directory
+      - .:/workspace
+      # Preserve bash history across container restarts
+      - pcb-bash-history:/home/developer/.bash_history_volume
+      # Preserve build artifacts for faster rebuilds
+      - pcb-build-cache:/workspace/.build-cache
+    working_dir: /workspace
+    stdin_open: true
+    tty: true
+    environment:
+      # Set display for GUI testing (if X11 forwarding is set up)
+      - DISPLAY=${DISPLAY:-:0}
+      # Preserve git user config from host
+      - GIT_AUTHOR_NAME=${GIT_AUTHOR_NAME:-PCB Developer}
+      - GIT_AUTHOR_EMAIL=${GIT_AUTHOR_EMAIL:-dev@example.com}
+      - GIT_COMMITTER_NAME=${GIT_COMMITTER_NAME:-PCB Developer}
+      - GIT_COMMITTER_EMAIL=${GIT_COMMITTER_EMAIL:-dev@example.com}
+    # Optional: for GUI application testing with X11
+    # Uncomment if you want to test the GTK GUI from within the container
+    # volumes:
+    #   - /tmp/.X11-unix:/tmp/.X11-unix:rw
+    # network_mode: host
+    # security_opt:
+    #   - seccomp:unconfined
+
+volumes:
+  pcb-bash-history:
+  pcb-build-cache:
