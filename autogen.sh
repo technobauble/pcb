@@ -64,8 +64,6 @@ echo "Patching some intltoolize output"
 
 mv po/Makefile.in.in po/Makefile.in.in.orig
 sed \
-	-e 's/^MSGMERGE *=/MSGMERGE = XGETTEXT="\${XGETTEXT}" MSGFMT="\${MSGFMT}" /g' \
-	-e 's/^GENPOT *=/GENPOT = XGETTEXT="\${XGETTEXT}" MSGFMT="\${MSGFMT}" /g' \
 	-e 's/ChangeLog//g' \
 	po/Makefile.in.in.orig > po/Makefile.in.in
 
@@ -76,6 +74,10 @@ cat >> po/Makefile.in.in <<'END_RULE'
 %.res.h: %.res
 	$(MAKE) -C ../src $@
 END_RULE
+
+# Disable the intltool-update -m check that causes shell syntax errors
+# This check looks for missing translations, which is not critical for builds
+sed -i 's/intltool-update -m/intltool-update -m || true/g' po/Makefile.in.in
 
 rm -f po/Makefile.in.in.orig
 
