@@ -21,9 +21,6 @@ jobs:
           - name: "GTK + OpenGL"
             configure_flags: "--with-gui=gtk --enable-gl --disable-doc --disable-dbus --disable-update-desktop-database"
 
-          - name: "Lesstif GUI"
-            configure_flags: "--with-gui=lesstif --disable-doc --disable-dbus --disable-update-desktop-database"
-
           - name: "Batch (Headless)"
             configure_flags: "--with-gui=batch --disable-doc --disable-dbus --disable-update-desktop-database"
 
@@ -56,11 +53,6 @@ jobs:
           libdbus-1-dev \
           gerbv \
           imagemagick \
-          lesstif2-dev \
-          libxmu-dev \
-          libxrender-dev \
-          libxinerama-dev \
-          libxt-dev \
           wish \
           tcl
 
@@ -239,9 +231,9 @@ jobs:
         echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
 
         if [ "${{ needs.build-linux.result }}" == "success" ]; then
-          echo "| Linux Builds (4 configs) | ✅ Success |" >> $GITHUB_STEP_SUMMARY
+          echo "| Linux Builds (3 configs) | ✅ Success |" >> $GITHUB_STEP_SUMMARY
         else
-          echo "| Linux Builds (4 configs) | ❌ Failed |" >> $GITHUB_STEP_SUMMARY
+          echo "| Linux Builds (3 configs) | ❌ Failed |" >> $GITHUB_STEP_SUMMARY
         fi
 
         if [ "${{ needs.code-quality.result }}" == "success" ]; then

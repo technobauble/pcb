@@ -39,13 +39,6 @@ RUN apt-get update && apt-get install -y \
     libcairo2-dev \
     # IPC
     libdbus-1-dev \
-    # Lesstif GUI dependencies (optional)
-    lesstif2-dev \
-    libxmu-dev \
-    libxt-dev \
-    libxrender-dev \
-    libxinerama-dev \
-    libxpm-dev \
     # Testing tools
     gerbv \
     imagemagick \
