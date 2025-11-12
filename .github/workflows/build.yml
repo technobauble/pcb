@@ -165,7 +165,10 @@ jobs:
 
     - name: Run distcheck
       if: matrix.config.name == 'Batch (Headless)'
-      run: make distcheck
+      run: |
+        echo "DISTCHECK_CONFIGURE_FLAGS from Makefile:"
+        grep "^DISTCHECK_CONFIGURE_FLAGS" Makefile || echo "Not found in Makefile"
+        make distcheck V=1
 
     - name: Upload build artifacts
       if: matrix.config.name == 'GTK GUI'
