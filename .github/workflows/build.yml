@@ -83,7 +83,24 @@ jobs:
         make check 2>&1 | tee test.log
         # Check for actual test failures
         if grep -q "^FAIL:" test.log; then
-          echo "❌ Tests failed" >> $GITHUB_STEP_SUMMARY
+          echo "## ❌ Tests Failed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Failed Tests:" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          grep "^FAIL:" test.log >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Show test-suite.log summary if it exists
+          if [ -f tests/test-suite.log ]; then
+            echo "### Test Suite Log (last 100 lines):" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            tail -100 tests/test-suite.log >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📥 **Full logs available in build artifacts**" >> $GITHUB_STEP_SUMMARY
           exit 1
         fi
         echo "✅ Tests passed" >> $GITHUB_STEP_SUMMARY
