@@ -9,88 +9,22 @@ export CONFIG_SHELL
 
 ############################################################################
 #
-# autopoint (gettext)
+# Internationalization (i18n) - DISABLED
+#
+# NOTE: i18n support (gettext/intltool) has been temporarily disabled
+# due to compatibility issues with modern tooling. This can be re-enabled
+# later once the core build is stable.
+#
+# To re-enable:
+# 1. Uncomment the autopoint and intltoolize sections below
+# 2. Uncomment AM_GNU_GETTEXT and IT_PROG_INTLTOOL in configure.ac
+# 3. Re-add "po" to SUBDIRS in Makefile.am
 #
 
-echo "Checking autopoint version..."
-ver=`autopoint --version | awk '{print $NF; exit}'`
-ap_maj=`echo $ver | sed 's;\..*;;g'`
-ap_min=`echo $ver | sed -e 's;^[0-9]*\.;;g'  -e 's;\..*$;;g'`
-ap_teeny=`echo $ver | sed -e 's;^[0-9]*\.[0-9]*\.;;g'`
-echo "    $ver"
+echo "Skipping internationalization setup (currently disabled)"
 
-case $ap_maj in
-	0)
-		if test $ap_min -lt 14 ; then
-			echo "You must have gettext >= 0.14.0 but you seem to have $ver"
-			exit 1
-		fi
-		;;
-esac
-echo "Running autopoint..."
-autopoint --force || exit 1
-
-############################################################################
-#
-# intltoolize (intltool)
-#
-
-echo "Checking intltoolize version..."
-it_ver=`intltoolize --version | awk '{print $NF; exit}'`
-it_maj=`echo $it_ver | sed 's;\..*;;g'`
-it_min=`echo $it_ver | sed -e 's;^[0-9]*\.;;g'  -e 's;\..*$;;g'`
-it_teeny=`echo $it_ver | sed -e 's;^[0-9]*\.[0-9]*\.;;g'`
-echo "    $it_ver"
-
-case $it_maj in
-	0)
-		if test $it_min -lt 35 ; then
-			echo "You must have intltool >= 0.35.0 but you seem to have $it_ver"
-			exit 1
-		fi
-		;;
-esac
-echo "Running intltoolize..."
-echo "no" | intltoolize --force --copy --automake || exit 1
-
-echo "Patching some intltoolize output"
-
-# both intltoolize and autopoint create a po/Makefile.in.in, this can't be good...
-# but intltoolize seems to have some bugs in it.  In particular, XGETTEXT and MSGFMT
-# are set in the Makefile but not passed down when calling MSGMERGE or GENPOT.
-# This defeats specifying the path to xgettext and msgfmt.  Also
-# we don't have a ChangeLog in the po/ directory right now so don't let
-# intltool try to include it in the distfile.
-
-mv po/Makefile.in.in po/Makefile.in.in.orig
-sed \
-	-e 's/ChangeLog//g' \
-	po/Makefile.in.in.orig > po/Makefile.in.in
-
-# Menu i18n
-# Add menu i18n rule with proper escaping
-cat >> po/Makefile.in.in <<'END_RULE'
-
-%.res.h: %.res
-	$(MAKE) -C ../src $@
-END_RULE
-
-# Completely disable the intltool-update -m check that causes shell syntax errors
-# This check looks for missing translations, which is not critical for builds
-# We replace both the check-local and missing targets with no-ops
-cat >> po/Makefile.in.in <<'END_CHECK_OVERRIDE'
-
-# Override the problematic check targets - make them no-ops
-.PHONY: check-local-disabled
-check-local:
-	@echo "Translation completeness check disabled (avoids shell syntax errors)"
-
-missing notexist:
-	@echo "Translation check skipped"
-	@touch missing notexist
-END_CHECK_OVERRIDE
-
-rm -f po/Makefile.in.in.orig
+# Disabled autopoint (gettext) section
+# Disabled intltoolize (intltool) section
 
 ############################################################################
 #

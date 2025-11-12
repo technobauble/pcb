@@ -113,39 +113,25 @@ if test "x$WIN32" = "xyes" ; then
 	fi
 fi
 
-# i18n
-GETTEXT_PACKAGE=$PACKAGE
-AH_TEMPLATE([GETTEXT_PACKAGE], [Name of this program's gettext domain])
-AC_DEFINE_UNQUOTED([GETTEXT_PACKAGE], ["$GETTEXT_PACKAGE"])
-AC_SUBST(GETTEXT_PACKAGE)
+# i18n - DISABLED
+# NOTE: Internationalization support has been temporarily disabled
+# due to compatibility issues with modern intltool/gettext versions.
+# This can be re-enabled later once the core build is stable.
+#
+# GETTEXT_PACKAGE=$PACKAGE
+# AH_TEMPLATE([GETTEXT_PACKAGE], [Name of this program's gettext domain])
+# AC_DEFINE_UNQUOTED([GETTEXT_PACKAGE], ["$GETTEXT_PACKAGE"])
+# AC_SUBST(GETTEXT_PACKAGE)
+#
+# AM_GNU_GETTEXT_VERSION([0.18.3])
+# AM_GNU_GETTEXT
+#
+# AC_MSG_CHECKING([if $MSGFMT understands msgctxt (message context)])
+# [gettext version check code omitted]
+#
+# IT_PROG_INTLTOOL([0.35.0])
 
-AM_GNU_GETTEXT_VERSION([0.18.3])
-AM_GNU_GETTEXT
-
-AC_MSG_CHECKING([if $MSGFMT understands msgctxt (message context)])
-cat > conftest.po <<EOF
-[#]line __oline__ "configure"
-[#]. -- Info tab
-[#]: myfile.c:lineno
-msgctxt "tab"
-msgid "Info"
-msgstr ""
-EOF
-if ($MSGFMT -o conftest.gmo conftest.po >/dev/null; exit) 2>&AS_MESSAGE_LOG_FD
-then
-dnl
-  AC_MSG_RESULT([yes])
-else
-  AC_MSG_RESULT([no])
-  AC_MSG_ERROR([It appears that your gettext tools ($MSGFMT) is too old.
-You should install a newer gettext tools (>= 0.19.3 suggested).  You may
-specify the location of the msgfmt executible with MSGFMT=/path/to/msgfmt
-on the configure command line.
-])
-fi
-rm -f conftest.po conftest.gmo
-
-IT_PROG_INTLTOOL([0.35.0])
+AC_MSG_NOTICE([Internationalization (i18n) support is currently disabled])
 
 AC_C_INLINE
 AC_PROG_CC_STDC

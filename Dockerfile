@@ -15,15 +15,11 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     autoconf \
     automake \
-    autopoint \
     libtool \
     pkg-config \
     # Parser generators
     flex \
     bison \
-    # Internationalization
-    gettext \
-    intltool \
     # Text processing
     m4 \
     gawk \
