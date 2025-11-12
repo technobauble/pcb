@@ -42,12 +42,19 @@ desktopdir=$(xdgdatadir)/applications
 desktop_in_files = pcb.desktop.in
 desktop_DATA = $(desktop_in_files:.desktop.in=.desktop)
 
-@INTLTOOL_XML_RULE@
+# @INTLTOOL_XML_RULE@ disabled - intltool not available
+# Simple fallback rule for .xml files (no translation)
+%.xml: %.xml.in
+	cp $< $@
+
 appdatadir = $(datadir)/metainfo
 appdata_DATA = $(appdata_in_files:.xml.in=.xml)
 appdata_in_files = pcb.appdata.xml.in
 
-@INTLTOOL_DESKTOP_RULE@
+# @INTLTOOL_DESKTOP_RULE@ disabled - intltool not available
+# Simple fallback rule for .desktop files (no translation)
+%.desktop: %.desktop.in
+	cp $< $@
 
 
 mimedir = $(xdgdatadir)/mime
