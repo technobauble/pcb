@@ -1263,7 +1263,8 @@ do
 done
 AC_SUBST(TOPDIRS)
 
-AC_CONFIG_FILES(Makefile data/Makefile intl/Makefile po/Makefile.in)
+# i18n directories removed - intl/Makefile and po/Makefile.in disabled
+AC_CONFIG_FILES(Makefile data/Makefile)
 
 if test -d $srcdir/README_FILES; then
    AC_CONFIG_FILES(README_FILES/Makefile)
