@@ -166,7 +166,6 @@ jobs:
     - name: Run distcheck
       if: matrix.config.name == 'Batch (Headless)'
       run: make distcheck
-      continue-on-error: true
 
     - name: Upload build artifacts
       if: matrix.config.name == 'GTK GUI'
