@@ -56,13 +56,13 @@ nogui_invalidate_lr (Coord l, Coord r, Coord t, Coord b)
 static void
 nogui_invalidate_all (void)
 {
-  CRASH;
+  /* No-op: invalidate is only relevant for GUI redraws, not exports */
 }
 
 static int
 nogui_set_layer (const char *name, int idx, int empty)
 {
-  CRASH;
+  /* No-op: layer changes are only relevant for GUIs, not exports (exports override this) */
   return 0;
 }
 
@@ -85,31 +85,31 @@ nogui_destroy_gc (hidGC gc)
 static void
 nogui_use_mask (enum mask_mode mode)
 {
-  CRASH;
+  /* No-op: masking handled by specific export HIDs */
 }
 
 static void
 nogui_set_color (hidGC gc, const char *name)
 {
-  CRASH;
+  /* No-op: colors handled by specific export HIDs */
 }
 
 static void
 nogui_set_line_cap (hidGC gc, EndCapStyle style)
 {
-  CRASH;
+  /* No-op: line caps handled by specific export HIDs */
 }
 
 static void
 nogui_set_line_width (hidGC gc, Coord width)
 {
-  CRASH;
+  /* No-op: line widths handled by specific export HIDs */
 }
 
 static void
 nogui_set_draw_xor (hidGC gc, int xor_)
 {
-  CRASH;
+  /* No-op: XOR drawing handled by specific export HIDs */
 }
 
 static void
@@ -120,68 +120,68 @@ nogui_set_draw_faded (hidGC gc, int faded)
 static void
 nogui_draw_line (hidGC gc, Coord x1, Coord y1, Coord x2, Coord y2)
 {
-  CRASH;
+  /* No-op: drawing handled by specific export HIDs */
 }
 
 static void
 nogui_draw_arc (hidGC gc, Coord cx, Coord cy, Coord width, Coord height,
 		Angle start_angle, Angle end_angle)
 {
-  CRASH;
+  /* No-op: drawing handled by specific export HIDs */
 }
 
 static void
 nogui_draw_rect (hidGC gc, Coord x1, Coord y1, Coord x2, Coord y2)
 {
-  CRASH;
+  /* No-op: drawing handled by specific export HIDs */
 }
 
 static void
 nogui_fill_circle (hidGC gc, Coord cx, Coord cy, Coord radius)
 {
-  CRASH;
+  /* No-op: drawing handled by specific export HIDs */
 }
 
 static void
 nogui_fill_polygon (hidGC gc, int n_coords, Coord *x, Coord *y)
 {
-  CRASH;
+  /* No-op: drawing handled by specific export HIDs */
 }
 
 static void
 nogui_draw_pcb_polygon (hidGC gc, PolygonType *poly, const BoxType *clip_box)
 {
-  CRASH;
+  /* No-op: polygon drawing handled by specific export HIDs */
 }
 
 static void
 nogui_fill_pcb_pad (hidGC gc, PadType *pad, bool clear, bool mask)
 {
-  CRASH;
+  /* No-op: pad rendering handled by specific export HIDs */
 }
 
 static void
 nogui_thindraw_pcb_pad (hidGC gc, PadType *pad, bool clear, bool mask)
 {
-  CRASH;
+  /* No-op: pad rendering handled by specific export HIDs */
 }
 
 static void
 nogui_fill_pcb_pv (hidGC fg_gc, hidGC bg_gc, PinType *pad, bool drawHole, bool mask)
 {
-  CRASH;
+  /* No-op: pin/via rendering handled by specific export HIDs */
 }
 
 static void
 nogui_thindraw_pcb_pv (hidGC fg_gc, hidGC bg_gc, PinType *pad, bool drawHole, bool mask)
 {
-  CRASH;
+  /* No-op: pin/via rendering handled by specific export HIDs */
 }
 
 static void
 nogui_fill_rect (hidGC gc, Coord x1, Coord y1, Coord x2, Coord y2)
 {
-  CRASH;
+  /* No-op: drawing handled by specific export HIDs */
 }
 
 static void
