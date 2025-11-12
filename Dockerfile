@@ -51,6 +51,7 @@ RUN apt-get update && apt-get install -y \
     imagemagick \
     # Utilities
     wish \
+    tcl \
     vim \
     nano \
     less \

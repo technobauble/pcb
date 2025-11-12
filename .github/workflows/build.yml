@@ -41,12 +41,14 @@ jobs:
           autoconf \
           automake \
           autopoint \
+          libtool \
           gettext \
           intltool \
           flex \
           bison \
           m4 \
           gawk \
+          pkg-config \
           libglib2.0-dev \
           libgtk2.0-dev \
           libgtkglext1-dev \
@@ -58,7 +60,9 @@ jobs:
           libxmu-dev \
           libxrender-dev \
           libxinerama-dev \
-          wish
+          libxt-dev \
+          wish \
+          tcl
 
     - name: Cache autotools
       uses: actions/cache@v4
@@ -125,12 +129,14 @@ jobs:
           autoconf \
           automake \
           autopoint \
+          libtool \
           gettext \
           intltool \
           flex \
           bison \
           m4 \
           gawk \
+          pkg-config \
           libglib2.0-dev \
           libgtk2.0-dev \
           libgd-dev
