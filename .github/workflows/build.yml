@@ -73,29 +73,60 @@ jobs:
         key: ${{ runner.os }}-autotools-${{ hashFiles('configure.ac', 'acinclude.m4') }}
 
     - name: Run autogen.sh
-      run: ./autogen.sh
+      run: |
+        ./autogen.sh
+        echo "✅ autogen.sh completed successfully" >> $GITHUB_STEP_SUMMARY
 
     - name: Configure
       run: |
-        ./configure ${{ matrix.config.configure_flags }}
+        ./configure ${{ matrix.config.configure_flags }} 2>&1 | tee configure.log
+        echo "✅ Configure completed for: ${{ matrix.config.name }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Configure flags:** \`${{ matrix.config.configure_flags }}\`" >> $GITHUB_STEP_SUMMARY
 
     - name: Build
-      run: make -j$(nproc)
+      run: |
+        make -j$(nproc) 2>&1 | tee build.log
+        echo "✅ Build completed successfully" >> $GITHUB_STEP_SUMMARY
 
     - name: Run tests
-      run: make check
+      run: |
+        make check 2>&1 | tee test.log
+        echo "✅ Tests passed" >> $GITHUB_STEP_SUMMARY
       continue-on-error: false
 
-    - name: Upload test logs on failure
-      if: failure()
+    - name: Upload build logs
+      if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: test-logs-${{ matrix.config.name }}
+        name: build-logs-${{ matrix.config.name }}
         path: |
+          configure.log
+          build.log
+          test.log
           src/unittest.log
           tests/test-suite.log
           tests/*.log
         retention-days: 7
+        if-no-files-found: ignore
+
+    - name: Report test failures
+      if: failure()
+      run: |
+        echo "## ❌ Build Failed: ${{ matrix.config.name }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        if [ -f src/unittest.log ]; then
+          echo "### Unit Test Log" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          tail -50 src/unittest.log >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+        fi
+        if [ -f tests/test-suite.log ]; then
+          echo "### Test Suite Log" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          tail -50 tests/test-suite.log >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+        fi
 
     - name: Run distcheck
       if: matrix.config.name == 'Batch (Headless)'
@@ -143,12 +174,18 @@ jobs:
 
     - name: Run cppcheck
       run: |
+        echo "## 🔍 Code Quality Analysis" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
         cppcheck --enable=warning,style,performance,portability \
           --error-exitcode=0 \
           --inline-suppr \
           --suppress=missingIncludeSystem \
           --quiet \
           src/ 2>&1 | tee cppcheck-report.txt
+        ISSUE_COUNT=$(wc -l < cppcheck-report.txt)
+        echo "### cppcheck Results" >> $GITHUB_STEP_SUMMARY
+        echo "Found $ISSUE_COUNT potential issues" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
       continue-on-error: true
 
     - name: Upload cppcheck report
@@ -161,18 +198,27 @@ jobs:
 
     - name: Check for obsolete C keywords
       run: |
+        echo "### Legacy Code Patterns" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
         echo "Checking for obsolete 'register' keyword..."
-        if grep -r "register " src/ --include="*.c" --include="*.h"; then
-          echo "::warning::Found obsolete 'register' keyword in code"
+        REGISTER_COUNT=$(grep -r "register " src/ --include="*.c" --include="*.h" | wc -l || echo "0")
+        if [ "$REGISTER_COUNT" -gt 0 ]; then
+          echo "- ⚠️ Found $REGISTER_COUNT uses of obsolete \`register\` keyword" >> $GITHUB_STEP_SUMMARY
+          echo "::warning::Found $REGISTER_COUNT uses of obsolete 'register' keyword"
+        else
+          echo "- ✅ No obsolete \`register\` keywords found" >> $GITHUB_STEP_SUMMARY
         fi
       continue-on-error: true
 
     - name: Check for CVS artifacts
       run: |
         echo "Checking for CVS artifacts..."
-        if find . -name ".cvsignore" | grep -q .; then
-          echo "::warning::Found CVS .cvsignore files that should be removed"
-          find . -name ".cvsignore"
+        CVS_COUNT=$(find . -name ".cvsignore" | wc -l)
+        if [ "$CVS_COUNT" -gt 0 ]; then
+          echo "- ⚠️ Found $CVS_COUNT CVS .cvsignore files that should be removed" >> $GITHUB_STEP_SUMMARY
+          echo "::warning::Found $CVS_COUNT CVS .cvsignore files"
+        else
+          echo "- ✅ No CVS artifacts found" >> $GITHUB_STEP_SUMMARY
         fi
       continue-on-error: true
 
@@ -183,6 +229,36 @@ jobs:
     if: always()
 
     steps:
+    - name: Generate build report
+      run: |
+        echo "# 🔨 PCB Build Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "## Build Results" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
+        echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+
+        if [ "${{ needs.build-linux.result }}" == "success" ]; then
+          echo "| Linux Builds (4 configs) | ✅ Success |" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "| Linux Builds (4 configs) | ❌ Failed |" >> $GITHUB_STEP_SUMMARY
+        fi
+
+        if [ "${{ needs.code-quality.result }}" == "success" ]; then
+          echo "| Code Quality Checks | ✅ Success |" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "| Code Quality Checks | ⚠️ Warnings |" >> $GITHUB_STEP_SUMMARY
+        fi
+
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "## Artifacts" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "Build logs and artifacts are available for download in the workflow artifacts." >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "- Build logs for each configuration" >> $GITHUB_STEP_SUMMARY
+        echo "- Code quality reports (cppcheck)" >> $GITHUB_STEP_SUMMARY
+        echo "- Built PCB binary (GTK GUI)" >> $GITHUB_STEP_SUMMARY
+
     - name: Check build status
       run: |
         if [ "${{ needs.build-linux.result }}" != "success" ]; then
