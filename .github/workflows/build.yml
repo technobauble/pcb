@@ -98,9 +98,23 @@ jobs:
             echo "" >> $GITHUB_STEP_SUMMARY
           fi
 
+          # Show stderr from failed tests
+          echo "### Test Error Output (stderr):" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          for errlog in tests/outputs/*/run_tests.err.log; do
+            if [ -f "$errlog" ] && [ -s "$errlog" ]; then
+              testname=$(basename $(dirname "$errlog"))
+              echo "=== $testname ===" >> $GITHUB_STEP_SUMMARY
+              cat "$errlog" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
           # Show brief failure details from test-suite.log if it exists
           if [ -f tests/test-suite.log ]; then
-            echo "### Test Failure Details:" >> $GITHUB_STEP_SUMMARY
+            echo "### Test Suite Log:" >> $GITHUB_STEP_SUMMARY
             echo '```' >> $GITHUB_STEP_SUMMARY
             # Show failures and errors from test-suite.log
             grep -A 20 "FAIL:" tests/test-suite.log | head -100 >> $GITHUB_STEP_SUMMARY || \
@@ -127,6 +141,7 @@ jobs:
           src/unittest.log
           tests/test-suite.log
           tests/*.log
+          tests/outputs/*/run_tests.err.log
         retention-days: 7
         if-no-files-found: ignore
 
