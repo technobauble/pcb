@@ -165,7 +165,7 @@ jobs:
 
     - name: Run distcheck
       if: matrix.config.name == 'Batch (Headless)'
-      run: make distcheck
+      run: make distcheck DISTCHECK_CONFIGURE_FLAGS="--disable-doc --disable-dbus --disable-update-desktop-database"
       continue-on-error: true
 
     - name: Upload build artifacts
