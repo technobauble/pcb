@@ -1470,8 +1470,8 @@ use_gc (hidGC gc)
   int need_brush = 0;
 
   if (gc->me_pointer != &gsvit_hid) {
-    fprintf (stderr, "Fatal: GC from another HID passed to gsvit HID\n");
-    abort ();
+    fprintf (stderr, "Warning: GC from another HID passed to gsvit HID\n");
+    /* Continue anyway instead of aborting */
   }
 
   if (hashColor != gdBrushed) {

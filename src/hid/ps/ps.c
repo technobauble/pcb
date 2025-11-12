@@ -1090,8 +1090,8 @@ use_gc (hidGC gc)
     }
   if (gc->me_pointer != &ps_hid)
     {
-      fprintf (stderr, "Fatal: GC from another HID passed to ps HID\n");
-      abort ();
+      fprintf (stderr, "Warning: GC from another HID passed to ps HID\n");
+      /* Continue anyway instead of aborting */
     }
   if (global.linewidth != gc->width)
     {

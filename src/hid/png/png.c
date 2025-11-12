@@ -1499,8 +1499,8 @@ use_gc (hidGC gc)
 
   if (gc->me_pointer != &png_hid)
     {
-      fprintf (stderr, "Fatal: GC from another HID passed to png HID\n");
-      abort ();
+      fprintf (stderr, "Warning: GC from another HID passed to png HID\n");
+      /* Continue anyway instead of aborting */
     }
 
   if (linewidth != gc->width)
