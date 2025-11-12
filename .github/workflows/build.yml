@@ -84,6 +84,14 @@ jobs:
     - name: Run tests
       run: |
         make check 2>&1 | tee test.log
+        # Check for actual test failures (not intltool warnings)
+        if grep -q "^FAIL:" test.log; then
+          echo "❌ Tests failed" >> $GITHUB_STEP_SUMMARY
+          exit 1
+        fi
+        if grep -q "Syntax error: Unterminated quoted string" test.log; then
+          echo "⚠️ Note: intltool i18n check has warnings (non-critical)" >> $GITHUB_STEP_SUMMARY
+        fi
         echo "✅ Tests passed" >> $GITHUB_STEP_SUMMARY
       continue-on-error: false
 

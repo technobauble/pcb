@@ -70,9 +70,12 @@ sed \
 	po/Makefile.in.in.orig > po/Makefile.in.in
 
 # Menu i18n
-echo "
+# Add menu i18n rule with proper escaping
+cat >> po/Makefile.in.in <<'END_RULE'
+
 %.res.h: %.res
-	\$(MAKE) -C ../src \$@" >> po/Makefile.in.in
+	$(MAKE) -C ../src $@
+END_RULE
 
 rm -f po/Makefile.in.in.orig
 
