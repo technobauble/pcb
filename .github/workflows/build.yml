@@ -52,7 +52,16 @@ jobs:
           ghostscript \
           imagemagick \
           wish \
-          tcl
+          tcl \
+          libgtest-dev \
+          cmake
+
+    - name: Build and install Google Test
+      run: |
+        cd /usr/src/gtest
+        sudo cmake CMakeLists.txt
+        sudo make
+        sudo cp lib/*.a /usr/lib || sudo cp googlemock/gtest/*.a /usr/lib
 
     - name: Cache autotools
       uses: actions/cache@v4
@@ -216,7 +225,17 @@ jobs:
           imagemagick \
           wish \
           tcl \
-          lcov
+          lcov \
+          libgtest-dev \
+          cmake
+
+    - name: Build and install Google Test
+      run: |
+        cd /usr/src/gtest
+        sudo cmake CMakeLists.txt
+        sudo make
+        sudo cp lib/*.a /usr/lib || sudo cp googlemock/gtest/*.a /usr/lib
+        echo "✅ Google Test installed" >> $GITHUB_STEP_SUMMARY
 
     - name: Run autogen.sh
       run: ./autogen.sh
@@ -326,7 +345,16 @@ jobs:
           ghostscript \
           imagemagick \
           wish \
-          tcl
+          tcl \
+          libgtest-dev \
+          cmake
+
+    - name: Build and install Google Test
+      run: |
+        cd /usr/src/gtest
+        sudo cmake CMakeLists.txt
+        sudo make
+        sudo cp lib/*.a /usr/lib || sudo cp googlemock/gtest/*.a /usr/lib
 
     - name: Run autogen.sh
       run: ./autogen.sh
