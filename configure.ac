@@ -1081,6 +1081,63 @@ AC_ARG_ENABLE([debug],
 AC_MSG_RESULT([$enable_debug])
 AM_CONDITIONAL(DEBUG_BUILD, test x$enable_debug = xyes)
 
+# ------------- Enable Code Coverage -------------------
+AC_MSG_CHECKING([for whether to enable code coverage])
+AC_ARG_ENABLE([coverage],
+[  --enable-coverage       Enable code coverage instrumentation],
+[],[enable_coverage=no])
+
+AC_MSG_RESULT([$enable_coverage])
+AM_CONDITIONAL(ENABLE_COVERAGE, test x$enable_coverage = xyes)
+
+if test "x$enable_coverage" = "xyes"; then
+  COVERAGE_CFLAGS="--coverage -fprofile-arcs -ftest-coverage"
+  COVERAGE_LDFLAGS="--coverage"
+  AC_SUBST(COVERAGE_CFLAGS)
+  AC_SUBST(COVERAGE_LDFLAGS)
+fi
+
+# ------------- C++ Standard and Google Test -------------------
+# Check for C++17 support (optional)
+AC_MSG_CHECKING([for C++17 support])
+AC_LANG_PUSH([C++])
+OLD_CXXFLAGS="$CXXFLAGS"
+CXXFLAGS="$CXXFLAGS -std=c++17"
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
+  #include <optional>
+  ]], [[
+  std::optional<int> x = 42;
+  ]])],
+  [have_cxx17=yes],
+  [have_cxx17=no])
+CXXFLAGS="$OLD_CXXFLAGS"
+AC_LANG_POP([C++])
+AC_MSG_RESULT([$have_cxx17])
+
+# Check for Google Test (optional - don't fail if missing)
+AC_MSG_CHECKING([for Google Test])
+PKG_CHECK_MODULES([GTEST], [gtest >= 1.10.0], [have_gtest=yes], [have_gtest=no])
+
+if test "x$have_gtest" = "xyes" -a "x$have_cxx17" = "xyes"; then
+  AC_MSG_RESULT([yes (C++ tests will be built)])
+  enable_cpp_tests=yes
+  # Set C++ standard flags
+  GTEST_CXXFLAGS="$GTEST_CFLAGS -std=c++17"
+  AC_SUBST(GTEST_CXXFLAGS)
+else
+  if test "x$have_gtest" = "xno"; then
+    AC_MSG_RESULT([no (Google Test not found)])
+    AC_MSG_NOTICE([C++ tests disabled: Google Test not found])
+    AC_MSG_NOTICE([Install with: sudo apt-get install libgtest-dev])
+  elif test "x$have_cxx17" = "xno"; then
+    AC_MSG_RESULT([no (C++17 not supported)])
+    AC_MSG_NOTICE([C++ tests disabled: C++17 compiler required])
+  fi
+  enable_cpp_tests=no
+fi
+
+AM_CONDITIONAL([HAVE_GTEST], [test "x$enable_cpp_tests" = "xyes"])
+
 # ------------- mkdir required for win32 compatibility ------------
 # WIN32 mkdir takes only one argument, POSIX takes two.
 # #include "misc.h" where mkdir is required.
@@ -1313,6 +1370,9 @@ fi
 
 dnl testsuite
 AC_CONFIG_FILES(tests/Makefile)
+if test "x$enable_cpp_tests" = "xyes"; then
+   AC_CONFIG_FILES(tests/cpp/Makefile)
+fi
 
 dnl GTS 0.7.6 - http://gts.sourceforge.net/
 AC_CONFIG_FILES(gts/Makefile)
@@ -1357,4 +1417,5 @@ AC_MSG_RESULT([
    dmalloc debugging:        $with_dmalloc
    ElectricFence debugging:  $with_efence
    Regression tests enabled: $have_test_tools
+   C++ tests (Google Test):  $enable_cpp_tests
 ])

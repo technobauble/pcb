@@ -1,5 +1,10 @@
 ## -*- makefile -*-
 
+# Subdirectories to recurse into
+if HAVE_GTEST
+SUBDIRS = cpp
+endif
+
 TESTS_ENVIRONMENT=	\
 	GERBV=${GERBV} \
 	IM_ANIMATE=${IM_ANIMATE} \
@@ -9,6 +14,11 @@ TESTS_ENVIRONMENT=	\
 	IM_DISPLAY=${IM_DISPLAY} \
 	IM_MONTAGE=${IM_MONTAGE} \
 	XHOST=${XHOST}
+
+if ENABLE_COVERAGE
+AM_CFLAGS = $(COVERAGE_CFLAGS)
+AM_LDFLAGS = $(COVERAGE_LDFLAGS)
+endif
 
 RUN_TESTS=	run_tests.sh
 

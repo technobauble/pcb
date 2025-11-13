@@ -1,0 +1,85 @@
+# Makefile stub for C++ tests
+#
+# This will be integrated into the main build system via configure.ac
+# For now, this shows the intended structure.
+#
+# To manually build (requires Google Test installed):
+#   make -f Makefile.stub
+
+CXX = g++
+CXXFLAGS = -std=c++17 -Wall -Wextra -g -O0
+CPPFLAGS = -I../../src -I.
+
+# Google Test flags
+GTEST_CFLAGS = $(shell pkg-config --cflags gtest 2>/dev/null || echo "-I/usr/include")
+GTEST_LIBS = $(shell pkg-config --libs gtest gtest_main 2>/dev/null || echo "-lgtest -lgtest_main -lpthread")
+
+# Coverage flags (optional)
+ifdef COVERAGE
+CXXFLAGS += --coverage -fprofile-arcs -ftest-coverage
+LDFLAGS += --coverage
+endif
+
+# Test sources
+TEST_SOURCES = \
+	example_test.cpp
+
+# Test binary
+TEST_BINARY = unittest_cpp
+
+# Build rules
+all: $(TEST_BINARY)
+
+$(TEST_BINARY): $(TEST_SOURCES)
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(GTEST_CFLAGS) \
+		$(TEST_SOURCES) \
+		$(GTEST_LIBS) $(LDFLAGS) \
+		-o $@
+
+# Run tests
+check: $(TEST_BINARY)
+	@echo "=== Running C++ tests ==="
+	./$(TEST_BINARY)
+
+# Run tests with verbose output
+check-verbose: $(TEST_BINARY)
+	./$(TEST_BINARY) --gtest_print_time=1
+
+# List all tests
+list: $(TEST_BINARY)
+	./$(TEST_BINARY) --gtest_list_tests
+
+# Run with coverage
+coverage: COVERAGE=1
+coverage: clean all check
+	@echo "=== Generating coverage report ==="
+	@if command -v lcov >/dev/null 2>&1; then \
+		lcov --capture --directory . --output-file coverage.info; \
+		lcov --list coverage.info; \
+	else \
+		echo "lcov not installed, skipping coverage report"; \
+	fi
+
+# Clean
+clean:
+	rm -f $(TEST_BINARY) *.o *.gcda *.gcno coverage.info
+
+.PHONY: all check check-verbose list coverage clean
+
+# Integration with main build system (future):
+#
+# In configure.ac:
+#   PKG_CHECK_MODULES([GTEST], [gtest >= 1.10.0], [have_gtest=yes], [have_gtest=no])
+#   AM_CONDITIONAL([HAVE_GTEST], [test "x$have_gtest" = "xyes"])
+#
+# In tests/Makefile.am:
+#   if HAVE_GTEST
+#   SUBDIRS = cpp
+#   endif
+#
+# In tests/cpp/Makefile.am:
+#   check_PROGRAMS = unittest_cpp
+#   unittest_cpp_SOURCES = example_test.cpp
+#   unittest_cpp_CXXFLAGS = $(GTEST_CFLAGS) -std=c++17
+#   unittest_cpp_LDADD = $(GTEST_LIBS)
+#   TESTS = unittest_cpp

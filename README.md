@@ -1,6 +1,7 @@
 # PCB - Printed Circuit Board Design Tool
 
 [![Build Status](https://github.com/technobauble/pcb/workflows/Build%20and%20Test/badge.svg)](https://github.com/technobauble/pcb/actions)
+[![codecov](https://codecov.io/gh/technobauble/pcb/branch/master/graph/badge.svg)](https://codecov.io/gh/technobauble/pcb)
 [![License: GPL v2+](https://img.shields.io/badge/License-GPL%20v2+-blue.svg)](COPYING)
 
 PCB is a powerful, feature-rich CAD (Computer Aided Design) program for the physical design of printed circuit boards. It has been in active development since 1994 and is part of the [gEDA project](http://www.geda-project.org/) ecosystem.
