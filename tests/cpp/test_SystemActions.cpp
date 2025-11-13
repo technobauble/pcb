@@ -110,7 +110,7 @@ TEST_F(SystemActionsTest, ActionsHaveSyntax) {
 // C Bridge Tests
 //=============================================================================
 
-TEST_F(SystemActionsTest, CanLookupViaC Bridge) {
+TEST_F(SystemActionsTest, CanLookupViaCBridge) {
   // Verify actions can be looked up via C bridge
   EXPECT_EQ(1, pcb_action_exists("Quit"));
   EXPECT_EQ(1, pcb_action_exists("Message"));
