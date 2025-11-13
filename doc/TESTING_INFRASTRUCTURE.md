@@ -40,9 +40,12 @@ Pursue a **phased modernization approach** that:
 2. Expands unit testing systematically
 3. Integrates modern testing tools (fuzzing, ASan, benchmarks)
 4. Maintains the strong integration test foundation
+5. **Gradual C++ migration** - Enables better testability and modern practices
 
 **Estimated Timeline:** 3-6 months for core improvements
 **Expected Impact:** 50%+ code coverage, 200+ unit tests, significantly improved code quality
+
+**📘 C++ Migration:** PCB is transitioning to C++ for improved testability. See [CPP_MIGRATION.md](CPP_MIGRATION.md) for the dual-infrastructure strategy that supports both C and C++ during the migration.
 
 ---
 
@@ -1911,7 +1914,11 @@ Ongoing: Phase 4 Quality
 
 ### Related Documentation
 
+- [TESTING.md](TESTING.md) - Testing guide for developers
+- [WRITING_UNIT_TESTS.md](WRITING_UNIT_TESTS.md) - Step-by-step unit test guide
+- [CPP_MIGRATION.md](CPP_MIGRATION.md) - **C++ migration strategy and dual-infrastructure guide**
 - `tests/README.txt` - Integration test guide
+- `tests/cpp/README.md` - C++ test directory guide
 - `CONTRIBUTING.md` - Contribution guidelines
 - `RENEWAL_PROPOSAL.md` - Project modernization plan
 - `.github/workflows/build.yml` - CI configuration
