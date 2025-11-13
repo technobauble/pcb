@@ -96,6 +96,8 @@ floordiv (int a, int n)
 /* Note: the following work for integers and other numeric types. */
 #undef sign
 #undef abs
+/* Don't redefine these macros in C++ mode - use std::min/std::max instead */
+#ifndef __cplusplus
 #undef min
 #undef max
 #undef sq
@@ -106,5 +108,6 @@ floordiv (int a, int n)
 #define max(a,b) ((a)>(b) ? (a) : (b))
 #define sq(a) ((a)*(a))
 #define cu(a) ((a)*(a)*(a))
+#endif /* __cplusplus */
 
 #endif /* AUXILIARY_H */
