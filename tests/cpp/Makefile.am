@@ -10,10 +10,12 @@ check_PROGRAMS = unittest_cpp
 unittest_cpp_SOURCES = \
 	example_test.cpp \
 	test_SelectionActions.cpp \
+	test_SystemActions.cpp \
 	pcb_stubs.cpp \
 	$(top_srcdir)/src/actions/Action.cpp \
 	$(top_srcdir)/src/actions/action_bridge.cpp \
-	$(top_srcdir)/src/actions/SelectionActions.cpp
+	$(top_srcdir)/src/actions/SelectionActions.cpp \
+	$(top_srcdir)/src/actions/SystemActions.cpp
 
 # Include paths
 unittest_cpp_CPPFLAGS = \

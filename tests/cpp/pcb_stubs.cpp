@@ -11,6 +11,11 @@
 
 extern "C" {
 
+// Macros needed by action implementations
+#ifndef UNKNOWN
+#define UNKNOWN(a) ((a) && *(a) ? (a) : "(unknown)")
+#endif
+
 // Stub implementations of PCB functions needed by SelectionActions
 
 // From select.c
@@ -58,6 +63,9 @@ void Message(const char* fmt, ...) { (void)fmt; }
 // From draw.c
 void Draw(void) {}
 
+// From misc.c (system actions)
+void QuitApplication(void) {}
+
 // Global state structures needed by action system
 struct CrosshairType {
     int X, Y;
@@ -73,9 +81,47 @@ struct PCBType {
 } *PCB = nullptr;
 
 // HID structure (minimal stub)
-struct hid_st;
-typedef struct hid_st HID;
+#define HID_CLOSE_CONFIRM_OK 0
 
-HID* gui = nullptr;
+struct hid_st {
+    int (*close_confirm_dialog)(void);
+};
+
+static int stub_close_confirm_dialog(void) {
+    return HID_CLOSE_CONFIRM_OK;
+}
+
+static struct hid_st stub_gui = {
+    stub_close_confirm_dialog
+};
+
+HID* gui = &stub_gui;
+
+// Library structure for DumpLibrary action
+typedef struct {
+    char* ListEntry;
+    char* Template;
+    char* Package;
+    char* Value;
+    char* Description;
+} LibraryEntryType;
+
+typedef struct {
+    int EntryN;
+    int EntryMax;
+    char* Name;
+    char* directory;
+    char* Style;
+    int flag;
+    LibraryEntryType* Entry;
+} LibraryMenuType;
+
+typedef struct {
+    int MenuN;
+    int MenuMax;
+    LibraryMenuType* Menu;
+} LibraryType;
+
+LibraryType Library = {0, 0, nullptr};
 
 } // extern "C"

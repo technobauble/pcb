@@ -184,7 +184,9 @@ PCB_CXX_SRCS = \
 	actions/action_bridge.h \
 	actions/action_bridge.cpp \
 	actions/SelectionActions.h \
-	actions/SelectionActions.cpp
+	actions/SelectionActions.cpp \
+	actions/SystemActions.h \
+	actions/SystemActions.cpp
 
 LIST_SRCS = ${PCB_SRCS}
 
