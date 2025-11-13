@@ -111,7 +111,9 @@ HID_Action* pcb_action_get_hid_list(int* count)
 
     for (auto* action : actions) {
         HID_Action hid_action;
-        hid_action.name = action->name();
+        // Note: HID_Action.name expects char*, but our strings are const char*
+        // This cast is safe because HID_Action doesn't modify these strings
+        hid_action.name = const_cast<char*>(action->name());
         hid_action.need_coord_msg = nullptr;  // Most actions don't need this
 
         // We need to create a wrapper function that bridges to the C++ action
