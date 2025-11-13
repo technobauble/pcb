@@ -48,6 +48,201 @@ src/
 
 ---
 
+## Global State and Testing Isolation
+
+### Understanding `initialize_units()`
+
+In `src/main-test.c`, you'll notice that `main()` calls `initialize_units()` before registering tests:
+
+```c
+int
+main(int argc, char *argv[])
+{
+  initialize_units();  // <-- Why is this needed?
+
+  pcb_printf_register_tests();
+  object_list_register_tests();
+
+  g_test_init(&argc, &argv, NULL);
+  return g_test_run();
+}
+```
+
+**Why does this exist?**
+
+PCB has global state that must be initialized before many functions work correctly:
+- **Unit conversion tables** (mil/mm/inch conversions)
+- **Coordinate system settings**
+- **Default settings and configurations**
+
+This is **technical debt** from PCB's legacy architecture. In an ideal world, unit tests should not require global initialization.
+
+### The Problem with Global State
+
+Global state violates unit testing principles:
+
+1. **Tests aren't truly isolated** - They share global state
+2. **Hidden dependencies** - Tests may pass/fail based on initialization order
+3. **Harder to test** - Can't easily test functions in different states
+4. **Slower tests** - Can't run tests in parallel safely
+
+### Better Approach: GTest Fixtures
+
+GTest provides **fixtures** for per-test setup and teardown, which is a more modern approach:
+
+```c
+/* Define a fixture structure */
+typedef struct {
+  UnitSystem *units;
+  Settings *settings;
+  /* Other test-specific state */
+} MyFixture;
+
+/* Setup function - called before each test */
+static void
+my_fixture_setup(MyFixture *fixture, gconstpointer user_data)
+{
+  /* Initialize only what this test needs */
+  fixture->units = create_unit_system();
+  fixture->settings = create_default_settings();
+}
+
+/* Teardown function - called after each test */
+static void
+my_fixture_teardown(MyFixture *fixture, gconstpointer user_data)
+{
+  /* Clean up */
+  free_unit_system(fixture->units);
+  free_settings(fixture->settings);
+}
+
+/* Test function using fixture */
+static void
+test_convert_units(MyFixture *fixture, gconstpointer user_data)
+{
+  /* Test has access to fixture->units and fixture->settings */
+  Coord result = convert_to_mil(100, fixture->units);
+  g_assert_cmpint(result, ==, 100);
+}
+
+/* Register test with fixture */
+void
+mymodule_register_tests(void)
+{
+  g_test_add("/mymodule/convert-units",
+             MyFixture,
+             NULL,  /* user_data */
+             my_fixture_setup,
+             test_convert_units,
+             my_fixture_teardown);
+}
+```
+
+### Benefits of Fixtures
+
+- ✅ **True isolation** - Each test gets fresh state
+- ✅ **Explicit dependencies** - Clear what each test needs
+- ✅ **Easier to maintain** - Setup/teardown in one place
+- ✅ **Better testing** - Can easily test different configurations
+- ✅ **Parallel execution** - Tests can run concurrently
+
+### Current State vs. Ideal State
+
+**Current State (PCB):**
+```c
+// main-test.c
+int main() {
+  initialize_units();  // Global initialization
+
+  // All tests share this global state
+  g_test_run();
+}
+```
+
+**Ideal State (with fixtures):**
+```c
+// mymodule.c
+static void
+test_with_fixture(MyFixture *fixture, gconstpointer user_data)
+{
+  // Each test gets its own isolated state
+  // No global dependencies
+}
+```
+
+### Practical Guidance for PCB
+
+**For now:**
+- Continue using `initialize_units()` in `main-test.c`
+- It's necessary for many PCB functions to work
+- Document which global state your tests depend on
+
+**For new code:**
+- Try to write functions that don't require global state
+- Pass dependencies as parameters instead of using globals
+- Use fixtures when possible for new test modules
+
+**Long-term goal:**
+- Refactor PCB to reduce global state
+- Migrate tests to use fixtures
+- Enable parallel test execution
+
+### Example: Testing with and without Global State
+
+**Function depending on global state:**
+```c
+/* Bad - depends on global Settings */
+Coord
+scale_dimension(Coord value)
+{
+  return value * Settings.grid_scale;  // Uses global
+}
+
+/* Test must use global state */
+static void
+test_scale_dimension(void)
+{
+  Settings.grid_scale = 2.0;  // Modify global
+  Coord result = scale_dimension(100);
+  g_assert_cmpint(result, ==, 200);
+  Settings.grid_scale = 1.0;  // Reset global
+}
+```
+
+**Better design - explicit dependencies:**
+```c
+/* Good - takes settings as parameter */
+Coord
+scale_dimension(Coord value, double grid_scale)
+{
+  return value * grid_scale;
+}
+
+/* Test is isolated */
+static void
+test_scale_dimension(void)
+{
+  Coord result = scale_dimension(100, 2.0);
+  g_assert_cmpint(result, ==, 200);
+  /* No global state to clean up */
+}
+```
+
+### When to Use Fixtures
+
+Use fixtures when:
+- Your tests need setup/teardown
+- You're testing a new module without global dependencies
+- You need different configurations for different tests
+- You want true test isolation
+
+Continue using global initialization when:
+- Testing legacy code that requires it
+- Refactoring to remove globals would be too invasive
+- You're working with coordinate systems or unit conversions
+
+---
+
 ## Step-by-Step: Adding Your First Test
 
 Let's add a test for a hypothetical function `calculate_distance()` in `src/geometry.c`.

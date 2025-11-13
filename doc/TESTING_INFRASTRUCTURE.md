@@ -1032,6 +1032,200 @@ diff structure.txt golden/structure.txt
 
 ---
 
+#### 3.5 Architectural Refactoring for Testability
+
+**Goal:** Reduce global state dependencies to enable better unit testing
+
+**Problem:** PCB's current architecture relies heavily on global state (unit conversion tables, settings, coordinate systems), which makes unit testing difficult. Tests must call `initialize_units()` before running, which violates test isolation principles and prevents parallel test execution.
+
+**Impact on Testing:**
+- Tests share global state (not truly isolated)
+- Hidden dependencies between tests
+- Can't run tests in parallel safely
+- Harder to test functions in different configurations
+- Fixtures can't be used effectively for most code
+
+**Long-term Refactoring Goals:**
+
+**1. Dependency Injection for Unit System**
+
+Currently:
+```c
+/* Bad - depends on global unit conversion tables */
+Coord
+convert_to_mil(const char *value)
+{
+  return parse_and_convert(value);  // Uses global Settings.unit
+}
+```
+
+Refactored:
+```c
+/* Good - takes unit system as parameter */
+Coord
+convert_to_mil(const char *value, UnitSystem *units)
+{
+  return parse_and_convert(value, units);
+}
+```
+
+**2. Eliminate Settings Global**
+
+Currently:
+```c
+/* Bad - uses global Settings */
+bool
+should_snap_to_grid(Coord x, Coord y)
+{
+  if (!Settings.grid_enabled)
+    return false;
+  return snap_to(x, y, Settings.grid_spacing);
+}
+```
+
+Refactored:
+```c
+/* Good - pass settings as context */
+bool
+should_snap_to_grid(Coord x, Coord y, const GridSettings *grid)
+{
+  if (!grid->enabled)
+    return false;
+  return snap_to(x, y, grid->spacing);
+}
+```
+
+**3. Context Objects for Complex Operations**
+
+```c
+/* Instead of global PCB pointer, use context */
+typedef struct {
+  PCBType *pcb;
+  Settings *settings;
+  UnitSystem *units;
+  /* Other dependencies */
+} OperationContext;
+
+/* Functions take context */
+bool
+run_drc_check(OperationContext *ctx, DRCSettings *drc_settings)
+{
+  /* All dependencies explicit */
+}
+```
+
+**4. Enable Fixture-Based Testing**
+
+With explicit dependencies, tests can use GTest fixtures:
+
+```c
+typedef struct {
+  UnitSystem *units;
+  GridSettings *grid;
+  PCBType *test_pcb;
+} TestFixture;
+
+static void
+fixture_setup(TestFixture *fixture, gconstpointer user_data)
+{
+  fixture->units = create_unit_system_mil();
+  fixture->grid = create_grid(50);
+  fixture->test_pcb = create_simple_pcb();
+}
+
+static void
+fixture_teardown(TestFixture *fixture, gconstpointer user_data)
+{
+  free_unit_system(fixture->units);
+  free_grid(fixture->grid);
+  free_pcb(fixture->test_pcb);
+}
+
+static void
+test_grid_snap(TestFixture *fixture, gconstpointer user_data)
+{
+  bool result = should_snap_to_grid(25, 25, fixture->grid);
+  g_assert_true(result);
+}
+```
+
+**Migration Strategy:**
+
+**Phase A: Document Current State**
+- ✅ Document global state issue in [WRITING_UNIT_TESTS.md](WRITING_UNIT_TESTS.md)
+- ✅ Add guidance on when to use fixtures vs. global initialization
+- Mark global state dependencies as technical debt
+
+**Phase B: Non-Breaking Additions (Low Risk)**
+- Add new functions with explicit dependencies alongside legacy versions
+- Use new versions in new code
+- Gradually migrate tests to fixture-based approach
+- No changes to existing code
+
+Example:
+```c
+/* Legacy version - keep for compatibility */
+Coord convert_to_mil(const char *value);
+
+/* New version - preferred for new code */
+Coord convert_to_mil_ex(const char *value, UnitSystem *units);
+```
+
+**Phase C: Incremental Refactoring (Medium Risk)**
+- Identify modules with fewest dependencies
+- Refactor one module at a time
+- Add comprehensive tests before and after refactoring
+- Maintain backward compatibility with wrapper functions
+
+Priority modules for refactoring:
+1. Geometry/math functions (fewest dependencies)
+2. String parsing/formatting
+3. Data structure utilities
+4. Coordinate calculations
+5. DRC algorithms (after prerequisites)
+
+**Phase D: Global State Encapsulation (High Risk)**
+- Encapsulate remaining globals in context structs
+- Update main application to create and pass contexts
+- Update all tests to use fixtures
+- Enable parallel test execution
+
+**Benefits:**
+
+Short-term:
+- Better documentation of dependencies
+- New code can be more testable
+- Gradual improvement without disruption
+
+Medium-term:
+- More isolated unit tests
+- Better test coverage possible
+- Easier to test edge cases
+
+Long-term:
+- Parallel test execution
+- Better code maintainability
+- Easier to add new features
+- Reduced coupling
+
+**Expected Impact:**
+- Enable fixture-based testing for 80%+ of unit tests
+- Support parallel test execution (10x faster test runs)
+- Improve code maintainability and clarity
+- Reduce coupling between modules
+
+**Effort:** 6-12 months (incremental, low-priority background work)
+**Priority:** Low (long-term quality improvement)
+
+**Success Criteria:**
+- [ ] 50+ tests using fixtures instead of global state
+- [ ] At least 3 modules fully refactored for testability
+- [ ] Documented migration guide for contributors
+- [ ] Parallel test execution working for fixture-based tests
+- [ ] No regressions in existing functionality
+
+---
+
 ### Phase 4: Quality Infrastructure (Ongoing)
 
 **Goal:** Maintain high quality standards continuously
