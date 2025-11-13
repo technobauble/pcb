@@ -234,6 +234,10 @@ Memory safety tests run automatically in CI:
 
 ## Writing Unit Tests
 
+**📖 For complete step-by-step instructions, see: [WRITING_UNIT_TESTS.md](WRITING_UNIT_TESTS.md)**
+
+This section provides a quick reference. For detailed guidance including examples, troubleshooting, and best practices, see the dedicated guide above.
+
 Unit tests use GLib's `g_test` framework.
 
 ### Test File Structure
