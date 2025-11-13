@@ -79,7 +79,7 @@ SelectAction::SelectAction()
     : Action("Select", select_help, select_syntax)
 {}
 
-int SelectAction::execute(int argc, char** argv, Coord x, Coord y)
+int SelectAction::execute(int /*argc*/, char** argv, Coord /*x*/, Coord /*y*/)
 {
     const char* function = arg(0, argv);
 
@@ -105,7 +105,11 @@ int SelectAction::execute(int argc, char** argv, Coord x, Coord y)
         box.Y2 = std::max(Crosshair.AttachedBox.Point1.Y, Crosshair.AttachedBox.Point2.Y);
 
         notify_crosshair_change(false);
-        NotifyBlock();
+
+        // TODO: NotifyBlock() is a static function in action.c that manages
+        // AttachedBox state transitions (STATE_FIRST -> STATE_SECOND -> STATE_THIRD).
+        // This UI state management needs to be refactored and exposed properly.
+        // For now, we handle the STATE_THIRD check directly below.
 
         if (Crosshair.AttachedBox.State == STATE_THIRD && SelectBlock(&box, true)) {
             SetChangedFlag(true);
@@ -220,7 +224,7 @@ UnselectAction::UnselectAction()
     : Action("Unselect", unselect_help, unselect_syntax)
 {}
 
-int UnselectAction::execute(int argc, char** argv, Coord x, Coord y)
+int UnselectAction::execute(int /*argc*/, char** argv, Coord /*x*/, Coord /*y*/)
 {
     const char* function = arg(0, argv);
 
@@ -247,7 +251,9 @@ int UnselectAction::execute(int argc, char** argv, Coord x, Coord y)
         box.Y2 = std::max(Crosshair.AttachedBox.Point1.Y, Crosshair.AttachedBox.Point2.Y);
 
         notify_crosshair_change(false);
-        NotifyBlock();
+
+        // TODO: Same as SelectAction - NotifyBlock() needs to be refactored.
+        // See comment in SelectAction::execute().
 
         if (Crosshair.AttachedBox.State == STATE_THIRD && SelectBlock(&box, false)) {
             SetChangedFlag(true);
@@ -345,7 +351,7 @@ RemoveSelectedAction::RemoveSelectedAction()
     : Action("RemoveSelected", removeselected_help, removeselected_syntax)
 {}
 
-int RemoveSelectedAction::execute(int argc, char** argv, Coord x, Coord y)
+int RemoveSelectedAction::execute(int /*argc*/, char** /*argv*/, Coord /*x*/, Coord /*y*/)
 {
     if (RemoveSelected()) {
         SetChangedFlag(true);
