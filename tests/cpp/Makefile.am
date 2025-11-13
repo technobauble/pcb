@@ -6,14 +6,18 @@
 # C++ test binary
 check_PROGRAMS = unittest_cpp
 
-# Test sources
+# Test sources (including action system sources for testing)
 unittest_cpp_SOURCES = \
 	example_test.cpp \
-	test_SelectionActions.cpp
+	test_SelectionActions.cpp \
+	$(top_srcdir)/src/actions/Action.cpp \
+	$(top_srcdir)/src/actions/action_bridge.cpp \
+	$(top_srcdir)/src/actions/SelectionActions.cpp
 
 # Include paths
 unittest_cpp_CPPFLAGS = \
 	-I$(top_srcdir)/src \
+	-I$(top_srcdir) \
 	$(GTEST_CFLAGS)
 
 # C++ compiler flags
@@ -21,13 +25,11 @@ unittest_cpp_CXXFLAGS = \
 	-std=c++17 \
 	-Wall \
 	-Wextra \
+	-Wno-unused-parameter \
 	$(GTEST_CXXFLAGS)
 
 # Linker flags and libraries
 unittest_cpp_LDADD = \
-	$(top_builddir)/src/actions/Action.o \
-	$(top_builddir)/src/actions/action_bridge.o \
-	$(top_builddir)/src/actions/SelectionActions.o \
 	$(GTEST_LIBS) \
 	-lgtest_main \
 	-lpthread
