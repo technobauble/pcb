@@ -336,7 +336,6 @@ static FunctionType Functions[] = {
 /* ---------------------------------------------------------------------------
  * some local routines
  */
-int GetFunctionID (String);
 static void AdjustAttachedBox (void);
 static void NotifyLine (void);
 static void NotifyBlock (void);
@@ -629,8 +628,8 @@ hashfunc(String s)
 /*!
  * \brief Get function ID of passed string.
  */
-static int
-GetFunctionID (String Ident)
+int
+GetFunctionID (const char *Ident)
 {
   int i, h;
 

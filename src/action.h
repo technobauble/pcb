@@ -144,6 +144,8 @@ typedef enum
   F_ToggleStartDirection,
   F_ToggleThindraw,
   F_ToggleThindrawPoly,
+  F_ToggleLockNames,
+  F_ToggleOnlyNames,
   F_ToggleOrthoMove,
   F_ToggleLocalRef,
   F_ToggleCheckPlanes,
@@ -154,8 +156,11 @@ typedef enum
   F_Via,
   F_ViaByName,
   F_ViaSize,
+  F_ViaDrillingHole,
   F_Zoom,
-  F_BuriedVias
+  F_ThroughHole,
+  F_BuriedVias,
+  F_ToggleAutoBuriedVias
 }
 FunctionID;
 
