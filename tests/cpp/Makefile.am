@@ -8,7 +8,8 @@ check_PROGRAMS = unittest_cpp
 
 # Test sources
 unittest_cpp_SOURCES = \
-	example_test.cpp
+	example_test.cpp \
+	test_SelectionActions.cpp
 
 # Include paths
 unittest_cpp_CPPFLAGS = \
@@ -24,6 +25,9 @@ unittest_cpp_CXXFLAGS = \
 
 # Linker flags and libraries
 unittest_cpp_LDADD = \
+	$(top_builddir)/src/actions/Action.o \
+	$(top_builddir)/src/actions/action_bridge.o \
+	$(top_builddir)/src/actions/SelectionActions.o \
 	$(GTEST_LIBS) \
 	-lgtest_main \
 	-lpthread
