@@ -27,9 +27,10 @@
 
 extern "C" {
 #include "global.h"
+#include "data.h"
 #include "crosshair.h"
 #include "undo.h"
-#include "macro.h"
+#include "action.h"
 }
 
 namespace pcb {

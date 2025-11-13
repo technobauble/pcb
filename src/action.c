@@ -460,7 +460,7 @@ static FunctionType Functions[] = {
 /* ---------------------------------------------------------------------------
  * some local routines
  */
-static int GetFunctionID (String);
+int GetFunctionID (String);
 static void AdjustAttachedBox (void);
 static void NotifyLine (void);
 static void NotifyBlock (void);
