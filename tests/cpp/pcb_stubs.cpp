@@ -16,6 +16,45 @@ extern "C" {
 #define UNKNOWN(a) ((a) && *(a) ? (a) : "(unknown)")
 #endif
 
+// FunctionID enum (subset needed for tests)
+typedef enum {
+    F_AddSelected,
+    F_All,
+    F_Block,
+    F_Center,
+    F_Clear,
+    F_Close,
+    F_Connection,
+    F_Convert,
+    F_Found,
+    F_Mirror,
+    F_Object,
+    F_Restore,
+    F_Rotate,
+    F_Save,
+    F_Selected,
+    F_SelectedElements,
+    F_BuriedVias
+} FunctionID;
+
+// GetFunctionID stub - minimal implementation for tests
+static int GetFunctionID(const char* str) {
+    if (!str) return -1;
+    if (strcmp(str, "Save") == 0) return F_Save;
+    if (strcmp(str, "Restore") == 0) return F_Restore;
+    if (strcmp(str, "Close") == 0) return F_Close;
+    if (strcmp(str, "Block") == 0) return F_Block;
+    if (strcmp(str, "Center") == 0) return F_Center;
+    if (strcmp(str, "Object") == 0) return F_Object;
+    if (strcmp(str, "Selected") == 0) return F_Selected;
+    if (strcmp(str, "SelectedElements") == 0) return F_SelectedElements;
+    if (strcmp(str, "All") == 0) return F_All;
+    if (strcmp(str, "Found") == 0) return F_Found;
+    if (strcmp(str, "Connection") == 0) return F_Connection;
+    if (strcmp(str, "BuriedVias") == 0) return F_BuriedVias;
+    return -1;
+}
+
 // Stub implementations of PCB functions needed by SelectionActions
 
 // From select.c
@@ -39,6 +78,7 @@ void SetChangedFlag(int flag) { (void)flag; }
 
 // From crosshair.c
 void notify_crosshair_change(int flag) { (void)flag; }
+void notify_mark_change(int flag) { (void)flag; }
 
 // From search.c
 void LookupConnection(int x, int y, int flag1, int flag2, int flag3, int flag4) {
@@ -56,6 +96,9 @@ int ResetFoundPinsViasAndPads(int flag) { (void)flag; return 0; }
 
 // From undo.c
 void IncrementUndoSerialNumber(void) {}
+void SaveUndoSerialNumber(void) {}
+void RestoreUndoSerialNumber(void) {}
+int Bumped = 0;
 
 // From error.c
 void Message(const char* fmt, ...) { (void)fmt; }
@@ -75,6 +118,11 @@ struct CrosshairType {
         struct { int X, Y; } Point2;
     } AttachedBox;
 } Crosshair = {0, 0, {0, {0, 0}, {0, 0}}};
+
+struct MarkType {
+    bool status;
+    int X, Y;
+} Marked = {false, 0, 0};
 
 struct PCBType {
     int Data;

@@ -11,11 +11,13 @@ unittest_cpp_SOURCES = \
 	example_test.cpp \
 	test_SelectionActions.cpp \
 	test_SystemActions.cpp \
+	test_EditorActions.cpp \
 	pcb_stubs.cpp \
 	$(top_srcdir)/src/actions/Action.cpp \
 	$(top_srcdir)/src/actions/action_bridge.cpp \
 	$(top_srcdir)/src/actions/SelectionActions.cpp \
-	$(top_srcdir)/src/actions/SystemActions.cpp
+	$(top_srcdir)/src/actions/SystemActions.cpp \
+	$(top_srcdir)/src/actions/EditorActions.cpp
 
 # Include paths
 unittest_cpp_CPPFLAGS = \
