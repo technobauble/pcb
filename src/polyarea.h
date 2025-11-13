@@ -49,6 +49,8 @@ enum {
 #define PLF_INV 0
 #define PLF_MARK 1
 
+/* Don't define min/max macros when compiling C++ - use std::min/std::max instead */
+#ifndef __cplusplus
 #ifndef min
 #define min(x, y) ((x) < (y) ? (x) : (y))
 #endif
@@ -56,6 +58,7 @@ enum {
 #ifndef max
 #define max(x, y) ((x) > (y) ? (x) : (y))
 #endif
+#endif /* __cplusplus */
 
 
 typedef Coord vertex[2]; /*!< longing point representation of coordinates. */

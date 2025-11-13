@@ -166,7 +166,14 @@ PCB_SRCS = \
 	hid/common/draw_helpers.h \
 	hid/common/hid_resource.c \
 	hid/common/hid_resource.h \
-	hid/hidint.h 
+	hid/hidint.h
+
+# C++ sources for new action system
+PCB_CXX_SRCS = \
+	actions/Action.h \
+	actions/Action.cpp \
+	actions/action_bridge.h \
+	actions/action_bridge.cpp
 
 LIST_SRCS = ${PCB_SRCS}
 
@@ -218,7 +225,11 @@ endif
 
 # All these -I$(top_srcdir) in this file are for globalconst.h.
 pcb_CPPFLAGS = -I$(top_srcdir) -I$(srcdir)/../gts
-pcb_SOURCES = ${PCB_SRCS} core_lists.h
+
+# C++ compiler flags for action system
+AM_CXXFLAGS = -std=c++11 -Wall -Wextra
+
+pcb_SOURCES = ${PCB_SRCS} ${PCB_CXX_SRCS} core_lists.h
 
 TEST_SRCS = \
 	pcb-printf.c	\
