@@ -73,8 +73,8 @@ TEST_F(EditorActionsTest, ActionsHaveHelpText) {
   ASSERT_NE(nullptr, markcrosshair);
   EXPECT_NE(nullptr, markcrosshair->help());
   EXPECT_GT(strlen(markcrosshair->help()), 0) << "MarkCrosshair action has empty help text";
-  EXPECT_NE(nullptr, strstr(markcrosshair->help(), "Crosshair") ||
-                     strstr(markcrosshair->help(), "mark"))
+  EXPECT_TRUE(strstr(markcrosshair->help(), "Crosshair") != nullptr ||
+              strstr(markcrosshair->help(), "mark") != nullptr)
     << "MarkCrosshair help should mention crosshair or mark";
 }
 
