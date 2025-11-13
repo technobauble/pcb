@@ -242,21 +242,29 @@ jobs:
         echo "" >> $GITHUB_STEP_SUMMARY
 
         # Capture coverage data
-        lcov --capture --directory . --output-file coverage.info
+        lcov --capture \
+          --directory . \
+          --output-file coverage.info \
+          --rc lcov_branch_coverage=0 \
+          --ignore-errors mismatch \
+          --ignore-errors inconsistent
 
         # Remove external/generated code from coverage
         lcov --remove coverage.info \
           --ignore-errors unused \
+          --ignore-errors mismatch \
           '/usr/*' \
           '*/gts/*' \
           '*/parse_y.c' \
           '*/parse_l.c' \
           '*/edif.c' \
           '*/tests/*' \
-          --output-file coverage_filtered.info
+          --output-file coverage_filtered.info \
+          --rc lcov_branch_coverage=0
 
         # Generate summary
-        lcov --list coverage_filtered.info > coverage_summary.txt
+        lcov --list coverage_filtered.info \
+          --rc lcov_branch_coverage=0 > coverage_summary.txt
 
         # Extract key metrics
         TOTAL_LINES=$(grep -oP 'lines\.*: \K[0-9.]+(?=%)' coverage_summary.txt | tail -1)
