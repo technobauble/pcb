@@ -1,0 +1,60 @@
+# Codecov Configuration for PCB
+# https://docs.codecov.com/docs/codecov-yaml
+
+codecov:
+  require_ci_to_pass: yes
+
+coverage:
+  precision: 2
+  round: down
+  range: "70...100"
+
+  status:
+    project:
+      default:
+        target: auto
+        threshold: 1%  # Allow 1% drop in coverage
+        if_ci_failed: error
+
+    patch:
+      default:
+        target: 50%  # New code should be at least 50% tested
+        threshold: 5%
+
+comment:
+  layout: "reach,diff,flags,files,footer"
+  behavior: default
+  require_changes: no
+
+ignore:
+  # External dependencies
+  - "gts/**/*"
+  # Generated files
+  - "src/hid/lesstif/lesstif_lists.h"
+  - "src/hid/lesstif/lesstif_lists2.h"
+  - "src/parse_y.c"
+  - "src/parse_y.h"
+  - "src/parse_l.c"
+  - "src/edif.c"
+  - "src/edif.h"
+  # Test files (tests themselves don't need coverage)
+  - "tests/**/*"
+  - "src/main-test.c"
+  # Win32 specific code (not tested in Linux CI)
+  - "w32/**/*"
+  - "win32/**/*"
+  # Documentation
+  - "doc/**/*"
+  - "tutorial/**/*"
+  - "example/**/*"
+
+flags:
+  unit:
+    paths:
+      - src/
+    carryforward: true
+
+  integration:
+    paths:
+      - src/
+    carryforward: true

@@ -29,6 +29,11 @@ else
 AM_CFLAGS= -DNDEBUG
 endif
 
+if ENABLE_COVERAGE
+AM_CFLAGS += $(COVERAGE_CFLAGS)
+AM_LDFLAGS = $(COVERAGE_LDFLAGS)
+endif
+
 PCB_SRCS = \
 	action.c \
 	action.h \

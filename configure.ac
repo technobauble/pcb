@@ -1081,6 +1081,22 @@ AC_ARG_ENABLE([debug],
 AC_MSG_RESULT([$enable_debug])
 AM_CONDITIONAL(DEBUG_BUILD, test x$enable_debug = xyes)
 
+# ------------- Enable Code Coverage -------------------
+AC_MSG_CHECKING([for whether to enable code coverage])
+AC_ARG_ENABLE([coverage],
+[  --enable-coverage       Enable code coverage instrumentation],
+[],[enable_coverage=no])
+
+AC_MSG_RESULT([$enable_coverage])
+AM_CONDITIONAL(ENABLE_COVERAGE, test x$enable_coverage = xyes)
+
+if test "x$enable_coverage" = "xyes"; then
+  COVERAGE_CFLAGS="--coverage -fprofile-arcs -ftest-coverage"
+  COVERAGE_LDFLAGS="--coverage"
+  AC_SUBST(COVERAGE_CFLAGS)
+  AC_SUBST(COVERAGE_LDFLAGS)
+fi
+
 # ------------- mkdir required for win32 compatibility ------------
 # WIN32 mkdir takes only one argument, POSIX takes two.
 # #include "misc.h" where mkdir is required.
