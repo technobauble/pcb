@@ -31,6 +31,7 @@ extern "C" {
 #include "crosshair.h"
 #include "undo.h"
 #include "action.h"
+#include "error.h"
 }
 
 namespace pcb {
