@@ -1,5 +1,10 @@
 ## -*- makefile -*-
 
+# Subdirectories to recurse into
+if HAVE_GTEST
+SUBDIRS = cpp
+endif
+
 TESTS_ENVIRONMENT=	\
 	GERBV=${GERBV} \
 	IM_ANIMATE=${IM_ANIMATE} \
