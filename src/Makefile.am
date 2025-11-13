@@ -23,10 +23,19 @@ pcblib_DATA= \
 
 bin_PROGRAMS=	pcb
 
+# Initialize flags
+AM_CFLAGS =
+AM_LDFLAGS =
+
 if DEBUG_BUILD
 # don't disable assert()
 else
-AM_CFLAGS= -DNDEBUG
+AM_CFLAGS += -DNDEBUG
+endif
+
+if ENABLE_COVERAGE
+AM_CFLAGS += $(COVERAGE_CFLAGS)
+AM_LDFLAGS += $(COVERAGE_LDFLAGS)
 endif
 
 PCB_SRCS = \

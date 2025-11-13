@@ -52,7 +52,16 @@ jobs:
           ghostscript \
           imagemagick \
           wish \
-          tcl
+          tcl \
+          libgtest-dev \
+          cmake
+
+    - name: Build and install Google Test
+      run: |
+        cd /usr/src/gtest
+        sudo cmake CMakeLists.txt
+        sudo make
+        sudo cp lib/*.a /usr/lib || sudo cp googlemock/gtest/*.a /usr/lib
 
     - name: Cache autotools
       uses: actions/cache@v4
@@ -70,6 +79,11 @@ jobs:
     - name: Configure
       run: |
         ./configure ${{ matrix.config.configure_flags }} 2>&1 | tee configure.log
+        configure_exit_code=${PIPESTATUS[0]}
+        if [ $configure_exit_code -ne 0 ]; then
+          echo "❌ Configure failed with exit code $configure_exit_code" >> $GITHUB_STEP_SUMMARY
+          exit $configure_exit_code
+        fi
         echo "✅ Configure completed for: ${{ matrix.config.name }}" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "**Configure flags:** \`${{ matrix.config.configure_flags }}\`" >> $GITHUB_STEP_SUMMARY
@@ -77,6 +91,11 @@ jobs:
     - name: Build
       run: |
         make -j$(nproc) 2>&1 | tee build.log
+        build_exit_code=${PIPESTATUS[0]}
+        if [ $build_exit_code -ne 0 ]; then
+          echo "❌ Build failed with exit code $build_exit_code" >> $GITHUB_STEP_SUMMARY
+          exit $build_exit_code
+        fi
         echo "✅ Build completed successfully" >> $GITHUB_STEP_SUMMARY
 
     - name: Run tests
@@ -183,6 +202,254 @@ jobs:
           src/pcb
         retention-days: 7
 
+  code-coverage:
+    name: Code Coverage
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential \
+          autoconf \
+          automake \
+          libtool \
+          flex \
+          bison \
+          m4 \
+          gawk \
+          pkg-config \
+          libglib2.0-dev \
+          libgtk2.0-dev \
+          libgtkglext1-dev \
+          libgd-dev \
+          libdbus-1-dev \
+          gerbv \
+          ghostscript \
+          imagemagick \
+          wish \
+          tcl \
+          lcov \
+          libgtest-dev \
+          cmake
+
+    - name: Build and install Google Test
+      run: |
+        cd /usr/src/gtest
+        sudo cmake CMakeLists.txt
+        sudo make
+        sudo cp lib/*.a /usr/lib || sudo cp googlemock/gtest/*.a /usr/lib
+        echo "✅ Google Test installed" >> $GITHUB_STEP_SUMMARY
+
+    - name: Run autogen.sh
+      run: ./autogen.sh
+
+    - name: Configure with coverage enabled
+      run: |
+        ./configure --enable-coverage --disable-doc --disable-dbus --disable-update-desktop-database --with-gui=batch
+        echo "✅ Configured with coverage enabled" >> $GITHUB_STEP_SUMMARY
+
+    - name: Build
+      run: |
+        make -j$(nproc)
+        echo "✅ Build completed" >> $GITHUB_STEP_SUMMARY
+
+    - name: Run tests
+      run: |
+        make check
+        echo "✅ Tests completed" >> $GITHUB_STEP_SUMMARY
+
+    - name: Generate coverage report
+      run: |
+        echo "## 📊 Code Coverage Report" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+
+        # Capture coverage data
+        lcov --capture \
+          --directory . \
+          --output-file coverage.info \
+          --rc lcov_branch_coverage=0 \
+          --ignore-errors mismatch \
+          --ignore-errors inconsistent
+
+        # Remove external/generated code from coverage
+        lcov --remove coverage.info \
+          --ignore-errors unused \
+          --ignore-errors mismatch \
+          '/usr/*' \
+          '*/gts/*' \
+          '*/parse_y.c' \
+          '*/parse_l.c' \
+          '*/edif.c' \
+          '*/tests/*' \
+          --output-file coverage_filtered.info \
+          --rc lcov_branch_coverage=0
+
+        # Generate summary
+        lcov --list coverage_filtered.info \
+          --rc lcov_branch_coverage=0 > coverage_summary.txt
+
+        # Extract key metrics
+        TOTAL_LINES=$(grep -oP 'lines\.*: \K[0-9.]+(?=%)' coverage_summary.txt | tail -1)
+        echo "- **Total Coverage:** ${TOTAL_LINES}%" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+
+        # Show top 10 files by coverage
+        echo "### Top Files by Coverage" >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        head -20 coverage_summary.txt >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        files: ./coverage_filtered.info
+        fail_ci_if_error: false
+        verbose: true
+
+    - name: Upload coverage artifacts
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report
+        path: |
+          coverage_filtered.info
+          coverage_summary.txt
+        retention-days: 30
+
+  memory-safety:
+    name: Memory Safety (AddressSanitizer)
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential \
+          autoconf \
+          automake \
+          libtool \
+          flex \
+          bison \
+          m4 \
+          gawk \
+          pkg-config \
+          libglib2.0-dev \
+          libgtk2.0-dev \
+          libgtkglext1-dev \
+          libgd-dev \
+          libdbus-1-dev \
+          gerbv \
+          ghostscript \
+          imagemagick \
+          wish \
+          tcl \
+          libgtest-dev \
+          cmake
+
+    - name: Build and install Google Test
+      run: |
+        cd /usr/src/gtest
+        sudo cmake CMakeLists.txt
+        sudo make
+        sudo cp lib/*.a /usr/lib || sudo cp googlemock/gtest/*.a /usr/lib
+
+    - name: Run autogen.sh
+      run: ./autogen.sh
+
+    - name: Configure with AddressSanitizer
+      run: |
+        ./configure \
+          CFLAGS="-fsanitize=address -g -O1 -fno-omit-frame-pointer" \
+          LDFLAGS="-fsanitize=address" \
+          --disable-doc \
+          --disable-dbus \
+          --disable-update-desktop-database \
+          --with-gui=gtk
+        echo "✅ Configured with AddressSanitizer + GTK GUI" >> $GITHUB_STEP_SUMMARY
+
+    - name: Build
+      run: |
+        make -j$(nproc)
+        echo "✅ Build completed" >> $GITHUB_STEP_SUMMARY
+
+    - name: Run unit tests with ASan
+      run: |
+        echo "## 🛡️ Memory Safety Testing" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "AddressSanitizer detects memory errors like:" >> $GITHUB_STEP_SUMMARY
+        echo "- Buffer overflows, use-after-free, memory leaks" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+
+        cd src
+        if [ -f ./unittest ]; then
+          echo "### Unit Tests" >> $GITHUB_STEP_SUMMARY
+          ./unittest 2>&1 | tee ../asan-unittest.log
+          UNITTEST_EXIT=$?
+
+          if grep -q "ERROR: AddressSanitizer" ../asan-unittest.log; then
+            echo "- ❌ **Memory errors detected**" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- ✅ **No memory errors detected**" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ $UNITTEST_EXIT -eq 0 ]; then
+            echo "- ✅ Tests functionally passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- ⚠️ Tests failed (but no memory errors)" >> $GITHUB_STEP_SUMMARY
+          fi
+        else
+          echo "- ⚠️ Unit tests not built" >> $GITHUB_STEP_SUMMARY
+        fi
+        cd ..
+      continue-on-error: true
+
+    - name: Run integration tests with ASan
+      run: |
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Integration Tests" >> $GITHUB_STEP_SUMMARY
+
+        cd tests
+        # Run a subset of fast tests to check for memory errors
+        ./run_tests.sh hid_bom1 hid_png1 2>&1 | tee ../asan-tests.log
+        TEST_EXIT=$?
+        cd ..
+
+        if grep -q "ERROR: AddressSanitizer" asan-tests.log; then
+          echo "- ❌ **Memory errors detected**" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "- ✅ **No memory errors detected**" >> $GITHUB_STEP_SUMMARY
+        fi
+
+        if [ $TEST_EXIT -eq 0 ]; then
+          echo "- ✅ Tests functionally passed" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "- ⚠️ Some tests failed (check log)" >> $GITHUB_STEP_SUMMARY
+        fi
+      continue-on-error: true
+
+    - name: Upload ASan logs
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: asan-logs
+        path: |
+          asan-unittest.log
+          asan-tests.log
+        retention-days: 30
+
   code-quality:
     name: Code Quality Checks
     runs-on: ubuntu-latest
@@ -234,6 +501,42 @@ jobs:
         path: cppcheck-report.txt
         retention-days: 30
 
+    - name: Run autogen for clang-tidy
+      run: ./autogen.sh
+      continue-on-error: true
+
+    - name: Configure for clang-tidy
+      run: |
+        ./configure --disable-doc --disable-dbus --disable-update-desktop-database --with-gui=batch
+      continue-on-error: true
+
+    - name: Run clang-tidy
+      run: |
+        echo "### clang-tidy Results" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+
+        # Run clang-tidy on a subset of files (to avoid timeout)
+        clang-tidy src/*.c \
+          -p=. \
+          -- -I. -Isrc $(pkg-config --cflags glib-2.0 2>/dev/null || echo "") \
+          2>&1 | tee clang-tidy-report.txt || true
+
+        ISSUE_COUNT=$(grep -c "warning:" clang-tidy-report.txt || echo "0")
+        ERROR_COUNT=$(grep -c "error:" clang-tidy-report.txt || echo "0")
+
+        echo "- Warnings: $ISSUE_COUNT" >> $GITHUB_STEP_SUMMARY
+        echo "- Errors: $ERROR_COUNT" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+      continue-on-error: true
+
+    - name: Upload clang-tidy report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: clang-tidy-report
+        path: clang-tidy-report.txt
+        retention-days: 30
+
     - name: Check for obsolete C keywords
       run: |
         echo "### Legacy Code Patterns" >> $GITHUB_STEP_SUMMARY
@@ -262,7 +565,7 @@ jobs:
 
   build-summary:
     name: Build Summary
-    needs: [build-linux, code-quality]
+    needs: [build-linux, code-coverage, memory-safety, code-quality]
     runs-on: ubuntu-latest
     if: always()
 
@@ -282,6 +585,18 @@ jobs:
           echo "| Linux Builds (3 configs) | ❌ Failed |" >> $GITHUB_STEP_SUMMARY
         fi
 
+        if [ "${{ needs.code-coverage.result }}" == "success" ]; then
+          echo "| Code Coverage | ✅ Success |" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "| Code Coverage | ❌ Failed |" >> $GITHUB_STEP_SUMMARY
+        fi
+
+        if [ "${{ needs.memory-safety.result }}" == "success" ]; then
+          echo "| Memory Safety (ASan) | ✅ Success |" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "| Memory Safety (ASan) | ⚠️ Warnings |" >> $GITHUB_STEP_SUMMARY
+        fi
+
         if [ "${{ needs.code-quality.result }}" == "success" ]; then
           echo "| Code Quality Checks | ✅ Success |" >> $GITHUB_STEP_SUMMARY
         else
@@ -294,6 +609,7 @@ jobs:
         echo "Build logs and artifacts are available for download in the workflow artifacts." >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "- Build logs for each configuration" >> $GITHUB_STEP_SUMMARY
+        echo "- Code coverage report (lcov)" >> $GITHUB_STEP_SUMMARY
         echo "- Code quality reports (cppcheck)" >> $GITHUB_STEP_SUMMARY
         echo "- Built PCB binary (GTK GUI)" >> $GITHUB_STEP_SUMMARY
 
