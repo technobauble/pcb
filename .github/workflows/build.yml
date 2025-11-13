@@ -246,6 +246,7 @@ jobs:
 
         # Remove external/generated code from coverage
         lcov --remove coverage.info \
+          --ignore-errors unused \
           '/usr/*' \
           '*/gts/*' \
           '*/parse_y.c' \
