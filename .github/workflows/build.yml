@@ -339,8 +339,8 @@ jobs:
           --disable-doc \
           --disable-dbus \
           --disable-update-desktop-database \
-          --with-gui=batch
-        echo "✅ Configured with AddressSanitizer" >> $GITHUB_STEP_SUMMARY
+          --with-gui=gtk
+        echo "✅ Configured with AddressSanitizer + GTK GUI" >> $GITHUB_STEP_SUMMARY
 
     - name: Build
       run: |
@@ -378,14 +378,29 @@ jobs:
         cd ..
       continue-on-error: true
 
-    - name: Skip integration tests (batch mode incompatible)
+    - name: Run integration tests with ASan
       run: |
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "### Integration Tests" >> $GITHUB_STEP_SUMMARY
-        echo "- ⏭️ **Skipped** - Batch mode missing GUI actions (PointCursor)" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "**Note:** ASan focus is on unit tests where we have full control." >> $GITHUB_STEP_SUMMARY
-        echo "Integration tests have GUI dependencies incompatible with batch mode." >> $GITHUB_STEP_SUMMARY
+
+        cd tests
+        # Run a subset of fast tests to check for memory errors
+        ./run_tests.sh hid_bom1 hid_png1 2>&1 | tee ../asan-tests.log
+        TEST_EXIT=$?
+        cd ..
+
+        if grep -q "ERROR: AddressSanitizer" asan-tests.log; then
+          echo "- ❌ **Memory errors detected**" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "- ✅ **No memory errors detected**" >> $GITHUB_STEP_SUMMARY
+        fi
+
+        if [ $TEST_EXIT -eq 0 ]; then
+          echo "- ✅ Tests functionally passed" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "- ⚠️ Some tests failed (check log)" >> $GITHUB_STEP_SUMMARY
+        fi
+      continue-on-error: true
 
     - name: Upload ASan logs
       if: always()
