@@ -10,6 +10,7 @@ check_PROGRAMS = unittest_cpp
 unittest_cpp_SOURCES = \
 	example_test.cpp \
 	test_SelectionActions.cpp \
+	pcb_stubs.cpp \
 	$(top_srcdir)/src/actions/Action.cpp \
 	$(top_srcdir)/src/actions/action_bridge.cpp \
 	$(top_srcdir)/src/actions/SelectionActions.cpp
@@ -47,6 +48,7 @@ TESTS = unittest_cpp
 EXTRA_DIST = \
 	README.md \
 	pcb_wrapper_example.hpp \
+	pcb_stubs.cpp \
 	Makefile.stub
 
 # Clean generated files
