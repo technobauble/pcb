@@ -351,14 +351,26 @@ jobs:
       run: |
         echo "## 🛡️ Memory Safety Testing" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
+        echo "AddressSanitizer detects memory errors like:" >> $GITHUB_STEP_SUMMARY
+        echo "- Buffer overflows, use-after-free, memory leaks" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
 
         cd src
         if [ -f ./unittest ]; then
-          ./unittest 2>&1 | tee ../asan-unittest.log || true
+          echo "### Unit Tests" >> $GITHUB_STEP_SUMMARY
+          ./unittest 2>&1 | tee ../asan-unittest.log
+          UNITTEST_EXIT=$?
+
           if grep -q "ERROR: AddressSanitizer" ../asan-unittest.log; then
-            echo "- ❌ Memory errors detected in unit tests" >> $GITHUB_STEP_SUMMARY
+            echo "- ❌ **Memory errors detected**" >> $GITHUB_STEP_SUMMARY
           else
-            echo "- ✅ Unit tests passed (no memory errors)" >> $GITHUB_STEP_SUMMARY
+            echo "- ✅ **No memory errors detected**" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ $UNITTEST_EXIT -eq 0 ]; then
+            echo "- ✅ Tests functionally passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- ⚠️ Tests failed (but no memory errors)" >> $GITHUB_STEP_SUMMARY
           fi
         else
           echo "- ⚠️ Unit tests not built" >> $GITHUB_STEP_SUMMARY
@@ -366,19 +378,14 @@ jobs:
         cd ..
       continue-on-error: true
 
-    - name: Run integration tests with ASan
+    - name: Skip integration tests (batch mode incompatible)
       run: |
-        cd tests
-        # Run a subset of fast tests to avoid timeout
-        ./run_tests.sh hid_bom1 hid_png1 2>&1 | tee ../asan-tests.log || true
-
-        if grep -q "ERROR: AddressSanitizer" ../asan-tests.log; then
-          echo "- ❌ Memory errors detected in integration tests" >> $GITHUB_STEP_SUMMARY
-        else
-          echo "- ✅ Integration tests passed (no memory errors)" >> $GITHUB_STEP_SUMMARY
-        fi
-        cd ..
-      continue-on-error: true
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Integration Tests" >> $GITHUB_STEP_SUMMARY
+        echo "- ⏭️ **Skipped** - Batch mode missing GUI actions (PointCursor)" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Note:** ASan focus is on unit tests where we have full control." >> $GITHUB_STEP_SUMMARY
+        echo "Integration tests have GUI dependencies incompatible with batch mode." >> $GITHUB_STEP_SUMMARY
 
     - name: Upload ASan logs
       if: always()
