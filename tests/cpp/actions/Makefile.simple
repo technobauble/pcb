@@ -1,0 +1,49 @@
+# Simple standalone test Makefile for MessageAction
+# Does NOT require Google Test - just basic C++ compilation
+# This deliberately does NOT link against action.c or libpcb.a
+
+CXX = g++
+GLIB_CFLAGS = $(shell pkg-config --cflags glib-2.0)
+CXXFLAGS = -std=c++11 -Wall -Wextra -I../../.. -I../../../src -I../../../src/actions $(GLIB_CFLAGS)
+
+# Test binary
+TARGET = simple_test
+
+# Sources (minimal set - no action.c, no libpcb.a!)
+SOURCES = \
+	simple_test.cpp \
+	../../../src/actions/MessageAction.cpp \
+	../../../src/actions/Action.cpp \
+	../../../src/actions/action_bridge.cpp
+
+OBJECTS = $(SOURCES:.cpp=.o)
+
+# Default target
+all: $(TARGET)
+
+# Link test binary
+$(TARGET): $(OBJECTS)
+	$(CXX) $(OBJECTS) -o $(TARGET)
+	@echo "==================================="
+	@echo "✓ Standalone test binary built!"
+	@echo "✓ No dependency on action.c"
+	@echo "✓ No dependency on libpcb.a"
+	@echo "✓ No Google Test required"
+	@echo "==================================="
+
+# Compile C++ sources
+%.o: %.cpp
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+# Run tests
+test: $(TARGET)
+	@echo ""
+	./$(TARGET)
+	@echo ""
+
+# Clean
+clean:
+	rm -f $(OBJECTS) $(TARGET)
+	@echo "Cleaned"
+
+.PHONY: all test clean
