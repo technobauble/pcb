@@ -39,7 +39,6 @@
 #include "global.h"
 
 #include "action.h"
-#include "actions/action_bridge.h"
 #include "autoplace.h"
 #include "autoroute.h"
 #include "buffer.h"
@@ -1995,12 +1994,6 @@ ActionMessage (int argc, char **argv, Coord x, Coord y)
 {
   int i;
 
-  /* Try C++ version first */
-  int cpp_result = pcb_action_execute("Message", argc, argv, x, y);
-  if (cpp_result != -1)
-    return cpp_result;  /* C++ handled it */
-
-  /* Fall back to C version */
   if (argc < 1)
     AFAIL (message);
 
@@ -5863,12 +5856,6 @@ saved in @code{./pcb.settings}.
 static int
 ActionSaveSettings (int argc, char **argv, Coord x, Coord y)
 {
-  /* Try C++ version first */
-  int cpp_result = pcb_action_execute("SaveSettings", argc, argv, x, y);
-  if (cpp_result != -1)
-    return cpp_result;  /* C++ handled it */
-
-  /* Fall back to C version */
   int locally = argc > 0 ? (strncasecmp (argv[0], "local", 5) == 0) : 0;
   hid_save_settings (locally);
   return 0;

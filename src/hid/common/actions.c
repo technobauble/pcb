@@ -13,6 +13,7 @@
 
 #include "hid.h"
 #include "../hidint.h"
+#include "actions/action_bridge.h"
 
 #ifdef HAVE_LIBDMALLOC
 #include <dmalloc.h>
@@ -216,6 +217,12 @@ hid_actionv (const char *name, int argc, char **argv)
   if (!name)
     return 1;
 
+  /* Try C++ action first */
+  ret = pcb_action_execute(name, argc, argv, x, y);
+  if (ret != -1)
+    return ret;  /* C++ action handled it */
+
+  /* Fall back to C action lookup */
   a = hid_find_action (name);
   if (!a)
     {
@@ -237,12 +244,12 @@ hid_actionv (const char *name, int argc, char **argv)
 	printf ("%s%s", i ? "," : "", argv[i]);
       printf (")\033[0m\n");
     }
-  
+
   old_action     = current_action;
   current_action = a;
   ret = current_action->trigger_cb (argc, argv, x, y);
   current_action = old_action;
-  
+
   return ret;
 }
 
