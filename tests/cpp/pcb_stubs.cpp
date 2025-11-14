@@ -9,6 +9,8 @@
  * tests instead.
  */
 
+#include <cstring>
+
 extern "C" {
 
 // Macros needed by action implementations
@@ -143,6 +145,7 @@ static struct hid_st stub_gui = {
     stub_close_confirm_dialog
 };
 
+typedef struct hid_st HID;
 HID* gui = &stub_gui;
 
 // Library structure for DumpLibrary action
