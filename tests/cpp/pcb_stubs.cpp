@@ -13,34 +13,17 @@
 
 extern "C" {
 
+// Include action.h to get FunctionID enum and GetFunctionID declaration
+#include "action.h"
+
 // Macros needed by action implementations
 #ifndef UNKNOWN
 #define UNKNOWN(a) ((a) && *(a) ? (a) : "(unknown)")
 #endif
 
-// FunctionID enum (subset needed for tests)
-typedef enum {
-    F_AddSelected,
-    F_All,
-    F_Block,
-    F_Center,
-    F_Clear,
-    F_Close,
-    F_Connection,
-    F_Convert,
-    F_Found,
-    F_Mirror,
-    F_Object,
-    F_Restore,
-    F_Rotate,
-    F_Save,
-    F_Selected,
-    F_SelectedElements,
-    F_BuriedVias
-} FunctionID;
-
 // GetFunctionID stub - minimal implementation for tests
-static int GetFunctionID(const char* str) {
+// This is a simplified version that handles only the function IDs needed by tests
+int GetFunctionID(const char* str) {
     if (!str) return -1;
     if (strcmp(str, "Save") == 0) return F_Save;
     if (strcmp(str, "Restore") == 0) return F_Restore;
