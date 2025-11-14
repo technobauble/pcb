@@ -95,23 +95,10 @@ void Draw(void) {}
 void QuitApplication(void) {}
 
 // Global state structures needed by action system
-struct CrosshairType {
-    int X, Y;
-    struct {
-        int State;
-        struct { int X, Y; } Point1;
-        struct { int X, Y; } Point2;
-    } AttachedBox;
-} Crosshair = {0, 0, {0, {0, 0}, {0, 0}}};
-
-struct MarkType {
-    bool status;
-    int X, Y;
-} Marked = {false, 0, 0};
-
-struct PCBType {
-    int Data;
-} *PCB = nullptr;
+// Note: Types are already declared in global.h (included via action.h)
+CrosshairType Crosshair = {};
+MarkType Marked = {};
+PCBType* PCB = nullptr;
 
 // HID structure (minimal stub)
 #define HID_CLOSE_CONFIRM_OK 0
