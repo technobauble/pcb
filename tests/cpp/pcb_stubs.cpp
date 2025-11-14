@@ -132,30 +132,7 @@ typedef struct hid_st HID;
 HID* gui = &stub_gui;
 
 // Library structure for DumpLibrary action
-typedef struct {
-    char* ListEntry;
-    char* Template;
-    char* Package;
-    char* Value;
-    char* Description;
-} LibraryEntryType;
-
-typedef struct {
-    int EntryN;
-    int EntryMax;
-    char* Name;
-    char* directory;
-    char* Style;
-    int flag;
-    LibraryEntryType* Entry;
-} LibraryMenuType;
-
-typedef struct {
-    int MenuN;
-    int MenuMax;
-    LibraryMenuType* Menu;
-} LibraryType;
-
+// The types are already declared in global.h (included via action.h)
 LibraryType Library = {0, 0, nullptr};
 
 } // extern "C"
