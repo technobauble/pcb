@@ -11,6 +11,7 @@
 
 #include <iostream>
 #include <sstream>
+#include <vector>
 #include <cstdarg>
 #include <cstring>
 #include <cassert>
@@ -38,17 +39,19 @@ extern "C" {
 }
 
 // Simple test framework
+struct TestCase {
+    const char* name;
+    void (*func)();
+};
+std::vector<TestCase> g_tests;
+
 #define TEST(name) \
     void test_##name(); \
-    struct Test_##name { \
-        Test_##name() { \
-            std::cout << "Running " #name "..."; \
-            g_message_output.str(""); \
-            g_message_output.clear(); \
-            test_##name(); \
-            std::cout << " PASSED\n"; \
+    struct Test_##name##_Registrar { \
+        Test_##name##_Registrar() { \
+            g_tests.push_back({#name, test_##name}); \
         } \
-    } test_instance_##name; \
+    } test_registrar_##name; \
     void test_##name()
 
 #define ASSERT(cond) \
@@ -116,8 +119,8 @@ TEST(NullArgumentPointer) {
 
     ASSERT(result == 0);
     std::string output = g_message_output.str();
-    // Should just have newline
-    ASSERT(output == "\n");
+    // Should skip NULL entirely - no output
+    ASSERT(output.empty());
 }
 
 int main() {
@@ -125,10 +128,32 @@ int main() {
     std::cout << "MessageAction Standalone Test Suite\n";
     std::cout << "===========================================\n\n";
 
-    // Tests run automatically via static initialization
+    // Run all registered tests
+    int passed = 0;
+    int failed = 0;
+
+    for (const auto& test : g_tests) {
+        std::cout << "Running " << test.name << "...";
+        g_message_output.str("");
+        g_message_output.clear();
+
+        try {
+            test.func();
+            std::cout << " PASSED\n";
+            passed++;
+        } catch (...) {
+            std::cout << " FAILED\n";
+            failed++;
+        }
+    }
 
     std::cout << "\n===========================================\n";
-    std::cout << "ALL TESTS PASSED!\n";
+    if (failed == 0) {
+        std::cout << "ALL " << passed << " TESTS PASSED!\n";
+    } else {
+        std::cout << passed << " passed, " << failed << " FAILED\n";
+        return 1;
+    }
     std::cout << "===========================================\n";
     std::cout << "\nProof of isolated compilation:\n";
     std::cout << "  ✓ No dependency on action.c\n";

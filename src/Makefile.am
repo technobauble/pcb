@@ -55,6 +55,7 @@ PCB_SRCS = \
 	compat.c \
 	compat.h \
 	const.h \
+	coord_types.h \
 	copy.c \
 	copy.h \
 	create.c \

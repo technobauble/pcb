@@ -4,7 +4,9 @@
 
 CXX = g++
 GLIB_CFLAGS = $(shell pkg-config --cflags glib-2.0)
-CXXFLAGS = -std=c++11 -Wall -Wextra -I../../.. -I../../../src -I../../../src/actions $(GLIB_CFLAGS)
+# Define COORD_TYPE for testing (normally comes from config.h)
+CXXFLAGS = -std=c++11 -Wall -Wextra -I../../.. -I../../../src -I../../../src/actions \
+	$(GLIB_CFLAGS) -DCOORD_TYPE=int32_t -DHAVE_STDINT_H
 
 # Test binary
 TARGET = simple_test
