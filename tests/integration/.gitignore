@@ -1,1 +1,3 @@
 action_integration_test
+action_c_syntax_test
+*.o
