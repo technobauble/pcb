@@ -1,0 +1,49 @@
+# Standalone test Makefile for SaveSettingsAction
+# Validates the coord_types.h pattern works for a second action
+
+CXX = g++
+GLIB_CFLAGS = $(shell pkg-config --cflags glib-2.0)
+# Define COORD_TYPE for testing (normally comes from config.h)
+CXXFLAGS = -std=c++11 -Wall -Wextra -I../../.. -I../../../src -I../../../src/actions \
+	$(GLIB_CFLAGS) -DCOORD_TYPE=int32_t -DHAVE_STDINT_H
+
+# Test binary
+TARGET = save_settings_test
+
+# Sources (minimal set - no action.c, no libpcb.a!)
+SOURCES = \
+	save_settings_test.cpp \
+	../../../src/actions/SaveSettingsAction.cpp \
+	../../../src/actions/Action.cpp \
+	../../../src/actions/action_bridge.cpp
+
+OBJECTS = $(SOURCES:.cpp=.o)
+
+# Default target
+all: $(TARGET)
+
+# Link test binary
+$(TARGET): $(OBJECTS)
+	$(CXX) $(OBJECTS) -o $(TARGET)
+	@echo "==================================="
+	@echo "✓ SaveSettings test binary built!"
+	@echo "✓ No dependency on action.c"
+	@echo "✓ Pattern validated with 2nd action"
+	@echo "==================================="
+
+# Compile C++ sources
+%.o: %.cpp
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+# Run tests
+test: $(TARGET)
+	@echo ""
+	./$(TARGET)
+	@echo ""
+
+# Clean
+clean:
+	rm -f $(OBJECTS) $(TARGET)
+	@echo "Cleaned"
+
+.PHONY: all test clean
