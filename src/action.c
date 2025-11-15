@@ -472,7 +472,6 @@ extern void stroke_init (void);
 extern void stroke_record (int x, int y);
 extern int stroke_trans (char *s);
 #endif
-static void ChangeFlag (char *, char *, int, char *);
 
 #ifdef HAVE_LIBSTROKE
 
