@@ -27,9 +27,7 @@
 extern "C" {
 #include "coord_types.h"
 #include "macro.h"       // For ARG macro
-
-// Forward declare ChangeFlag helper (defined in action.c)
-void ChangeFlag(char *what, char *flag_name, int value, char *cmd_name);
+#include "action.h"      // For ChangeFlag() helper
 }
 
 namespace pcb {

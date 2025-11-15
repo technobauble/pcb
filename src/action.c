@@ -6830,7 +6830,7 @@ ActionChangeFlag (int argc, char **argv, Coord x, Coord y)
 }
 
 
-static void
+void
 ChangeFlag (char *what, char *flag_name, int value, char *cmd_name)
 {
   bool (*set_object) (int, void *, void *, void *);

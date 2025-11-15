@@ -28,10 +28,8 @@ extern "C" {
 #include "coord_types.h"
 #include "macro.h"       // For ARG macro
 #include "error.h"       // For Message()
+#include "action.h"      // For ChangeFlag() helper
 #include <stdlib.h>      // For atoi()
-
-// Forward declare ChangeFlag helper (defined in action.c)
-void ChangeFlag(char *what, char *flag_name, int value, char *cmd_name);
 }
 
 namespace pcb {
