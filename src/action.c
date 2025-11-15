@@ -1878,6 +1878,10 @@ static const char dumplibrary_help[] =
 
 %end-doc */
 
+/* NOTE: This action has been migrated to C++ (see src/actions/DumpLibraryAction.cpp)
+ * The dispatcher in hid_actionv() will use the C++ version automatically.
+ * This C version remains as a fallback if C++ actions are not available.
+ */
 static int
 ActionDumpLibrary (int argc, char **argv, Coord x, Coord y)
 {
@@ -2259,6 +2263,10 @@ save) before quitting.
 
 %end-doc */
 
+/* NOTE: This action has been migrated to C++ (see src/actions/QuitAction.cpp)
+ * The dispatcher in hid_actionv() will use the C++ version automatically.
+ * This C version remains as a fallback if C++ actions are not available.
+ */
 static int
 ActionQuit (int argc, char **argv, Coord x, Coord y)
 {

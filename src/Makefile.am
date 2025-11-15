@@ -185,7 +185,9 @@ PCB_CXX_SRCS = \
 	actions/action_bridge.h \
 	actions/action_bridge.cpp \
 	actions/MessageAction.cpp \
-	actions/SaveSettingsAction.cpp
+	actions/SaveSettingsAction.cpp \
+	actions/DumpLibraryAction.cpp \
+	actions/QuitAction.cpp
 
 LIST_SRCS = ${PCB_SRCS}
 
