@@ -187,7 +187,10 @@ PCB_CXX_SRCS = \
 	actions/MessageAction.cpp \
 	actions/SaveSettingsAction.cpp \
 	actions/DumpLibraryAction.cpp \
-	actions/QuitAction.cpp
+	actions/QuitAction.cpp \
+	actions/SetFlagAction.cpp \
+	actions/ClrFlagAction.cpp \
+	actions/ChangeFlagAction.cpp
 
 LIST_SRCS = ${PCB_SRCS}
 

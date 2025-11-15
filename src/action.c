@@ -6743,6 +6743,10 @@ SetFlag(SelectedPins,thermal)
 
 %end-doc */
 
+/* NOTE: This action has been migrated to C++ (see src/actions/SetFlagAction.cpp)
+ * The dispatcher in hid_actionv() will use the C++ version automatically.
+ * This C version remains as a fallback if C++ actions are not available.
+ */
 static int
 ActionSetFlag (int argc, char **argv, Coord x, Coord y)
 {
@@ -6774,6 +6778,10 @@ ClrFlag(SelectedLines,join)
 
 %end-doc */
 
+/* NOTE: This action has been migrated to C++ (see src/actions/ClrFlagAction.cpp)
+ * The dispatcher in hid_actionv() will use the C++ version automatically.
+ * This C version remains as a fallback if C++ actions are not available.
+ */
 static int
 ActionClrFlag (int argc, char **argv, Coord x, Coord y)
 {
@@ -6804,6 +6812,10 @@ cleared.  If the value is 1, the flag is set.
 
 %end-doc */
 
+/* NOTE: This action has been migrated to C++ (see src/actions/ChangeFlagAction.cpp)
+ * The dispatcher in hid_actionv() will use the C++ version automatically.
+ * This C version remains as a fallback if C++ actions are not available.
+ */
 static int
 ActionChangeFlag (int argc, char **argv, Coord x, Coord y)
 {
