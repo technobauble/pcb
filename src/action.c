@@ -1989,6 +1989,10 @@ followed by a newline.
 
 %end-doc */
 
+/* NOTE: This action has been migrated to C++ (see src/actions/MessageAction.cpp)
+ * The dispatcher in hid_actionv() will use the C++ version automatically.
+ * This C version remains as a fallback if C++ actions are not available.
+ */
 static int
 ActionMessage (int argc, char **argv, Coord x, Coord y)
 {
@@ -5853,6 +5857,10 @@ saved in @code{./pcb.settings}.
 
 %end-doc */
 
+/* NOTE: This action has been migrated to C++ (see src/actions/SaveSettingsAction.cpp)
+ * The dispatcher in hid_actionv() will use the C++ version automatically.
+ * This C version remains as a fallback if C++ actions are not available.
+ */
 static int
 ActionSaveSettings (int argc, char **argv, Coord x, Coord y)
 {
