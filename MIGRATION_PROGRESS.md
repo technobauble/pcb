@@ -8,8 +8,8 @@
 ## Summary
 
 **Total Actions:** 62
-**Migrated:** 16 (26%)
-**Remaining:** 46 (74%)
+**Migrated:** 19 (31%)
+**Remaining:** 43 (69%)
 
 ---
 
@@ -36,6 +36,11 @@
 ### Batch 3: GetFunctionID Validation (This Session)
 15. ✅ **New** - Create new layout (file operation, 45 lines)
 16. ✅ **MoveToCurrentLayer** - Move objects to current layer (validates GetFunctionID export, 29 lines)
+
+### Batch 4: More GetFunctionID Actions (This Session)
+17. ✅ **AutoPlaceSelected** - Auto-place selected elements (simple wrapper, 10 lines)
+18. ✅ **AutoRoute** - Auto-route rat lines (uses GetFunctionID, 20 lines)
+19. ✅ **ChangeHole** - Change via drill hole diameter (object modification, 30 lines)
 
 ---
 
@@ -119,8 +124,8 @@ All migrated actions are:
 ## File Statistics
 
 **Original action.c:** 8,466 lines
-**Migrated to C++:** ~1,300 lines (estimated)
-**Reduction:** ~15%
+**Migrated to C++:** ~1,545 lines (estimated)
+**Reduction:** ~18%
 
 ## Helper Function Exports
 
