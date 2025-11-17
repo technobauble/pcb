@@ -188,8 +188,14 @@ PCB_CXX_SRCS = \
 	actions/AtomicAction.cpp \
 	actions/AutoPlaceSelectedAction.cpp \
 	actions/AutoRouteAction.cpp \
-	actions/ChangeHoleAction.cpp \
 	actions/ChangeFlagAction.cpp \
+	actions/ChangeHoleAction.cpp \
+	actions/ChangeJoinAction.cpp \
+	actions/ChangeOctagonAction.cpp \
+	actions/ChangePasteAction.cpp \
+	actions/ChangeSquareAction.cpp \
+	actions/ClearOctagonAction.cpp \
+	actions/ClearSquareAction.cpp \
 	actions/ClrFlagAction.cpp \
 	actions/ConnectionAction.cpp \
 	actions/DeleteRatsAction.cpp \
@@ -206,7 +212,10 @@ PCB_CXX_SRCS = \
 	actions/RemoveSelectedAction.cpp \
 	actions/RouteStyleAction.cpp \
 	actions/SaveSettingsAction.cpp \
-	actions/SetFlagAction.cpp
+	actions/SetFlagAction.cpp \
+	actions/SetOctagonAction.cpp \
+	actions/SetSquareAction.cpp \
+	actions/ToggleHideNameAction.cpp
 
 LIST_SRCS = ${PCB_SRCS}
 

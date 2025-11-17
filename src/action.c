@@ -4673,6 +4673,7 @@ appear on the silk layer when you print the layout.
 %end-doc */
 
 static int
+/* MIGRATED to C++: src/actions/ToggleHideNameAction.cpp */
 ActionToggleHideName (int argc, char **argv, Coord x, Coord y)
 {
   char *function = ARG (0);
@@ -4747,6 +4748,7 @@ polygon, insulating them from each other.
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/ChangeJoinAction.cpp */
 static int
 ActionChangeJoin (int argc, char **argv, Coord x, Coord y)
 {
@@ -4808,6 +4810,7 @@ Note that @code{Pins} means both pins and pads.
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/ChangeSquareAction.cpp */
 static int
 ActionChangeSquare (int argc, char **argv, Coord x, Coord y)
 {
@@ -4865,6 +4868,7 @@ Note that @code{Pins} means pins and pads.
 @pinshapes
 
 %end-doc */
+/* MIGRATED to C++: src/actions/SetSquareAction.cpp */
 
 static int
 ActionSetSquare (int argc, char **argv, Coord x, Coord y)
@@ -4924,6 +4928,7 @@ Note that @code{Pins} means pins and pads.
 @pinshapes
 
 %end-doc */
+/* MIGRATED to C++: src/actions/ClearSquareAction.cpp */
 
 static int
 ActionClearSquare (int argc, char **argv, Coord x, Coord y)
@@ -4981,6 +4986,7 @@ static const char changeoctagon_help[] =
 
 @pinshapes
 
+/* MIGRATED to C++: src/actions/ChangeOctagonAction.cpp */
 %end-doc */
 
 static int
@@ -5042,6 +5048,7 @@ static const char setoctagon_help[] = N_("Sets the octagon-flag of objects.");
 
 @pinshapes
 
+/* MIGRATED to C++: src/actions/SetOctagonAction.cpp */
 %end-doc */
 
 static int
@@ -5102,6 +5109,7 @@ static const char clearoctagon_help[] =
   N_("Clears the octagon-flag of pins and vias.");
 
 /* %start-doc actions ClearOctagon
+/* MIGRATED to C++: src/actions/ClearOctagonAction.cpp */
 
 @pinshapes
 
@@ -5214,6 +5222,7 @@ static const char changepaste_help[] =
 
 The "no paste flag" of a pad determines whether the solderpaste
  stencil will have an opening for the pad (no set) or if there wil be
+/* MIGRATED to C++: src/actions/ChangePasteAction.cpp */
  no solderpaste on the pad (set).  This is used for things such as
  fiducial pads.
 
