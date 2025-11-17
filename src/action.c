@@ -5880,6 +5880,7 @@ If a name is not given, one is prompted for.
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/NewAction.cpp */
 static int
 ActionNew (int argc, char **argv, Coord x, Coord y)
 {
@@ -6522,6 +6523,7 @@ or from solder to component, won't automatically flip it.  Use the
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/MoveToCurrentLayerAction.cpp */
 static int
 ActionMoveToCurrentLayer (int argc, char **argv, Coord x, Coord y)
 {
