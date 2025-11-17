@@ -3267,6 +3267,10 @@ static const char removeselected_help[] = N_("Removes any selected objects.");
 
 %end-doc */
 
+/* NOTE: This action has been migrated to C++ (see src/actions/RemoveSelectedAction.cpp)
+ * The dispatcher in hid_actionv() will use the C++ version automatically.
+ * This C version remains as a fallback if C++ actions are not available.
+ */
 static int
 ActionRemoveSelected (int argc, char **argv, Coord x, Coord y)
 {
@@ -3904,6 +3908,10 @@ static const char deleterats_help[] = N_("Delete rat lines.");
 
 %end-doc */
 
+/* NOTE: This action has been migrated to C++ (see src/actions/DeleteRatsAction.cpp)
+ * The dispatcher in hid_actionv() will use the C++ version automatically.
+ * This C version remains as a fallback if C++ actions are not available.
+ */
 static int
 ActionDeleteRats (int argc, char **argv, Coord x, Coord y)
 {

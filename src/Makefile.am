@@ -187,11 +187,13 @@ PCB_CXX_SRCS = \
 	actions/AtomicAction.cpp \
 	actions/ChangeFlagAction.cpp \
 	actions/ClrFlagAction.cpp \
+	actions/DeleteRatsAction.cpp \
 	actions/DumpLibraryAction.cpp \
 	actions/ExecCommandAction.cpp \
 	actions/MarkCrosshairAction.cpp \
 	actions/MessageAction.cpp \
 	actions/QuitAction.cpp \
+	actions/RemoveSelectedAction.cpp \
 	actions/SaveSettingsAction.cpp \
 	actions/SetFlagAction.cpp
 
