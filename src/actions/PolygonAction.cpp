@@ -20,6 +20,7 @@
 // Only include stable C interfaces
 extern "C" {
 #include "global.h"
+#include "data.h"        // For Settings
 #include "error.h"       // For Message()
 #include "polygon.h"     // For ClosePolygon(), GoToPreviousPoint()
 #include "crosshair.h"   // For notify_crosshair_change()
@@ -51,7 +52,7 @@ public:
                  "Polygon(Close|PreviousPoint)")
     {}
 
-    int execute(int argc, char** argv, Coord x, Coord y) override {
+    int execute(int argc, char** argv, Coord /*x*/, Coord /*y*/) override {
         if (argc < 1) {
             Message("Syntax error. Usage:\n%s\n", syntax());
             return 1;

@@ -43,7 +43,7 @@ public:
                  "RemoveSelected()")
     {}
 
-    int execute(int argc, char** argv, Coord x, Coord y) override {
+    int execute(int /*argc*/, char** /*argv*/, Coord /*x*/, Coord /*y*/) override {
         if (RemoveSelected()) {
             SetChangedFlag(true);
         }

@@ -20,6 +20,7 @@
 // Only include stable C interfaces
 extern "C" {
 #include "global.h"
+#include "data.h"    // For PCB
 #include "error.h"   // For Message()
 #include "set.h"     // For SetLineSize(), etc.
 #include "hid.h"     // For hid_action()
@@ -47,7 +48,7 @@ public:
                  "RouteStyle(1|2|3|4)")
     {}
 
-    int execute(int argc, char** argv, Coord x, Coord y) override {
+    int execute(int argc, char** argv, Coord /*x*/, Coord /*y*/) override {
         if (argc < 1) {
             Message("Syntax error. Usage:\n%s\n", syntax());
             return 1;
@@ -63,7 +64,7 @@ public:
             SetViaDrillingHole(rts->Hole, true);
             SetKeepawayWidth(rts->Keepaway);
             SetViaMaskAperture(rts->ViaMask);
-            hid_action("RouteStylesChanged");
+            hid_action(const_cast<char*>("RouteStylesChanged"));
         }
         else {
             Message("RouteStyle: Invalid style number %d. Use 1-%d.\n", number, NUM_STYLES);
