@@ -184,17 +184,21 @@ PCB_CXX_SRCS = \
 	actions/Action.cpp \
 	actions/action_bridge.h \
 	actions/action_bridge.cpp \
+	actions/AddRatsAction.cpp \
 	actions/AtomicAction.cpp \
 	actions/AutoPlaceSelectedAction.cpp \
 	actions/AutoRouteAction.cpp \
 	actions/ChangeHoleAction.cpp \
 	actions/ChangeFlagAction.cpp \
 	actions/ClrFlagAction.cpp \
+	actions/ConnectionAction.cpp \
 	actions/DeleteRatsAction.cpp \
 	actions/DumpLibraryAction.cpp \
 	actions/ExecCommandAction.cpp \
+	actions/FlipAction.cpp \
 	actions/MarkCrosshairAction.cpp \
 	actions/MessageAction.cpp \
+	actions/MorphPolygonAction.cpp \
 	actions/MoveToCurrentLayerAction.cpp \
 	actions/NewAction.cpp \
 	actions/PolygonAction.cpp \

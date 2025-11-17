@@ -1828,6 +1828,7 @@ other, not their absolute positions on the board.
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/FlipAction.cpp */
 static int
 ActionFlip (int argc, char **argv, Coord x, Coord y)
 {
@@ -2199,6 +2200,7 @@ All ``found'' objects are marked ``not found''.
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/ConnectionAction.cpp */
 static int
 ActionConnection (int argc, char **argv, Coord x, Coord y)
 {
@@ -3676,6 +3678,7 @@ Selects the shortest unselected rat on the board.
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/AddRatsAction.cpp */
 static int
 ActionAddRats (int argc, char **argv, Coord x, Coord y)
 {
@@ -4614,6 +4617,7 @@ off are automatically deleted.
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/MorphPolygonAction.cpp */
 static int
 ActionMorphPolygon (int argc, char **argv, Coord x, Coord y)
 {
