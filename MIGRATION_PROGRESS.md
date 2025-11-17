@@ -1,15 +1,15 @@
 # Action Migration Progress
 
-**Date:** November 17, 2025  
+**Date:** November 17, 2025
 **Branch:** claude/refactor-action-dependencies-01A7QiJjB6c7sdmiSbqNkH4k
 
 ---
 
 ## Summary
 
-**Total Actions:** 62  
-**Migrated:** 10 (16%)  
-**Remaining:** 52 (84%)
+**Total Actions:** 62
+**Migrated:** 14 (23%)
+**Remaining:** 48 (77%)
 
 ---
 
@@ -28,6 +28,10 @@
 8. ✅ **Atomic** - Group actions into single undo operation
 9. ✅ **MarkCrosshair** - Set/reset crosshair mark
 10. ✅ **ExecCommand** - Run system commands
+11. ✅ **RemoveSelected** - Remove selected objects
+12. ✅ **DeleteRats** - Delete rat lines (airwires)
+13. ✅ **Polygon** - Polygon drawing operations
+14. ✅ **RouteStyle** - Select routing styles
 
 ---
 
@@ -110,9 +114,9 @@ All migrated actions are:
 
 ## File Statistics
 
-**Original action.c:** 8,466 lines  
-**Migrated to C++:** ~800 lines (estimated)  
-**Reduction:** ~9.5%
+**Original action.c:** 8,466 lines
+**Migrated to C++:** ~1,100 lines (estimated)
+**Reduction:** ~13%
 
 ---
 
