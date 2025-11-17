@@ -20,6 +20,7 @@
 // Only include stable C interfaces
 extern "C" {
 #include "global.h"
+#include "data.h"    // For Settings
 #include "error.h"   // For Message()
 #include "remove.h"  // For DeleteRats()
 #include "action.h"  // For ClearWarnings()
