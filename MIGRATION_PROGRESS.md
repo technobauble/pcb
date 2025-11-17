@@ -8,8 +8,8 @@
 ## Summary
 
 **Total Actions:** 62
-**Migrated:** 23 (37%)
-**Remaining:** 39 (63%)
+**Migrated:** 32 (52%) - **PAST HALFWAY!** 🎉
+**Remaining:** 30 (48%)
 
 ---
 
@@ -47,6 +47,17 @@
 21. ✅ **AddRats** - Add rat lines/airwires (uses GetFunctionID, 50 lines)
 22. ✅ **MorphPolygon** - Morph polygons to simplify (uses GetFunctionID, 37 lines)
 23. ✅ **Connection** - Find and highlight connections (uses GetFunctionID, 45 lines)
+
+### Batch 6: Flag Manipulation Actions (This Session)
+24. ✅ **ChangeSquare** - Toggle square flag on pins/pads (~40 lines)
+25. ✅ **SetSquare** - Set square flag on pins/pads (~40 lines)
+26. ✅ **ClearSquare** - Clear square flag on pins/pads (~40 lines)
+27. ✅ **ChangeOctagon** - Toggle octagon flag on pins/vias (~43 lines)
+28. ✅ **SetOctagon** - Set octagon flag on pins/vias (~43 lines)
+29. ✅ **ClearOctagon** - Clear octagon flag on pins/vias (~43 lines)
+30. ✅ **ChangeJoin** - Toggle join/clearance flag on lines/arcs (~42 lines)
+31. ✅ **ChangePaste** - Toggle paste flag on pads (~37 lines)
+32. ✅ **ToggleHideName** - Toggle element name visibility (~45 lines, uses ELEMENT_LOOP)
 
 ---
 
@@ -130,8 +141,8 @@ All migrated actions are:
 ## File Statistics
 
 **Original action.c:** 8,466 lines
-**Migrated to C++:** ~1,965 lines (estimated)
-**Reduction:** ~23%
+**Migrated to C++:** ~2,917 lines (estimated)
+**Reduction:** ~34%
 
 ## Helper Function Exports
 
