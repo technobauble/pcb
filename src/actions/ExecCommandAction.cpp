@@ -43,7 +43,7 @@ public:
                  "ExecCommand(command)")
     {}
 
-    int execute(int argc, char** argv, Coord x, Coord y) override {
+    int execute(int argc, char** argv, Coord /*x*/, Coord /*y*/) override {
         // Argument validation
         if (argc < 1) {
             Message("Syntax error. Usage:\n%s\n", syntax());

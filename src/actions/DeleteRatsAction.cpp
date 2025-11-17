@@ -48,7 +48,7 @@ public:
                  "DeleteRats(AllRats|SelectedRats|Selected)")
     {}
 
-    int execute(int argc, char** argv, Coord x, Coord y) override {
+    int execute(int argc, char** argv, Coord /*x*/, Coord /*y*/) override {
         if (argc < 1) {
             Message("Syntax error. Usage:\n%s\n", syntax());
             return 1;
