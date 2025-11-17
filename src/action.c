@@ -3833,6 +3833,7 @@ connecting them are minimized.  Note that you cannot undo this.
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/AutoPlaceSelectedAction.cpp */
 static int
 ActionAutoPlaceSelected (int argc, char **argv, Coord x, Coord y)
 {
@@ -3875,6 +3876,7 @@ responsive.
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/AutoRouteAction.cpp */
 static int
 ActionAutoRoute (int argc, char **argv, Coord x, Coord y)
 {
@@ -5163,6 +5165,7 @@ plated-through hole (not set), or an unplated hole (set).
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/ChangeHoleAction.cpp */
 static int
 ActionChangeHole (int argc, char **argv, Coord x, Coord y)
 {

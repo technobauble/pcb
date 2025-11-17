@@ -185,6 +185,9 @@ PCB_CXX_SRCS = \
 	actions/action_bridge.h \
 	actions/action_bridge.cpp \
 	actions/AtomicAction.cpp \
+	actions/AutoPlaceSelectedAction.cpp \
+	actions/AutoRouteAction.cpp \
+	actions/ChangeHoleAction.cpp \
 	actions/ChangeFlagAction.cpp \
 	actions/ClrFlagAction.cpp \
 	actions/DeleteRatsAction.cpp \
