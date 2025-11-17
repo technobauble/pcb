@@ -8,8 +8,8 @@
 ## Summary
 
 **Total Actions:** 62
-**Migrated:** 14 (23%)
-**Remaining:** 48 (77%)
+**Migrated:** 16 (26%)
+**Remaining:** 46 (74%)
 
 ---
 
@@ -32,6 +32,10 @@
 12. ✅ **DeleteRats** - Delete rat lines (airwires)
 13. ✅ **Polygon** - Polygon drawing operations
 14. ✅ **RouteStyle** - Select routing styles
+
+### Batch 3: GetFunctionID Validation (This Session)
+15. ✅ **New** - Create new layout (file operation, 45 lines)
+16. ✅ **MoveToCurrentLayer** - Move objects to current layer (validates GetFunctionID export, 29 lines)
 
 ---
 
@@ -91,7 +95,7 @@ These actions are good candidates for the next batch:
 **File Actions (Medium complexity):**
 - `SaveTo` - Save PCB to file
 - `LoadFrom` - Load PCB from file
-- `New` - Create new layout
+- ✅ `New` - Create new layout (COMPLETED)
 
 ### Complex Actions (Save for Later)
 These require more refactoring:
@@ -115,8 +119,15 @@ All migrated actions are:
 ## File Statistics
 
 **Original action.c:** 8,466 lines
-**Migrated to C++:** ~1,100 lines (estimated)
-**Reduction:** ~13%
+**Migrated to C++:** ~1,300 lines (estimated)
+**Reduction:** ~15%
+
+## Helper Function Exports
+
+Successfully exported helper functions from action.c for use by C++ actions:
+- ✅ **ChangeFlag** - Flag modification (used by SetFlag, ClrFlag, ChangeFlag)
+- ✅ **ClearWarnings** - Clear warning flags (used by DeleteRats)
+- ✅ **GetFunctionID** - String to enum lookup (validated by MoveToCurrentLayer, unlocks ~36 actions)
 
 ---
 
