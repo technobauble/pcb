@@ -21,7 +21,8 @@
 extern "C" {
 #include "global.h"
 #include "error.h"   // For Message()
-#include "rats.h"    // For DeleteRats(), ClearWarnings()
+#include "remove.h"  // For DeleteRats()
+#include "action.h"  // For ClearWarnings()
 #include "set.h"     // For SetChangedFlag()
 }
 

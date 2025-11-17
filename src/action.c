@@ -465,7 +465,8 @@ static void AdjustAttachedBox (void);
 static void NotifyLine (void);
 static void NotifyBlock (void);
 static void NotifyMode (void);
-static void ClearWarnings (void);
+/* Exported helper function - now declared in action.h */
+void ClearWarnings (void);
 #ifdef HAVE_LIBSTROKE
 static void FinishStroke (void);
 extern void stroke_init (void);
@@ -591,6 +592,8 @@ ClearWarnings ()
   ENDALL_LOOP;
   Draw ();
 }
+
+/* ClearWarnings is now exported for use by C++ actions */
 
 /*!
  * \brief Click callback.

@@ -48,7 +48,8 @@ void warpNoWhere (void);
 bool ActionGetLocation (char *);
 void ActionGetXY (char *);
 
-/* Helper function for flag actions (defined in action.c) */
+/* Helper functions (defined in action.c) */
 void ChangeFlag (char *what, char *flag_name, int value, char *cmd_name);
+void ClearWarnings (void);
 
 #endif
