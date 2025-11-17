@@ -1837,6 +1837,10 @@ Does a Restore if there was nothing to undo, else does a Close.
 
 %end-doc */
 
+/* NOTE: This action has been migrated to C++ (see src/actions/AtomicAction.cpp)
+ * The dispatcher in hid_actionv() will use the C++ version automatically.
+ * This C version remains as a fallback if C++ actions are not available.
+ */
 static int
 ActionAtomic (int argc, char **argv, Coord x, Coord y)
 {
@@ -4024,6 +4028,10 @@ cursor location.
 
 %end-doc */
 
+/* NOTE: This action has been migrated to C++ (see src/actions/MarkCrosshairAction.cpp)
+ * The dispatcher in hid_actionv() will use the C++ version automatically.
+ * This C version remains as a fallback if C++ actions are not available.
+ */
 static int
 ActionMarkCrosshair (int argc, char **argv, Coord x, Coord y)
 {
@@ -7345,6 +7353,10 @@ Runs the given command, which is a system executable.
 
 %end-doc */
 
+/* NOTE: This action has been migrated to C++ (see src/actions/ExecCommandAction.cpp)
+ * The dispatcher in hid_actionv() will use the C++ version automatically.
+ * This C version remains as a fallback if C++ actions are not available.
+ */
 static int
 ActionExecCommand (int argc, char **argv, Coord x, Coord y)
 {

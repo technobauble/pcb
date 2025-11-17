@@ -184,13 +184,16 @@ PCB_CXX_SRCS = \
 	actions/Action.cpp \
 	actions/action_bridge.h \
 	actions/action_bridge.cpp \
-	actions/MessageAction.cpp \
-	actions/SaveSettingsAction.cpp \
-	actions/DumpLibraryAction.cpp \
-	actions/QuitAction.cpp \
-	actions/SetFlagAction.cpp \
+	actions/AtomicAction.cpp \
+	actions/ChangeFlagAction.cpp \
 	actions/ClrFlagAction.cpp \
-	actions/ChangeFlagAction.cpp
+	actions/DumpLibraryAction.cpp \
+	actions/ExecCommandAction.cpp \
+	actions/MarkCrosshairAction.cpp \
+	actions/MessageAction.cpp \
+	actions/QuitAction.cpp \
+	actions/SaveSettingsAction.cpp \
+	actions/SetFlagAction.cpp
 
 LIST_SRCS = ${PCB_SRCS}
 
