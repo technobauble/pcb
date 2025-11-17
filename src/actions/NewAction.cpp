@@ -54,11 +54,11 @@ public:
     int execute(int argc, char** argv, Coord /*x*/, Coord /*y*/) override {
         char* name = (argc > 0) ? argv[0] : nullptr;
 
-        if (!PCB->Changed || gui->confirm_dialog(_("OK to clear layout data?"), 0)) {
+        if (!PCB->Changed || gui->confirm_dialog(const_cast<char*>(_("OK to clear layout data?")), 0)) {
             if (name) {
                 name = strdup(name);
             } else {
-                name = gui->prompt_for(_("Enter the layout name:"), "");
+                name = gui->prompt_for(const_cast<char*>(_("Enter the layout name:")), const_cast<char*>(""));
             }
 
             if (!name) {
@@ -85,7 +85,7 @@ public:
             CenterDisplay(PCB->MaxWidth / 2, PCB->MaxHeight / 2, false);
             Redraw();
 
-            hid_action("PCBChanged");
+            hid_action(const_cast<char*>("PCBChanged"));
             notify_crosshair_change(true);
 
             return 0;

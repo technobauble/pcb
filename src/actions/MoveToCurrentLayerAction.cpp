@@ -20,6 +20,7 @@
 // Only include stable C interfaces
 extern "C" {
 #include "global.h"
+#include "data.h"         // For Settings, PCB, LayerStack, and layer globals
 #include "action.h"       // For GetFunctionID()
 #include "search.h"       // For SearchScreen()
 #include "move.h"         // For MoveObjectToLayer(), MoveSelectedObjectsToLayer()
@@ -60,7 +61,7 @@ public:
                 void* ptr2;
                 void* ptr3;
 
-                gui->get_coords(_("Select an Object"), &x, &y);
+                gui->get_coords(const_cast<char*>(_("Select an Object")), &x, &y);
                 type = SearchScreen(x, y, MOVETOLAYER_TYPES, &ptr1, &ptr2, &ptr3);
                 if (type != NO_TYPE) {
                     if (MoveObjectToLayer(type, ptr1, ptr2, ptr3, CURRENT, false)) {
