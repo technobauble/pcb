@@ -6503,6 +6503,10 @@ will call Polygon(PreviousPoint) when appropriate to do so.
 
 %end-doc */
 
+/* NOTE: This action has been migrated to C++ (see src/actions/PolygonAction.cpp)
+ * The dispatcher in hid_actionv() will use the C++ version automatically.
+ * This C version remains as a fallback if C++ actions are not available.
+ */
 static int
 ActionPolygon (int argc, char **argv, Coord x, Coord y)
 {
@@ -6538,6 +6542,10 @@ static const char routestyle_help[] =
 
 %end-doc */
 
+/* NOTE: This action has been migrated to C++ (see src/actions/RouteStyleAction.cpp)
+ * The dispatcher in hid_actionv() will use the C++ version automatically.
+ * This C version remains as a fallback if C++ actions are not available.
+ */
 static int
 ActionRouteStyle (int argc, char **argv, Coord x, Coord y)
 {

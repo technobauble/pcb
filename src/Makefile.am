@@ -192,8 +192,10 @@ PCB_CXX_SRCS = \
 	actions/ExecCommandAction.cpp \
 	actions/MarkCrosshairAction.cpp \
 	actions/MessageAction.cpp \
+	actions/PolygonAction.cpp \
 	actions/QuitAction.cpp \
 	actions/RemoveSelectedAction.cpp \
+	actions/RouteStyleAction.cpp \
 	actions/SaveSettingsAction.cpp \
 	actions/SetFlagAction.cpp
 
