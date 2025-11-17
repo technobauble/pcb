@@ -567,8 +567,9 @@ FinishStroke (void)
 
 /*!
  * \brief Clear warning color from pins/pads.
+ * Exported helper function for C++ actions.
  */
-static void
+void
 ClearWarnings ()
 {
   Settings.RatWarn = false;
