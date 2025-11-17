@@ -8,8 +8,8 @@
 ## Summary
 
 **Total Actions:** 62
-**Migrated:** 19 (31%)
-**Remaining:** 43 (69%)
+**Migrated:** 23 (37%)
+**Remaining:** 39 (63%)
 
 ---
 
@@ -41,6 +41,12 @@
 17. ✅ **AutoPlaceSelected** - Auto-place selected elements (simple wrapper, 10 lines)
 18. ✅ **AutoRoute** - Auto-route rat lines (uses GetFunctionID, 20 lines)
 19. ✅ **ChangeHole** - Change via drill hole diameter (object modification, 30 lines)
+
+### Batch 5: Object Manipulation and Connection Actions (This Session)
+20. ✅ **Flip** - Flip elements to opposite board side (uses GetFunctionID, 35 lines)
+21. ✅ **AddRats** - Add rat lines/airwires (uses GetFunctionID, 50 lines)
+22. ✅ **MorphPolygon** - Morph polygons to simplify (uses GetFunctionID, 37 lines)
+23. ✅ **Connection** - Find and highlight connections (uses GetFunctionID, 45 lines)
 
 ---
 
@@ -124,8 +130,8 @@ All migrated actions are:
 ## File Statistics
 
 **Original action.c:** 8,466 lines
-**Migrated to C++:** ~1,545 lines (estimated)
-**Reduction:** ~18%
+**Migrated to C++:** ~1,965 lines (estimated)
+**Reduction:** ~23%
 
 ## Helper Function Exports
 
