@@ -49,6 +49,91 @@ Date: 2025-11-18
 
 ---
 
-## Day 2: Core Initialization Migration - IN PROGRESS
+## Day 2-3: Core Initialization and Main Window Migration - COMPLETED
 
-(To be updated as work progresses)
+Date: 2025-11-18
+
+### Completed Tasks
+
+- ✅ gtkhid-main.c fully migrated to GTK3
+- ✅ gui-top-window.c main window layout migrated
+- ✅ All deprecated container APIs converted
+- ✅ GTK initialization verified GTK3-compatible
+
+### Changes Made
+
+#### gtkhid-main.c (Day 2)
+- Converted gtk_vbox_new() → gtk_box_new(GTK_ORIENTATION_VERTICAL, ...)
+- Converted gtk_table_new() → gtk_grid_new()
+- Converted gtk_table_attach() → gtk_grid_attach() with widget properties
+- Removed gtk_table_resize() (GtkGrid auto-resizes)
+- Updated widget expand/align/fill properties for GTK3
+
+#### gui-top-window.c (Days 2-3)
+- Converted 14 instances of gtk_vbox_new() → gtk_box_new(GTK_ORIENTATION_VERTICAL, 0)
+- Converted 14 instances of gtk_hbox_new() → gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0)
+- Verified gtk_init() code is GTK3-compatible (no deprecated threading)
+- No gdk_threads_* usage (already commented out)
+- No direct widget member access (clean!)
+- No expose-event signals in this file
+
+### Deferred to Later Milestones
+
+The following deprecated APIs are still present but work in GTK3 and can be migrated later:
+- GTK_STOCK_* constants (deprecated GTK3.10+, still functional)
+- gtk_misc_set_alignment() (deprecated GTK3.14+, still functional)
+- gtk_alignment_new() (deprecated GTK3.14+, still functional)
+
+These will be addressed in Week 4 (Milestone 4) during UI polish.
+
+### Files Migration Status
+
+- ✅ configure.ac - GTK3 detection and configuration
+- ✅ src/Makefile.am - GTK3 compilation flags
+- ✅ src/hid/gtk/gtkhid-main.c - Fully migrated
+- ✅ src/hid/gtk/gui-top-window.c - Layout migrated
+- ⏳ Drawing files (Week 2):
+  - src/hid/gtk/gtkhid-gdk.c
+  - src/hid/gtk/gui-output-events.c
+- ⏳ OpenGL files (Week 3):
+  - src/hid/gtk/gtkhid-gl.c
+
+### Current Status
+
+**Milestone 1 Progress:** Days 1-3 Complete (~60% of Milestone 1)
+
+**Working:**
+- Build system configured for GTK3
+- Core HID registration migrated
+- Main window layout structure converted
+- GTK initialization compatible
+
+**Ready For:**
+- Compilation testing (requires GTK3 environment)
+- Week 2: Drawing migration (Cairo conversion)
+
+**Notes:**
+- No compilation errors expected in migrated files
+- All critical GTK2→GTK3 container conversions complete
+- Main window should display structure (even if drawing area empty)
+
+---
+
+## Next Steps
+
+### Immediate (Milestone 1 completion)
+- Day 4: Review and test other GTK HID files
+- Day 5: Integration testing and bug fixes
+
+### Week 2 (Milestone 2)
+- Migrate gtkhid-gdk.c (GDK → Cairo drawing)
+- Migrate gui-output-events.c
+- Get PCB rendering working
+
+### Week 3 (Milestone 3)
+- Migrate gtkhid-gl.c (GtkGLExt → GtkGLArea)
+- OpenGL 3D rendering
+
+### Week 4 (Milestone 4)
+- Migrate remaining dialogs and widgets
+- UI polish and deprecation cleanup
