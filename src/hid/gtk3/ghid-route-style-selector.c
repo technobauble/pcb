@@ -162,10 +162,12 @@ _table_attach (GtkWidget *table, gint row, const gchar *label,
   gtk_misc_set_alignment (GTK_MISC (label_w), 1.0, 0.5);
 
   *entry = ghid_coord_entry_new (min, max, 0, Settings.grid_unit, CE_SMALL);
-  gtk_table_attach (GTK_TABLE (table), label_w, 0, 1, row, row + 1,
-                    GTK_EXPAND | GTK_FILL, GTK_EXPAND | GTK_FILL, 2, 2);
-  gtk_table_attach (GTK_TABLE (table), *entry, 1, 2, row, row + 1,
-                    GTK_EXPAND | GTK_FILL, GTK_EXPAND | GTK_FILL, 2, 2);
+  gtk_grid_attach (GTK_GRID (table), label_w, 0, row, 1, 1);
+  gtk_widget_set_hexpand (label_w, TRUE);
+  gtk_widget_set_vexpand (label_w, TRUE);
+  gtk_grid_attach (GTK_GRID (table), *entry, 1, row, 1, 1);
+  gtk_widget_set_hexpand (*entry, TRUE);
+  gtk_widget_set_vexpand (*entry, TRUE);
 }
 
 /* \brief Builds and runs the "edit route styles" dialog */
@@ -199,26 +201,26 @@ ghid_route_style_selector_edit_dialog (GHidRouteStyleSelector *rss)
 
   content_area = gtk_dialog_get_content_area (GTK_DIALOG (dialog));
 
-  hbox = gtk_hbox_new (FALSE, 4);
+  hbox = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 4);
   gtk_box_pack_start (GTK_BOX (content_area), hbox, TRUE, TRUE, 4);
-  vbox = gtk_vbox_new (FALSE, 4);
+  vbox = gtk_box_new (GTK_ORIENTATION_VERTICAL, 4);
   gtk_box_pack_start (GTK_BOX (hbox), vbox, TRUE, TRUE, 4);
 
-  hbox = gtk_hbox_new (FALSE, 4);
+  hbox = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 4);
   gtk_box_pack_start (GTK_BOX (vbox), hbox, FALSE, FALSE, 4);
   gtk_box_pack_start (GTK_BOX (hbox), label, TRUE, TRUE, 0);
   gtk_box_pack_start (GTK_BOX (hbox), select_box, TRUE, TRUE, 0);
 
   sub_vbox = ghid_category_vbox (vbox, _("Route Style Data"),
                                  4, 2, TRUE, TRUE);
-  table = gtk_table_new (6, 2, FALSE);
+  table = gtk_grid_new ();
   gtk_box_pack_start (GTK_BOX (sub_vbox), table, TRUE, TRUE, 4);
   label = gtk_label_new (_("Name:"));
   gtk_misc_set_alignment (GTK_MISC (label), 1.0, 0.5);
   dialog_data.name_entry = gtk_entry_new ();
-  gtk_table_attach (GTK_TABLE (table), label, 0, 1, 0, 1,
+  gtk_table_attach (GTK_GRID (table), label, 0, 1, 0, 1,
                     GTK_EXPAND | GTK_FILL, GTK_EXPAND | GTK_FILL, 2, 2);
-  gtk_table_attach (GTK_TABLE (table), dialog_data.name_entry, 1, 2, 0, 1,
+  gtk_table_attach (GTK_GRID (table), dialog_data.name_entry, 1, 2, 0, 1,
                     GTK_EXPAND | GTK_FILL, GTK_EXPAND | GTK_FILL, 2, 2);
 
   _table_attach (table, 1, _("Line width:"),

@@ -262,7 +262,7 @@ ghid_coord_entry (GtkWidget * box, GtkWidget ** coord_entry, Coord value,
 
   if (string && box)
     {
-      hbox = gtk_hbox_new (FALSE, 0);
+      hbox = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 0);
       gtk_box_pack_start (GTK_BOX (box), hbox, FALSE, FALSE, 2);
       box = hbox;
     }
@@ -309,7 +309,7 @@ ghid_spin_button (GtkWidget * box, GtkWidget ** spin_button, gfloat value,
 
   if (string && box)
     {
-      hbox = gtk_hbox_new (FALSE, 0);
+      hbox = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 0);
       gtk_box_pack_start (GTK_BOX (box), hbox, FALSE, FALSE, 2);
       box = hbox;
     }
@@ -505,7 +505,7 @@ ghid_scrolled_vbox (GtkWidget * box, GtkWidget ** scr,
   gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (scrolled),
 				  h_policy, v_policy);
   gtk_box_pack_start (GTK_BOX (box), scrolled, TRUE, TRUE, 0);
-  vbox = gtk_vbox_new (FALSE, 0);
+  vbox = gtk_box_new (GTK_ORIENTATION_VERTICAL, 0);
   gtk_scrolled_window_add_with_viewport (GTK_SCROLLED_WINDOW (scrolled),
 					 vbox);
   if (scr)
@@ -528,7 +528,7 @@ ghid_framed_vbox (GtkWidget * box, gchar * label, gint frame_border_width,
   frame = gtk_frame_new (label);
   gtk_container_set_border_width (GTK_CONTAINER (frame), frame_border_width);
   gtk_box_pack_start (GTK_BOX (box), frame, frame_expand, frame_expand, 0);
-  vbox = gtk_vbox_new (FALSE, vbox_pad);
+  vbox = gtk_box_new (GTK_ORIENTATION_VERTICAL, vbox_pad);
   gtk_container_set_border_width (GTK_CONTAINER (vbox), vbox_border_width);
   gtk_container_add (GTK_CONTAINER (frame), vbox);
   return vbox;
@@ -545,7 +545,7 @@ ghid_framed_vbox_end (GtkWidget * box, gchar * label, gint frame_border_width,
   frame = gtk_frame_new (label);
   gtk_container_set_border_width (GTK_CONTAINER (frame), frame_border_width);
   gtk_box_pack_end (GTK_BOX (box), frame, frame_expand, frame_expand, 0);
-  vbox = gtk_vbox_new (FALSE, vbox_pad);
+  vbox = gtk_box_new (GTK_ORIENTATION_VERTICAL, vbox_pad);
   gtk_container_set_border_width (GTK_CONTAINER (vbox), vbox_border_width);
   gtk_container_add (GTK_CONTAINER (frame), vbox);
   return vbox;
@@ -559,7 +559,7 @@ ghid_category_vbox (GtkWidget * box, const gchar * category_header,
   GtkWidget *vbox, *vbox1, *hbox, *label;
   gchar *s;
 
-  vbox = gtk_vbox_new (FALSE, 0);
+  vbox = gtk_box_new (GTK_ORIENTATION_VERTICAL, 0);
   if (pack_start)
     gtk_box_pack_start (GTK_BOX (box), vbox, FALSE, FALSE, 0);
   else
@@ -576,11 +576,11 @@ ghid_category_vbox (GtkWidget * box, const gchar * category_header,
       g_free (s);
     }
 
-  hbox = gtk_hbox_new (FALSE, 0);
+  hbox = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 0);
   gtk_box_pack_start (GTK_BOX (vbox), hbox, FALSE, FALSE, 0);
   label = gtk_label_new ("     ");
   gtk_box_pack_start (GTK_BOX (hbox), label, FALSE, FALSE, 0);
-  vbox1 = gtk_vbox_new (FALSE, box_pad);
+  vbox1 = gtk_box_new (GTK_ORIENTATION_VERTICAL, box_pad);
   gtk_box_pack_start (GTK_BOX (hbox), vbox1, TRUE, TRUE, 0);
 
   if (bottom_pad)
@@ -622,7 +622,7 @@ ghid_notebook_page (GtkWidget * tabs, const char *name, gint pad, gint border)
   GtkWidget *label;
   GtkWidget *vbox;
 
-  vbox = gtk_vbox_new (FALSE, pad);
+  vbox = gtk_box_new (GTK_ORIENTATION_VERTICAL, pad);
   gtk_container_set_border_width (GTK_CONTAINER (vbox), border);
 
   label = gtk_label_new (name);
@@ -671,7 +671,7 @@ ghid_dialog_report (gchar * title, gchar * message)
 
   content_area = gtk_dialog_get_content_area (GTK_DIALOG (dialog));
 
-  vbox = gtk_vbox_new (FALSE, 0);
+  vbox = gtk_box_new (GTK_ORIENTATION_VERTICAL, 0);
   gtk_container_set_border_width (GTK_CONTAINER (vbox), 8);
   gtk_box_pack_start (GTK_BOX (content_area), vbox, FALSE, FALSE, 0);
 
