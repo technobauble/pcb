@@ -10,6 +10,7 @@ extern "C" {
 #include "hid.h"
 #include "find.h"
 #include "search.h"
+#include "set.h"
 }
 
 #include <cstdio>
