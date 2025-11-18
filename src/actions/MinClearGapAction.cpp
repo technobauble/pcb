@@ -102,6 +102,6 @@ public:
     }
 };
 
-REGISTER_ACTION(MinClearGapAction)
+REGISTER_ACTION(MinClearGapAction);
 
 }} // namespace pcb::actions

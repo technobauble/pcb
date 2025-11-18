@@ -115,6 +115,6 @@ public:
     }
 };
 
-REGISTER_ACTION(ChangeSizeAction)
+REGISTER_ACTION(ChangeSizeAction);
 
 }} // namespace pcb::actions

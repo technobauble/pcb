@@ -98,6 +98,6 @@ public:
     }
 };
 
-REGISTER_ACTION(MinMaskGapAction)
+REGISTER_ACTION(MinMaskGapAction);
 
 }} // namespace pcb::actions

@@ -93,6 +93,6 @@ public:
     }
 };
 
-REGISTER_ACTION(SetThermalAction)
+REGISTER_ACTION(SetThermalAction);
 
 }} // namespace pcb::actions
