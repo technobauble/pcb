@@ -1,8 +1,8 @@
 #include "Action.h"
-#include "action_bridge.h"
 
 extern "C" {
 #include "global.h"
+#include "action.h"
 #include "change.h"
 #include "data.h"
 #include "draw.h"
