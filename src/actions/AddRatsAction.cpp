@@ -80,15 +80,14 @@ public:
 
                 RAT_LOOP(PCB->Data);
                 {
-                    RatType* rat_line = static_cast<RatType*>(line);
-                    if (TEST_FLAG(SELECTEDFLAG, rat_line))
+                    if (TEST_FLAG(SELECTEDFLAG, line))
                         continue;
 
-                    float len = SQUARE(rat_line->Point1.X - rat_line->Point2.X) +
-                               SQUARE(rat_line->Point1.Y - rat_line->Point2.Y);
+                    float len = SQUARE(line->Point1.X - line->Point2.X) +
+                               SQUARE(line->Point1.Y - line->Point2.Y);
                     if (len < small) {
                         small = len;
-                        shorty = rat_line;
+                        shorty = line;
                     }
                 }
                 END_LOOP;
