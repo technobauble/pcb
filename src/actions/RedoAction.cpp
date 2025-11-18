@@ -5,6 +5,7 @@ extern "C" {
 #include "action.h"
 #include "crosshair.h"
 #include "data.h"
+#include "set.h"
 #include "undo.h"
 }
 
