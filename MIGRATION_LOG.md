@@ -252,3 +252,174 @@ Foundation fully established for GTK3 HID:
 **Focus:** Drawing Migration (GDK → Cairo)
 **Files:** gtkhid-gdk.c, gui-output-events.c
 **Goal:** Get PCB board rendering working
+
+---
+
+## Milestone 2: Drawing & Rendering - IN PROGRESS
+
+### Day 1: Signal Migration - COMPLETED ✅
+
+Date: 2025-11-18
+
+#### Completed Tasks
+
+- ✅ Migrated all expose-event signals to draw signal
+- ✅ Updated all callback signatures (GdkEventExpose → cairo_t)
+- ✅ Removed manual cairo_t creation/destruction in GTK3 draw callbacks
+- ✅ Updated GdkColor → GdkRGBA in gui-trackball.c
+- ✅ Updated widget->style → GtkStyleContext in gui-trackball.c
+
+#### Files Modified
+
+1. **gui-top-window.c**
+   - Changed "expose_event" → "draw" signal connection
+   - Updated callback name
+
+2. **gtkhid-gdk.c**
+   - ghid_drawing_area_expose_cb → ghid_drawing_area_draw_cb
+   - ghid_pinout_preview_expose → ghid_pinout_preview_draw
+   - Updated to receive cairo_t parameter
+
+3. **gtkhid-gl.c**
+   - Updated OpenGL callbacks to match new signature
+   - Added notes that full GL migration is Milestone 3
+   - Removed expose area clipping (will be handled differently in GTK3)
+
+4. **gui-trackball.c**
+   - ghid_trackball_expose → ghid_trackball_draw
+   - Removed gdk_cairo_create() and cairo_destroy()
+   - Updated to use provided cairo_t from GTK3
+   - Migrated GdkColor → GdkRGBA
+   - Migrated widget->style → GtkStyleContext
+
+5. **gui-pinout-preview.c**
+   - Updated widget class method: expose_event → draw
+
+6. **gui.h**
+   - Updated all function declarations
+
+#### Technical Notes
+
+In GTK3, the draw signal provides a cairo_t context directly, so we no longer
+need to create it with gdk_cairo_create() or destroy it. GTK3 manages the
+cairo context lifecycle.
+
+All callbacks now receive cairo_t instead of GdkEventExpose, which means:
+- No ev->area for clipping (GTK3 handles clipping automatically)
+- Can use cairo_t directly for drawing
+- Must not destroy the cairo_t (owned by GTK)
+
+### Day 2: Cairo Drawing Migration - IN PROGRESS 🚧
+
+Date: 2025-11-18
+
+#### Current Status
+
+Analyzing drawing architecture to prepare for GDK → Cairo migration.
+
+#### Key Drawing Functions to Migrate (24 gdk_draw_* calls total)
+
+**Primary Drawing Functions:**
+- ghid_draw_line() - Uses gdk_draw_line
+- ghid_draw_arc() - Uses gdk_draw_arc
+- ghid_draw_rect() - Uses gdk_draw_rectangle
+- ghid_fill_circle() - Uses gdk_draw_arc (filled)
+- ghid_fill_polygon() - Uses gdk_draw_polygon
+- ghid_fill_rect() - Uses gdk_draw_rectangle (filled)
+- ghid_draw_grid() - Uses gdk_draw_points
+
+**Support Functions:**
+- ghid_screen_update() - Uses gdk_draw_drawable (blit pixmap to window)
+- draw_crosshair() - Multiple gdk_draw_line calls with XOR
+- ghid_drawing_area_configure_hook() - GC creation and management
+
+#### Architecture Changes Needed
+
+**Current (GTK2/GDK):**
+```c
+typedef struct render_priv {
+  GdkGC *bg_gc;
+  GdkGC *offlimits_gc;
+  GdkGC *mask_gc;
+  GdkGC *u_gc;
+  GdkGC *grid_gc;
+  // ...
+} render_priv;
+
+typedef struct hid_gc_struct {
+  GdkGC *gc;
+  gchar *colorname;
+  Coord width;
+  gint cap, join;
+  // ...
+} hid_gc_struct;
+```
+
+Drawing flow:
+1. Create GdkGC with gdk_gc_new()
+2. Set properties (color, width, cap, join) on GC
+3. Draw using gdk_draw_* with GC
+4. Offscreen: Draw to GdkPixmap (gport->pixmap)
+5. Blit: gdk_draw_drawable() to copy pixmap to window
+
+**Target (GTK3/Cairo):**
+```c
+typedef struct render_priv {
+  cairo_surface_t *surface;  // Offscreen surface
+  // No GCs - state is in cairo_t during drawing
+  // Keep clip, colors, etc. as direct values
+  // ...
+} render_priv;
+
+typedef struct hid_gc_struct {
+  // No GdkGC!
+  gchar *colorname;
+  Coord width;
+  cairo_line_cap_t cap;
+  cairo_line_join_t join;
+  GdkRGBA color;  // Parse from colorname
+  // ...
+} hid_gc_struct;
+```
+
+Drawing flow:
+1. Create cairo_t from surface: cairo_create(surface)
+2. Set properties on cairo_t: cairo_set_source_rgba(), cairo_set_line_width()
+3. Draw using cairo_* primitives
+4. Offscreen: Draw to cairo_surface_t
+5. Blit: cairo_set_source_surface() + cairo_paint()
+
+#### Next Steps
+
+1. Update render_priv structure to add cairo_surface_t
+2. Create surface management functions
+3. Update use_gc() to set Cairo state instead of GC
+4. Migrate drawing primitives one by one
+5. Test with simple shapes
+
+#### Challenges
+
+- **Offscreen rendering**: Need to replace GdkPixmap with cairo_surface_t
+- **XOR drawing**: Cairo doesn't have XOR mode (crosshair needs alternative)
+- **Clipping**: Need to implement Cairo clipping
+- **Color management**: Parse color names to GdkRGBA
+
+---
+
+### Progress Summary
+
+**Milestone 2 Overall:** ~25% complete
+
+**Completed:**
+- Signal migration (expose-event → draw)
+- Callback signature updates
+- GTK3 style context updates
+
+**In Progress:**
+- Architecture analysis for Cairo migration
+
+**Remaining:**
+- GDK → Cairo drawing primitives (24 calls)
+- Surface management
+- Color/GC property handling
+- Testing with real PCB files
