@@ -208,20 +208,24 @@ PCB_CXX_SRCS = \
 	actions/ElementSetAttrAction.cpp \
 	actions/ExecCommandAction.cpp \
 	actions/FlipAction.cpp \
+	actions/LoadFromAction.cpp \
 	actions/MarkCrosshairAction.cpp \
 	actions/MessageAction.cpp \
 	actions/MinClearGapAction.cpp \
 	actions/MinMaskGapAction.cpp \
 	actions/MorphPolygonAction.cpp \
+	actions/MoveObjectAction.cpp \
 	actions/MoveToCurrentLayerAction.cpp \
 	actions/NewAction.cpp \
 	actions/PolygonAction.cpp \
 	actions/PSCalibAction.cpp \
 	actions/QuitAction.cpp \
+	actions/RedoAction.cpp \
 	actions/RemoveSelectedAction.cpp \
 	actions/RipUpAction.cpp \
 	actions/RouteStyleAction.cpp \
 	actions/SaveSettingsAction.cpp \
+	actions/SaveToAction.cpp \
 	actions/SetFlagAction.cpp \
 	actions/SetOctagonAction.cpp \
 	actions/SetSameAction.cpp \

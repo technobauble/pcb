@@ -7,9 +7,9 @@
 
 ## Summary
 
-**Total Actions:** 62
-**Migrated:** 45 (73%) - **NEARLY THREE-QUARTERS COMPLETE!** 🎉
-**Remaining:** 17 (27%)
+**Total Actions:** 65
+**Migrated:** 50 (77%) - **OVER THREE-QUARTERS COMPLETE!** 🎉
+**Remaining:** 15 (23%)
 
 ---
 
@@ -77,6 +77,17 @@
 43. ✅ **Attributes** - Edit PCB/layer/element attributes (~85 lines, uses gui->edit_attributes)
 44. ✅ **ElementSetAttr** - Set/clear element-specific attributes (~110 lines, includes helper functions)
 45. ✅ **PSCalib** - Calibrate PostScript output (~10 lines, simple HID exporter call)
+
+### Batch 10: File Operations & Undo/Redo (This Session)
+46. ✅ **MoveObject** - Move object to specified coordinates (~51 lines, uses SearchScreen, rubberband)
+47. ✅ **LoadFrom** - Load layout/element/netlist from file (~67 lines, multiple file operations)
+48. ✅ **SaveTo** - Save layout/connections/buffer to file (~109 lines, multiple save operations)
+49. ✅ **Redo** - Redo recent undo operations (~55 lines, undo state management)
+
+**Note:** Some actions were evaluated but deferred:
+- **ActionDelete** - Uses static `Note` struct and `NotifyMode()` (816 lines, not yet exported)
+- **ActionExecuteFile** - Uses static `defer_updates` variables shared with ActionChangeName
+- **ActionBell** - Has different function signature, not in standard HID actions table
 
 ---
 
@@ -160,8 +171,8 @@ All migrated actions are:
 ## File Statistics
 
 **Original action.c:** 8,466 lines
-**Migrated to C++:** ~3,882 lines (estimated from 45 actions)
-**Reduction:** ~46%
+**Migrated to C++:** ~4,164 lines (estimated from 50 actions)
+**Reduction:** ~49%
 
 ## Helper Function Exports
 

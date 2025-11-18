@@ -5684,6 +5684,7 @@ Save the content of the active Buffer to a file. This is the graphical way to cr
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/SaveToAction.cpp */
 static int
 ActionSaveTo (int argc, char **argv, Coord x, Coord y)
 {
@@ -5839,6 +5840,7 @@ you may have made.
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/LoadFromAction.cpp */
 static int
 ActionLoadFrom (int argc, char **argv, Coord x, Coord y)
 {
@@ -6362,6 +6364,7 @@ three "undone" lines.
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/RedoAction.cpp */
 static int
 ActionRedo (int argc, char **argv, Coord x, Coord y)
 {
@@ -6498,6 +6501,7 @@ units, currently 1/100 mil.
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/MoveObjectAction.cpp */
 static int
 ActionMoveObject (int argc, char **argv, Coord x, Coord y)
 {
