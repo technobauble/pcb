@@ -6,11 +6,13 @@ extern "C" {
 #include "change.h"
 #include "data.h"
 #include "misc.h"
+#include "pcb-printf.h"
 #include "search.h"
 #include "set.h"
 }
 
-namespace {
+namespace pcb {
+namespace actions {
 
 class ChangeClearSizeAction : public Action {
 public:
@@ -94,4 +96,4 @@ public:
 
 REGISTER_ACTION(ChangeClearSizeAction)
 
-} // namespace
+}} // namespace pcb::actions

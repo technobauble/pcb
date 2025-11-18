@@ -10,7 +10,8 @@ extern "C" {
 #include "set.h"
 }
 
-namespace {
+namespace pcb {
+namespace actions {
 
 class Change2ndSizeAction : public Action {
 public:
@@ -70,4 +71,4 @@ public:
 
 REGISTER_ACTION(Change2ndSizeAction)
 
-} // namespace
+}} // namespace pcb::actions

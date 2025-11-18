@@ -11,7 +11,8 @@ extern "C" {
 
 #include <cstring>
 
-namespace {
+namespace pcb {
+namespace actions {
 
 class MinMaskGapAction : public Action {
 public:
@@ -99,4 +100,4 @@ public:
 
 REGISTER_ACTION(MinMaskGapAction)
 
-} // namespace
+}} // namespace pcb::actions

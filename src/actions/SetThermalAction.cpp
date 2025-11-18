@@ -11,7 +11,8 @@ extern "C" {
 #include "undo.h"
 }
 
-namespace {
+namespace pcb {
+namespace actions {
 
 class SetThermalAction : public Action {
 public:
@@ -94,4 +95,4 @@ public:
 
 REGISTER_ACTION(SetThermalAction)
 
-} // namespace
+}} // namespace pcb::actions
