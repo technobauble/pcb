@@ -256,6 +256,42 @@ ghid_draw_grid (BoxType * region)
     }
   if (n == 0)
     return;
+
+  /* GTK3: Draw grid using Cairo */
+  if (priv->surface)
+    {
+      cairo_t *cr = cairo_create (priv->surface);
+      GdkRGBA grid_rgba;
+
+      /* Parse grid color to RGBA */
+      if (gdk_rgba_parse (&grid_rgba, Settings.GridColor))
+        {
+          /* Use semi-transparent grid instead of XOR */
+          grid_rgba.alpha = 0.5;
+        }
+      else
+        {
+          /* Default to semi-transparent white */
+          grid_rgba.red = grid_rgba.green = grid_rgba.blue = 1.0;
+          grid_rgba.alpha = 0.5;
+        }
+
+      gdk_cairo_set_source_rgba (cr, &grid_rgba);
+
+      /* Draw grid points as small rectangles */
+      for (y = y1; y <= y2; y += PCB->Grid)
+        {
+          for (i = 0; i < n; i++)
+            {
+              cairo_rectangle (cr, points[i].x - 0.5, Vy (y) - 0.5, 1, 1);
+              cairo_fill (cr);
+            }
+        }
+
+      cairo_destroy (cr);
+    }
+
+  /* GTK2: Original GDK implementation with XOR */
   for (y = y1; y <= y2; y += PCB->Grid)
     { /* reuse the row of points at each y */
       for (i = 0; i < n; i++)   points[i].y = Vy (y);
@@ -959,6 +995,68 @@ redraw_region (GdkRectangle *rect)
       ebottom = tmp;
     }
 
+  /* GTK3: Draw offlimits and background using Cairo */
+  if (priv->surface)
+    {
+      cairo_t *cr = cairo_create (priv->surface);
+      GdkRGBA offlimits_rgba, bg_rgba;
+
+      /* Convert offlimits color */
+      offlimits_rgba.red = gport->offlimits_color.red / 65535.0;
+      offlimits_rgba.green = gport->offlimits_color.green / 65535.0;
+      offlimits_rgba.blue = gport->offlimits_color.blue / 65535.0;
+      offlimits_rgba.alpha = 1.0;
+
+      gdk_cairo_set_source_rgba (cr, &offlimits_rgba);
+
+      /* Draw dead areas around PCB */
+      if (eleft > 0)
+        {
+          cairo_rectangle (cr, 0, 0, eleft, gport->height);
+          cairo_fill (cr);
+        }
+      else
+        eleft = 0;
+
+      if (eright < gport->width)
+        {
+          cairo_rectangle (cr, eright, 0, gport->width - eright, gport->height);
+          cairo_fill (cr);
+        }
+      else
+        eright = gport->width;
+
+      if (etop > 0)
+        {
+          cairo_rectangle (cr, eleft, 0, eright - eleft + 1, etop);
+          cairo_fill (cr);
+        }
+      else
+        etop = 0;
+
+      if (ebottom < gport->height)
+        {
+          cairo_rectangle (cr, eleft, ebottom, eright - eleft + 1,
+                          gport->height - ebottom);
+          cairo_fill (cr);
+        }
+      else
+        ebottom = gport->height;
+
+      /* Draw PCB background */
+      bg_rgba.red = gport->bg_color.red / 65535.0;
+      bg_rgba.green = gport->bg_color.green / 65535.0;
+      bg_rgba.blue = gport->bg_color.blue / 65535.0;
+      bg_rgba.alpha = 1.0;
+
+      gdk_cairo_set_source_rgba (cr, &bg_rgba);
+      cairo_rectangle (cr, eleft, etop, eright - eleft + 1, ebottom - etop + 1);
+      cairo_fill (cr);
+
+      cairo_destroy (cr);
+    }
+
+  /* GTK2: Draw offlimits and background using GDK */
   /* If the PCB isn't filling the entire screen, draw the dead area around it */
   if (eleft > 0) /* draw dead area on the left side */
     gdk_draw_rectangle (gport->drawable, priv->offlimits_gc,
@@ -1301,6 +1399,14 @@ ghid_screen_update (void)
   render_priv *priv = gport->render_priv;
   GdkWindow *window = gtk_widget_get_window (gport->drawing_area);
 
+  /* GTK3: Request a redraw which will trigger the draw callback */
+  if (priv->surface)
+    {
+      gtk_widget_queue_draw (gport->drawing_area);
+      return;
+    }
+
+  /* GTK2: Manual blit from pixmap to window */
   if (gport->pixmap == NULL)
     return;
 
