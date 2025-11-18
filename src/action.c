@@ -3551,6 +3551,7 @@ that this uses the highest numbered paste buffer.
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/RipUpAction.cpp */
 static int
 ActionRipUp (int argc, char **argv, Coord x, Coord y)
 {
@@ -6926,6 +6927,7 @@ ActionExecuteFile (int argc, char **argv, Coord x, Coord y)
 
 /* --------------------------------------------------------------------------- */
 
+/* MIGRATED to C++: src/actions/PSCalibAction.cpp */
 static int
 ActionPSCalib (int argc, char **argv, Coord x, Coord y)
 {
@@ -7218,6 +7220,7 @@ not specified, the given attribute is removed if present.
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/ElementSetAttrAction.cpp */
 static int
 ActionElementSetAttr (int argc, char **argv, Coord x, Coord y)
 {
@@ -7941,7 +7944,7 @@ pcb, an element, or a layer.
 
 %end-doc */
 
-
+/* MIGRATED to C++: src/actions/AttributesAction.cpp */
 static int
 ActionAttributes (int argc, char **argv, Coord x, Coord y)
 {

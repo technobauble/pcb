@@ -186,6 +186,7 @@ PCB_CXX_SRCS = \
 	actions/action_bridge.cpp \
 	actions/AddRatsAction.cpp \
 	actions/AtomicAction.cpp \
+	actions/AttributesAction.cpp \
 	actions/AutoPlaceSelectedAction.cpp \
 	actions/AutoRouteAction.cpp \
 	actions/Change2ndSizeAction.cpp \
@@ -204,6 +205,7 @@ PCB_CXX_SRCS = \
 	actions/ConnectionAction.cpp \
 	actions/DeleteRatsAction.cpp \
 	actions/DumpLibraryAction.cpp \
+	actions/ElementSetAttrAction.cpp \
 	actions/ExecCommandAction.cpp \
 	actions/FlipAction.cpp \
 	actions/MarkCrosshairAction.cpp \
@@ -214,8 +216,10 @@ PCB_CXX_SRCS = \
 	actions/MoveToCurrentLayerAction.cpp \
 	actions/NewAction.cpp \
 	actions/PolygonAction.cpp \
+	actions/PSCalibAction.cpp \
 	actions/QuitAction.cpp \
 	actions/RemoveSelectedAction.cpp \
+	actions/RipUpAction.cpp \
 	actions/RouteStyleAction.cpp \
 	actions/SaveSettingsAction.cpp \
 	actions/SetFlagAction.cpp \

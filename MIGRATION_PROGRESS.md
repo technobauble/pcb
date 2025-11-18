@@ -8,8 +8,8 @@
 ## Summary
 
 **Total Actions:** 62
-**Migrated:** 41 (66%) - **TWO-THIRDS COMPLETE!** 🎉
-**Remaining:** 21 (34%)
+**Migrated:** 45 (73%) - **NEARLY THREE-QUARTERS COMPLETE!** 🎉
+**Remaining:** 17 (27%)
 
 ---
 
@@ -71,6 +71,12 @@
 39. ✅ **ChangePinName** - Change pin names on elements (~70 lines, uses ELEMENT_LOOP, PIN_LOOP, PAD_LOOP)
 40. ✅ **SetValue** - Set board-wide values (grid, line size, via size, etc.) (~95 lines, uses GetFunctionID)
 41. ✅ **SetSame** - Copy properties from clicked object (~80 lines, uses SearchScreen)
+
+### Batch 9: Utility Actions (This Session)
+42. ✅ **RipUp** - Rip up auto-routed tracks or convert elements to parts (~95 lines, uses ALLLINE_LOOP, buffer operations)
+43. ✅ **Attributes** - Edit PCB/layer/element attributes (~85 lines, uses gui->edit_attributes)
+44. ✅ **ElementSetAttr** - Set/clear element-specific attributes (~110 lines, includes helper functions)
+45. ✅ **PSCalib** - Calibrate PostScript output (~10 lines, simple HID exporter call)
 
 ---
 
@@ -154,8 +160,8 @@ All migrated actions are:
 ## File Statistics
 
 **Original action.c:** 8,466 lines
-**Migrated to C++:** ~3,582 lines (estimated)
-**Reduction:** ~42%
+**Migrated to C++:** ~3,882 lines (estimated from 45 actions)
+**Reduction:** ~46%
 
 ## Helper Function Exports
 
@@ -192,23 +198,27 @@ All migrated actions include:
 
 ## Next Session Goals
 
-1. **Migrate 5-10 more simple actions**
-   - Focus on actions with <50 lines
-   - Minimal global state dependencies
-   - Clear, simple logic
+1. **Migrate remaining 17 actions (27%)**
+   - File operations: SaveTo, LoadFrom, ExecuteFile
+   - Display/UI: Display, Mode, LayerGroups
+   - Selection: Select, Unselect
+   - Complex: Import, Undo, Redo
+   - Utilities: ElementList, DisperseElements, etc.
 
-2. **Create more tests**
-   - Add unit tests for new actions
-   - Expand integration test coverage
+2. **Focus on medium-complexity actions**
+   - File operations (SaveTo, LoadFrom) - 50-100 lines each
+   - Display actions - mode switching logic
+   - Selection operations - object traversal patterns
 
-3. **Document patterns**
-   - Update pattern library
-   - Add examples for common cases
+3. **Save most complex for last**
+   - Undo/Redo - complex state machine
+   - Import - external dependencies
+   - NotifyMode - 816 lines (may need alternative approach)
 
-4. **Consider grouping**
-   - File-related actions → FileActions.cpp?
-   - Flag-related actions already grouped
-   - Display-related actions → DisplayActions.cpp?
+4. **Continue testing and documentation**
+   - Add unit tests for complex actions
+   - Document new patterns discovered
+   - Update STRATEGIC_REFACTORING_OPPORTUNITIES.md
 
 ---
 
