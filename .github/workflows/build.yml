@@ -15,11 +15,17 @@ jobs:
       fail-fast: false
       matrix:
         config:
-          - name: "GTK GUI"
+          - name: "GTK2 GUI"
             configure_flags: "--with-gui=gtk --disable-doc --disable-dbus --disable-update-desktop-database"
 
-          - name: "GTK + OpenGL"
+          - name: "GTK2 + OpenGL"
             configure_flags: "--with-gui=gtk --enable-gl --disable-doc --disable-dbus --disable-update-desktop-database"
+
+          - name: "GTK3 GUI"
+            configure_flags: "--with-gui=gtk3 --disable-doc --disable-dbus --disable-update-desktop-database"
+
+          - name: "GTK3 + OpenGL"
+            configure_flags: "--with-gui=gtk3 --enable-gl --disable-doc --disable-dbus --disable-update-desktop-database"
 
           - name: "Batch (Headless)"
             configure_flags: "--with-gui=batch --disable-doc --disable-dbus --disable-update-desktop-database"
@@ -45,6 +51,7 @@ jobs:
           pkg-config \
           libglib2.0-dev \
           libgtk2.0-dev \
+          libgtk-3-dev \
           libgtkglext1-dev \
           libgd-dev \
           libdbus-1-dev \
@@ -194,10 +201,10 @@ jobs:
     #     make distcheck V=1
 
     - name: Upload build artifacts
-      if: matrix.config.name == 'GTK GUI'
+      if: matrix.config.name == 'GTK2 GUI' || matrix.config.name == 'GTK3 GUI'
       uses: actions/upload-artifact@v4
       with:
-        name: pcb-linux-gtk
+        name: pcb-linux-${{ matrix.config.name }}
         path: |
           src/pcb
         retention-days: 7
@@ -227,6 +234,7 @@ jobs:
           pkg-config \
           libglib2.0-dev \
           libgtk2.0-dev \
+          libgtk-3-dev \
           libgtkglext1-dev \
           libgd-dev \
           libdbus-1-dev \
@@ -348,6 +356,7 @@ jobs:
           pkg-config \
           libglib2.0-dev \
           libgtk2.0-dev \
+          libgtk-3-dev \
           libgtkglext1-dev \
           libgd-dev \
           libdbus-1-dev \
@@ -580,9 +589,9 @@ jobs:
         echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
 
         if [ "${{ needs.build-linux.result }}" == "success" ]; then
-          echo "| Linux Builds (3 configs) | ✅ Success |" >> $GITHUB_STEP_SUMMARY
+          echo "| Linux Builds (5 configs) | ✅ Success |" >> $GITHUB_STEP_SUMMARY
         else
-          echo "| Linux Builds (3 configs) | ❌ Failed |" >> $GITHUB_STEP_SUMMARY
+          echo "| Linux Builds (5 configs) | ❌ Failed |" >> $GITHUB_STEP_SUMMARY
         fi
 
         if [ "${{ needs.code-coverage.result }}" == "success" ]; then
@@ -611,7 +620,7 @@ jobs:
         echo "- Build logs for each configuration" >> $GITHUB_STEP_SUMMARY
         echo "- Code coverage report (lcov)" >> $GITHUB_STEP_SUMMARY
         echo "- Code quality reports (cppcheck)" >> $GITHUB_STEP_SUMMARY
-        echo "- Built PCB binary (GTK GUI)" >> $GITHUB_STEP_SUMMARY
+        echo "- Built PCB binaries (GTK2 and GTK3)" >> $GITHUB_STEP_SUMMARY
 
     - name: Check build status
       run: |
