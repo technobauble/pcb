@@ -1,5 +1,34 @@
 # GTK3 Migration Log
 
+## ARCHITECTURE CHANGE: Dual HID Approach
+
+**Date:** 2025-11-18
+
+**Important:** The migration strategy has been changed to implement GTK3 as a **separate new HID** alongside the existing GTK2 HID, rather than replacing it.
+
+### New Architecture
+
+- **src/hid/gtk/** - Original GTK2 HID (preserved, untouched)
+- **src/hid/gtk3/** - New GTK3 HID (migrated code)
+
+### Benefits
+
+1. **Backward Compatibility** - GTK2 version remains available
+2. **Safe Migration** - Both HIDs can coexist during transition
+3. **Easy Testing** - Users can switch between versions
+4. **Gradual Adoption** - GTK3 can mature before GTK2 removal
+
+### Build System
+
+Users can now specify which GUI to build:
+- `./configure --with-gui=gtk` - Build with GTK2 (default)
+- `./configure --with-gui=gtk3` - Build with GTK3
+- `./configure --with-gui=lesstif` - Build with Lesstif
+
+At runtime, the HID is selected automatically based on which was built.
+
+---
+
 ## Day 1: Build System Setup - COMPLETED
 
 Date: 2025-11-18

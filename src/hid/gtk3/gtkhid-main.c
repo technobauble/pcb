@@ -758,7 +758,7 @@ make_progress_dialog (void)
   pd->progress = gtk_progress_bar_new ();
   gtk_widget_set_size_request (pd->progress, -1, 26);
 
-  vbox = gtk_vbox_new (false, 0);
+  vbox = gtk_box_new (GTK_ORIENTATION_VERTICAL, 0);
   gtk_box_pack_start (GTK_BOX (vbox), pd->message, true, true, 8);
   gtk_box_pack_start (GTK_BOX (vbox), pd->progress, false, true, 8);
 
@@ -889,7 +889,8 @@ static void attributes_delete_callback (GtkWidget *w, void *v);
 static void
 ghid_attr_set_table_size ()
 {
-  gtk_table_resize (GTK_TABLE (attr_table), attr_num_rows > 0 ? attr_num_rows : 1, 3);
+  /* GTK3: GtkGrid automatically resizes as widgets are added/removed, no manual resize needed */
+  /* gtk_table_resize (GTK_TABLE (attr_table), attr_num_rows > 0 ? attr_num_rows : 1, 3); */
 }
 
 static void
@@ -906,30 +907,27 @@ ghid_attributes_need_rows (int new_max)
     {
       /* add [attr_max_rows] */
       attr_row[attr_max_rows].del = gtk_button_new_with_label (_("del"));
-      gtk_table_attach (GTK_TABLE (attr_table), attr_row[attr_max_rows].del,
-			0, 1,
-			attr_max_rows, attr_max_rows+1,
-			(GtkAttachOptions)(GTK_FILL | GTK_EXPAND),
-			GTK_FILL,
-			0, 0);
+      gtk_grid_attach (GTK_GRID (attr_table), attr_row[attr_max_rows].del,
+		       0, attr_max_rows, 1, 1);
+      gtk_widget_set_hexpand (attr_row[attr_max_rows].del, TRUE);
+      gtk_widget_set_halign (attr_row[attr_max_rows].del, GTK_ALIGN_FILL);
+      gtk_widget_set_valign (attr_row[attr_max_rows].del, GTK_ALIGN_FILL);
       g_signal_connect (G_OBJECT (attr_row[attr_max_rows].del), "clicked",
 			G_CALLBACK (attributes_delete_callback), GINT_TO_POINTER (attr_max_rows) );
 
       attr_row[attr_max_rows].w_name = gtk_entry_new ();
-      gtk_table_attach (GTK_TABLE (attr_table), attr_row[attr_max_rows].w_name,
-			1, 2,
-			attr_max_rows, attr_max_rows+1,
-			(GtkAttachOptions)(GTK_FILL | GTK_EXPAND),
-			GTK_FILL,
-			0, 0);
+      gtk_grid_attach (GTK_GRID (attr_table), attr_row[attr_max_rows].w_name,
+		       1, attr_max_rows, 1, 1);
+      gtk_widget_set_hexpand (attr_row[attr_max_rows].w_name, TRUE);
+      gtk_widget_set_halign (attr_row[attr_max_rows].w_name, GTK_ALIGN_FILL);
+      gtk_widget_set_valign (attr_row[attr_max_rows].w_name, GTK_ALIGN_FILL);
 
       attr_row[attr_max_rows].w_value = gtk_entry_new ();
-      gtk_table_attach (GTK_TABLE (attr_table), attr_row[attr_max_rows].w_value,
-			2, 3,
-			attr_max_rows, attr_max_rows+1,
-			(GtkAttachOptions)(GTK_FILL | GTK_EXPAND),
-			GTK_FILL,
-			0, 0);
+      gtk_grid_attach (GTK_GRID (attr_table), attr_row[attr_max_rows].w_value,
+		       2, attr_max_rows, 1, 1);
+      gtk_widget_set_hexpand (attr_row[attr_max_rows].w_value, TRUE);
+      gtk_widget_set_halign (attr_row[attr_max_rows].w_value, GTK_ALIGN_FILL);
+      gtk_widget_set_valign (attr_row[attr_max_rows].w_value, GTK_ALIGN_FILL);
 
       attr_max_rows ++;
     }
@@ -1015,7 +1013,9 @@ ghid_attributes (char *owner, AttributeListType *attrs)
 						   _("New"), GA_RESPONSE_NEW,
 						   GTK_STOCK_OK, GTK_RESPONSE_OK, NULL);
 
-  attr_table = gtk_table_new (attrs->Number, 3, 0);
+  attr_table = gtk_grid_new ();
+  gtk_grid_set_column_homogeneous (GTK_GRID (attr_table), FALSE);
+  gtk_grid_set_row_homogeneous (GTK_GRID (attr_table), FALSE);
 
   content_area = gtk_dialog_get_content_area (GTK_DIALOG (attributes_dialog));
   gtk_box_pack_start (GTK_BOX (content_area), attr_table, FALSE, FALSE, 0);
@@ -2328,8 +2328,8 @@ hid_gtk_init ()
   common_draw_helpers_init (&ghid_graphics);
 
   ghid_hid.struct_size              = sizeof (HID);
-  ghid_hid.name                     = "gtk";
-  ghid_hid.description              = "Gtk - The Gimp Toolkit";
+  ghid_hid.name                     = "gtk3";
+  ghid_hid.description              = "Gtk3 - The Gimp Toolkit (GTK+ 3.x)";
   ghid_hid.gui                      = 1;
   ghid_hid.poly_after               = 1;
 
