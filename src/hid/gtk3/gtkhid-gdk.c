@@ -58,11 +58,17 @@ static enum mask_mode cur_mask = HID_MASK_OFF;
 static int mask_seq = 0;
 
 typedef struct render_priv {
+  /* GTK3 Cairo rendering */
+  cairo_surface_t *surface;  /* Offscreen surface for double-buffering */
+  cairo_t *cr;               /* Current cairo context during drawing */
+
+  /* GTK2 GDK compatibility - to be phased out */
   GdkGC *bg_gc;
   GdkGC *offlimits_gc;
   GdkGC *mask_gc;
   GdkGC *u_gc;
   GdkGC *grid_gc;
+
   bool clip;
   GdkRectangle clip_rect;
   int attached_invalidate_depth;
@@ -83,9 +89,10 @@ typedef struct render_priv {
 typedef struct hid_gc_struct
 {
   HID *me_pointer;
-  GdkGC *gc;
+  GdkGC *gc;  /* GTK2 compatibility - to be phased out */
 
   gchar *colorname;
+  GdkRGBA color;  /* GTK3 Cairo color */
   Coord width;
   gint cap, join;
   gchar xor_mask;
@@ -421,6 +428,34 @@ ghid_set_color (hidGC gc, const char *name)
     }
 
   gc->colorname = (char *) name;
+
+  /* GTK3: Parse color to GdkRGBA for Cairo rendering */
+  if (strcmp (name, "erase") == 0)
+    {
+      /* Use background color - convert from GdkColor to GdkRGBA */
+      gc->color.red = gport->bg_color.red / 65535.0;
+      gc->color.green = gport->bg_color.green / 65535.0;
+      gc->color.blue = gport->bg_color.blue / 65535.0;
+      gc->color.alpha = 1.0;
+    }
+  else if (strcmp (name, "drill") == 0)
+    {
+      gc->color.red = gport->offlimits_color.red / 65535.0;
+      gc->color.green = gport->offlimits_color.green / 65535.0;
+      gc->color.blue = gport->offlimits_color.blue / 65535.0;
+      gc->color.alpha = 1.0;
+    }
+  else
+    {
+      /* Parse color name to RGBA */
+      if (!gdk_rgba_parse (&gc->color, name))
+        {
+          /* Default to white if parse fails */
+          gc->color.red = gc->color.green = gc->color.blue = 1.0;
+          gc->color.alpha = 1.0;
+        }
+    }
+
   if (!gc->gc)
     return;
   if (gport->colormap == 0)
@@ -532,6 +567,47 @@ use_gc (hidGC gc)
       abort ();
     }
 
+  /* GTK3: Create Cairo context for drawing to surface */
+  if (priv->surface)
+    {
+      /* Clean up any existing context */
+      if (priv->cr)
+        cairo_destroy (priv->cr);
+
+      /* Create new context for this surface */
+      priv->cr = cairo_create (priv->surface);
+
+      /* Set up Cairo state from GC */
+      gdk_cairo_set_source_rgba (priv->cr, &gc->color);
+      cairo_set_line_width (priv->cr, Vz (gc->width));
+
+      /* Set line cap */
+      switch (gc->cap)
+        {
+        case Trace_Cap:
+        case Round_Cap:
+          cairo_set_line_cap (priv->cr, CAIRO_LINE_CAP_ROUND);
+          break;
+        case Square_Cap:
+          cairo_set_line_cap (priv->cr, CAIRO_LINE_CAP_SQUARE);
+          break;
+        default:
+          cairo_set_line_cap (priv->cr, CAIRO_LINE_CAP_BUTT);
+          break;
+        }
+
+      /* Set line join */
+      cairo_set_line_join (priv->cr, CAIRO_LINE_JOIN_MITER);
+
+      /* Handle clipping */
+      if (priv->clip)
+        {
+          cairo_rectangle (priv->cr, priv->clip_rect.x, priv->clip_rect.y,
+                          priv->clip_rect.width, priv->clip_rect.height);
+          cairo_clip (priv->cr);
+        }
+    }
+
   if (!gport->pixmap)
     return 0;
   if (!gc->gc)
@@ -571,6 +647,16 @@ ghid_draw_line (hidGC gc, Coord x1, Coord y1, Coord x2, Coord y2)
     return;
 
   USE_GC (gc);
+
+  /* GTK3: Draw using Cairo */
+  if (priv->cr)
+    {
+      cairo_move_to (priv->cr, dx1, dy1);
+      cairo_line_to (priv->cr, dx2, dy2);
+      cairo_stroke (priv->cr);
+    }
+
+  /* GTK2 compatibility */
   gdk_draw_line (gport->drawable, priv->u_gc, dx1, dy1, dx2, dy2);
 }
 
@@ -609,6 +695,28 @@ ghid_draw_arc (hidGC gc, Coord cx, Coord cy,
   start_angle = NormalizeAngle (start_angle);
   if (start_angle >= 180)  start_angle -= 360;
 
+  /* GTK3: Draw using Cairo */
+  if (priv->cr)
+    {
+      double vcx = Vx (cx);
+      double vcy = Vy (cy);
+      double start_radians = (start_angle + 180) * M_PI / 180.0;
+      double end_radians = start_radians + (delta_angle * M_PI / 180.0);
+
+      cairo_save (priv->cr);
+      cairo_translate (priv->cr, vcx, vcy);
+      cairo_scale (priv->cr, vrx, vry);
+
+      if (delta_angle < 0)
+        cairo_arc_negative (priv->cr, 0, 0, 1, start_radians, end_radians);
+      else
+        cairo_arc (priv->cr, 0, 0, 1, start_radians, end_radians);
+
+      cairo_restore (priv->cr);
+      cairo_stroke (priv->cr);
+    }
+
+  /* GTK2 compatibility */
   gdk_draw_arc (gport->drawable, priv->u_gc, 0,
 		Vx (cx) - vrx, Vy (cy) - vry,
 		vrx * 2, vry * 2, (start_angle + 180) * 64, delta_angle * 64);
@@ -653,6 +761,15 @@ ghid_draw_rect (hidGC gc, Coord x1, Coord y1, Coord x2, Coord y2)
     }
 
   USE_GC (gc);
+
+  /* GTK3: Draw using Cairo */
+  if (priv->cr)
+    {
+      cairo_rectangle (priv->cr, x1, y1, x2 - x1 + 1, y2 - y1 + 1);
+      cairo_stroke (priv->cr);
+    }
+
+  /* GTK2 compatibility */
   gdk_draw_rectangle (gport->drawable, priv->u_gc, FALSE,
 		      x1, y1, x2 - x1 + 1, y2 - y1 + 1);
 }
@@ -674,6 +791,15 @@ ghid_fill_circle (hidGC gc, Coord cx, Coord cy, Coord radius)
 
   USE_GC (gc);
   vr = Vz (radius);
+
+  /* GTK3: Draw using Cairo */
+  if (priv->cr)
+    {
+      cairo_arc (priv->cr, Vx (cx), Vy (cy), vr, 0, 2 * M_PI);
+      cairo_fill (priv->cr);
+    }
+
+  /* GTK2 compatibility */
   gdk_draw_arc (gport->drawable, priv->u_gc, TRUE,
 		Vx (cx) - vr, Vy (cy) - vr, vr * 2, vr * 2, 0, 360 * 64);
 }
@@ -697,6 +823,21 @@ ghid_fill_polygon (hidGC gc, int n_coords, Coord *x, Coord *y)
       points[i].x = Vx (x[i]);
       points[i].y = Vy (y[i]);
     }
+
+  /* GTK3: Draw using Cairo */
+  if (priv->cr)
+    {
+      if (n_coords > 0)
+        {
+          cairo_move_to (priv->cr, points[0].x, points[0].y);
+          for (i = 1; i < n_coords; i++)
+            cairo_line_to (priv->cr, points[i].x, points[i].y);
+          cairo_close_path (priv->cr);
+          cairo_fill (priv->cr);
+        }
+    }
+
+  /* GTK2 compatibility */
   gdk_draw_polygon (gport->drawable, priv->u_gc, 1, points, n_coords);
 }
 
@@ -737,6 +878,15 @@ ghid_fill_rect (hidGC gc, Coord x1, Coord y1, Coord x2, Coord y2)
       y2 = yy;
     }
   USE_GC (gc);
+
+  /* GTK3: Draw using Cairo */
+  if (priv->cr)
+    {
+      cairo_rectangle (priv->cr, x1, y1, x2 - x1 + 1, y2 - y1 + 1);
+      cairo_fill (priv->cr);
+    }
+
+  /* GTK2 compatibility */
   gdk_draw_rectangle (gport->drawable, priv->u_gc, TRUE,
 		      x1, y1, x2 - x1 + 1, y2 - y1 + 1);
 }
@@ -1119,6 +1269,13 @@ ghid_drawing_area_configure_hook (GHidPort *port)
   static int done_once = 0;
   render_priv *priv = port->render_priv;
 
+  /* GTK3: Create/recreate cairo surface for offscreen rendering */
+  if (priv->surface)
+    cairo_surface_destroy (priv->surface);
+
+  priv->surface = cairo_image_surface_create (CAIRO_FORMAT_RGB24,
+                                              port->width, port->height);
+
   if (!done_once)
     {
       priv->bg_gc = gdk_gc_new (port->drawable);
@@ -1159,16 +1316,12 @@ ghid_drawing_area_draw_cb (GtkWidget *widget,
 {
   render_priv *priv = port->render_priv;
 
-  /* GTK3: In GTK3, we receive a cairo_t directly from the draw signal.
-   * The pixmap will need to be migrated to cairo_surface_t.
-   * For now, this is a placeholder that will be completed when we
-   * migrate the pixmap and drawing infrastructure to Cairo.
-   */
-
-  /* TODO: Once pixmap is migrated to cairo_surface_t:
-   * cairo_set_source_surface (cr, port->surface, 0, 0);
-   * cairo_paint (cr);
-   */
+  /* GTK3: Paint the offscreen surface to the widget */
+  if (priv->surface)
+    {
+      cairo_set_source_surface (cr, priv->surface, 0, 0);
+      cairo_paint (cr);
+    }
 
   draw_crosshair (priv);
   return FALSE;
