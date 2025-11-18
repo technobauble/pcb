@@ -5,6 +5,7 @@ extern "C" {
 #include "action.h"
 #include "buffer.h"
 #include "data.h"
+#include "error.h"
 #include "file.h"
 #include "hid.h"
 #include "find.h"
@@ -16,6 +17,12 @@ extern "C" {
 
 namespace pcb {
 namespace actions {
+
+// Syntax string for AFAIL macro
+static const char* saveto_syntax =
+    "SaveTo(Layout|LayoutAs,filename)\n"
+    "SaveTo(AllConnections|AllUnusedPins|ElementConnections,filename)\n"
+    "SaveTo(PasteBuffer,filename)";
 
 class SaveToAction : public Action {
 public:

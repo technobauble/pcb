@@ -3,8 +3,10 @@
 extern "C" {
 #include "global.h"
 #include "action.h"
+#include "buffer.h"
 #include "crosshair.h"
 #include "data.h"
+#include "error.h"
 #include "file.h"
 #include "hid.h"
 #include "misc.h"
@@ -16,6 +18,10 @@ extern "C" {
 
 namespace pcb {
 namespace actions {
+
+// Syntax string for AFAIL macro
+static const char* loadfrom_syntax =
+    "LoadFrom(Layout|LayoutToBuffer|ElementToBuffer|Netlist|Revert,filename)";
 
 class LoadFromAction : public Action {
 public:
