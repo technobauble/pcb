@@ -91,7 +91,7 @@ public:
 
                     if (SearchScreen(Crosshair.X, Crosshair.Y, ELEMENT_TYPE,
                                     &ptr1, &ptr2, &ptr3) != NO_TYPE) {
-                        Note.Buffer = Settings.BufferNumber;
+                        int saved_buffer = Settings.BufferNumber;
                         SetBufferNumber(MAX_BUFFER - 1);
                         ClearBuffer(PASTEBUFFER);
                         CopyObjectToBuffer(PASTEBUFFER->Data, PCB->Data,
@@ -104,7 +104,7 @@ public:
                         MoveObjectToRemoveUndoList(ELEMENT_TYPE, ptr1, ptr2, ptr3);
                         RestoreUndoSerialNumber();
                         CopyPastebufferToLayout(0, 0);
-                        SetBufferNumber(Note.Buffer);
+                        SetBufferNumber(saved_buffer);
                         SetChangedFlag(true);
                     }
                 }
