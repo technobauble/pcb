@@ -1935,6 +1935,7 @@ Pins and Vias may have thermals whether or not there is a polygon available
 to connect with. However, they will have no effect without the polygon.
 %end-doc */
 
+/* MIGRATED to C++: src/actions/SetThermalAction.cpp */
 static int
 ActionSetThermal (int argc, char **argv, Coord x, Coord y)
 {
@@ -3983,6 +3984,7 @@ of the silk layer lines and arcs for this element.
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/ChangeSizeAction.cpp */
 static int
 ActionChangeSize (int argc, char **argv, Coord x, Coord y)
 {
@@ -4078,6 +4080,7 @@ static const char changedrillsize_help[] =
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/Change2ndSizeAction.cpp */
 static int
 ActionChange2ndSize (int argc, char **argv, Coord x, Coord y)
 {
@@ -4145,6 +4148,7 @@ changes the polygon clearance.
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/ChangeClearSizeAction.cpp */
 static int
 ActionChangeClearSize (int argc, char **argv, Coord x, Coord y)
 {
@@ -4223,6 +4227,7 @@ the mask edge.
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/MinMaskGapAction.cpp */
 static int
 ActionMinMaskGap (int argc, char **argv, Coord x, Coord y)
 {
@@ -4319,6 +4324,7 @@ polygon edges.
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/MinClearGapAction.cpp */
 static int
 ActionMinClearGap (int argc, char **argv, Coord x, Coord y)
 {

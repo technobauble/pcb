@@ -8,8 +8,8 @@
 ## Summary
 
 **Total Actions:** 62
-**Migrated:** 32 (52%) - **PAST HALFWAY!** 🎉
-**Remaining:** 30 (48%)
+**Migrated:** 38 (61%) - **PAST 60%!** 🎉
+**Remaining:** 24 (39%)
 
 ---
 
@@ -58,6 +58,14 @@
 30. ✅ **ChangeJoin** - Toggle join/clearance flag on lines/arcs (~42 lines)
 31. ✅ **ChangePaste** - Toggle paste flag on pads (~37 lines)
 32. ✅ **ToggleHideName** - Toggle element name visibility (~45 lines, uses ELEMENT_LOOP)
+
+### Batch 7: Size/Clearance Actions (This Session)
+33. ✅ **ChangeSize** - Change object dimensions (~80 lines, uses GetFunctionID)
+34. ✅ **Change2ndSize (ChangeDrillSize)** - Change drill hole sizes (~50 lines, uses GetFunctionID)
+35. ✅ **ChangeClearSize** - Change clearance around objects (~60 lines, uses GetFunctionID)
+36. ✅ **MinMaskGap** - Ensure minimum solder mask clearance (~80 lines, loops through pins/pads/vias)
+37. ✅ **MinClearGap** - Ensure minimum polygon clearance (~90 lines, loops through all objects)
+38. ✅ **SetThermal** - Set thermal relief style (~60 lines, uses GetFunctionID)
 
 ---
 
@@ -123,7 +131,7 @@ These actions are good candidates for the next batch:
 These require more refactoring:
 - `Undo`/`Redo` - Complex state machine logic
 - `Select`/`Unselect` - Complex object traversal
-- `ChangeSize`/`ChangeClearSize` - Object modification patterns
+- ✅ `ChangeSize`/`ChangeClearSize` - Object modification patterns (COMPLETED)
 - `ExecuteFile` - Needs defer_updates static variable handling
 
 ---
@@ -141,8 +149,8 @@ All migrated actions are:
 ## File Statistics
 
 **Original action.c:** 8,466 lines
-**Migrated to C++:** ~2,917 lines (estimated)
-**Reduction:** ~34%
+**Migrated to C++:** ~3,337 lines (estimated)
+**Reduction:** ~39%
 
 ## Helper Function Exports
 

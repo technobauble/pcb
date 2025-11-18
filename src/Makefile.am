@@ -188,9 +188,12 @@ PCB_CXX_SRCS = \
 	actions/AtomicAction.cpp \
 	actions/AutoPlaceSelectedAction.cpp \
 	actions/AutoRouteAction.cpp \
+	actions/Change2ndSizeAction.cpp \
+	actions/ChangeClearSizeAction.cpp \
 	actions/ChangeFlagAction.cpp \
 	actions/ChangeHoleAction.cpp \
 	actions/ChangeJoinAction.cpp \
+	actions/ChangeSizeAction.cpp \
 	actions/ChangeOctagonAction.cpp \
 	actions/ChangePasteAction.cpp \
 	actions/ChangeSquareAction.cpp \
@@ -204,6 +207,8 @@ PCB_CXX_SRCS = \
 	actions/FlipAction.cpp \
 	actions/MarkCrosshairAction.cpp \
 	actions/MessageAction.cpp \
+	actions/MinClearGapAction.cpp \
+	actions/MinMaskGapAction.cpp \
 	actions/MorphPolygonAction.cpp \
 	actions/MoveToCurrentLayerAction.cpp \
 	actions/NewAction.cpp \
@@ -215,6 +220,7 @@ PCB_CXX_SRCS = \
 	actions/SetFlagAction.cpp \
 	actions/SetOctagonAction.cpp \
 	actions/SetSquareAction.cpp \
+	actions/SetThermalAction.cpp \
 	actions/ToggleHideNameAction.cpp
 
 LIST_SRCS = ${PCB_SRCS}
