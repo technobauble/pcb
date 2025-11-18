@@ -196,6 +196,7 @@ PCB_CXX_SRCS = \
 	actions/ChangeSizeAction.cpp \
 	actions/ChangeOctagonAction.cpp \
 	actions/ChangePasteAction.cpp \
+	actions/ChangePinNameAction.cpp \
 	actions/ChangeSquareAction.cpp \
 	actions/ClearOctagonAction.cpp \
 	actions/ClearSquareAction.cpp \
@@ -219,8 +220,10 @@ PCB_CXX_SRCS = \
 	actions/SaveSettingsAction.cpp \
 	actions/SetFlagAction.cpp \
 	actions/SetOctagonAction.cpp \
+	actions/SetSameAction.cpp \
 	actions/SetSquareAction.cpp \
 	actions/SetThermalAction.cpp \
+	actions/SetValueAction.cpp \
 	actions/ToggleHideNameAction.cpp
 
 LIST_SRCS = ${PCB_SRCS}

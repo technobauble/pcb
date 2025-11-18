@@ -8,8 +8,8 @@
 ## Summary
 
 **Total Actions:** 62
-**Migrated:** 38 (61%) - **PAST 60%!** 🎉
-**Remaining:** 24 (39%)
+**Migrated:** 41 (66%) - **TWO-THIRDS COMPLETE!** 🎉
+**Remaining:** 21 (34%)
 
 ---
 
@@ -66,6 +66,11 @@
 36. ✅ **MinMaskGap** - Ensure minimum solder mask clearance (~80 lines, loops through pins/pads/vias)
 37. ✅ **MinClearGap** - Ensure minimum polygon clearance (~90 lines, loops through all objects)
 38. ✅ **SetThermal** - Set thermal relief style (~60 lines, uses GetFunctionID)
+
+### Batch 8: Name/Value Actions (This Session)
+39. ✅ **ChangePinName** - Change pin names on elements (~70 lines, uses ELEMENT_LOOP, PIN_LOOP, PAD_LOOP)
+40. ✅ **SetValue** - Set board-wide values (grid, line size, via size, etc.) (~95 lines, uses GetFunctionID)
+41. ✅ **SetSame** - Copy properties from clicked object (~80 lines, uses SearchScreen)
 
 ---
 
@@ -149,8 +154,8 @@ All migrated actions are:
 ## File Statistics
 
 **Original action.c:** 8,466 lines
-**Migrated to C++:** ~3,337 lines (estimated)
-**Reduction:** ~39%
+**Migrated to C++:** ~3,582 lines (estimated)
+**Reduction:** ~42%
 
 ## Helper Function Exports
 

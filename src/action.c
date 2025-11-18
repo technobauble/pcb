@@ -2063,6 +2063,7 @@ Changes the size of new text.
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/SetValueAction.cpp */
 static int
 ActionSetValue (int argc, char **argv, Coord x, Coord y)
 {
@@ -4434,6 +4435,7 @@ ChangePinName(U3, 7, VCC)
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/ChangePinNameAction.cpp */
 static int
 ActionChangePinName (int argc, char **argv, Coord x, Coord y)
 {
@@ -6592,6 +6594,7 @@ sizes (thickness, keepaway, drill, etc) according to that item.
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/SetSameAction.cpp */
 static int
 ActionSetSame (int argc, char **argv, Coord x, Coord y)
 {
