@@ -215,7 +215,7 @@
   for (__iter = (top)->Rat, __next = g_list_next (__iter);          \
        __iter != NULL;                                              \
        __iter = __next, __next = g_list_next (__iter), n++) {       \
-    RatType *line = __iter->data;
+    RatType *line = (RatType *)__iter->data;
 
 #define	ELEMENTTEXT_LOOP(element) do { 	\
 	Cardinal	n;				\
