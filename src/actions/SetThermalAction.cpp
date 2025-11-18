@@ -6,6 +6,7 @@ extern "C" {
 #include "change.h"
 #include "data.h"
 #include "draw.h"
+#include "error.h"
 #include "misc.h"
 #include "search.h"
 #include "undo.h"

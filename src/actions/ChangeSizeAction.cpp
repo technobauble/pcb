@@ -5,6 +5,7 @@ extern "C" {
 #include "action.h"
 #include "change.h"
 #include "data.h"
+#include "error.h"
 #include "misc.h"
 #include "pcb-printf.h"
 #include "search.h"
