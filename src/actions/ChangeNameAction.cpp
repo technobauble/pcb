@@ -10,6 +10,7 @@ extern "C" {
 #include "hid.h"
 #include "move.h"
 #include "rats.h"
+#include "rubberband.h"
 #include "search.h"
 #include "set.h"
 #include "undo.h"
@@ -53,7 +54,7 @@ public:
                                 for (i = 0; i < Crosshair.AttachedObject.RubberbandN;
                                      i++, ptr++) {
                                     if (PCB->RatOn)
-                                        EraseRat(static_cast<RatType*>(ptr->Line));
+                                        EraseRat((RatType*)ptr->Line);
                                     MoveObjectToRemoveUndoList(RATLINE_TYPE,
                                                               ptr->Line, ptr->Line,
                                                               ptr->Line);
