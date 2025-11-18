@@ -4986,9 +4986,9 @@ static const char changeoctagon_help[] =
 
 @pinshapes
 
-/* MIGRATED to C++: src/actions/ChangeOctagonAction.cpp */
 %end-doc */
 
+/* MIGRATED to C++: src/actions/ChangeOctagonAction.cpp */
 static int
 ActionChangeOctagon (int argc, char **argv, Coord x, Coord y)
 {
@@ -5048,9 +5048,9 @@ static const char setoctagon_help[] = N_("Sets the octagon-flag of objects.");
 
 @pinshapes
 
-/* MIGRATED to C++: src/actions/SetOctagonAction.cpp */
 %end-doc */
 
+/* MIGRATED to C++: src/actions/SetOctagonAction.cpp */
 static int
 ActionSetOctagon (int argc, char **argv, Coord x, Coord y)
 {
@@ -5109,11 +5109,11 @@ static const char clearoctagon_help[] =
   N_("Clears the octagon-flag of pins and vias.");
 
 /* %start-doc actions ClearOctagon
-/* MIGRATED to C++: src/actions/ClearOctagonAction.cpp */
 
 @pinshapes
 
 %end-doc */
+/* MIGRATED to C++: src/actions/ClearOctagonAction.cpp */
 
 static int
 ActionClearOctagon (int argc, char **argv, Coord x, Coord y)
@@ -5222,12 +5222,12 @@ static const char changepaste_help[] =
 
 The "no paste flag" of a pad determines whether the solderpaste
  stencil will have an opening for the pad (no set) or if there wil be
-/* MIGRATED to C++: src/actions/ChangePasteAction.cpp */
  no solderpaste on the pad (set).  This is used for things such as
  fiducial pads.
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/ChangePasteAction.cpp */
 static int
 ActionChangePaste (int argc, char **argv, Coord x, Coord y)
 {
