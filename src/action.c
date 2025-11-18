@@ -4535,6 +4535,7 @@ Changes the name of the currently active layer.
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/ChangeNameAction.cpp */
 int
 ActionChangeName (int argc, char **argv, Coord x, Coord y)
 {
@@ -6021,6 +6022,7 @@ Selects the given buffer to be the current paste buffer.
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/PasteBufferAction.cpp */
 static int
 ActionPasteBuffer (int argc, char **argv, Coord x, Coord y)
 {

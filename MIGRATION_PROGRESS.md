@@ -8,8 +8,8 @@
 ## Summary
 
 **Total Actions:** 65
-**Migrated:** 50 (77%) - **OVER THREE-QUARTERS COMPLETE!** 🎉
-**Remaining:** 15 (23%)
+**Migrated:** 52 (80%) - **FOUR-FIFTHS COMPLETE!** 🎉
+**Remaining:** 13 (20%)
 
 ---
 
@@ -88,6 +88,12 @@
 - **ActionDelete** - Uses static `Note` struct and `NotifyMode()` (816 lines, not yet exported)
 - **ActionExecuteFile** - Uses static `defer_updates` variables shared with ActionChangeName
 - **ActionBell** - Has different function signature, not in standard HID actions table
+
+### Batch 11: State Management & Naming (This Session)
+50. ✅ **ChangeName** - Change object/layout/layer names (~92 lines, uses GetFunctionID, gui prompts)
+51. ✅ **PasteBuffer** - Buffer operations (add, clear, rotate, convert, save, paste) (~165 lines, multiple operations)
+
+**Note:** ActionUndo was evaluated but deferred due to static `lastLayer` variable dependency.
 
 ---
 
@@ -171,8 +177,8 @@ All migrated actions are:
 ## File Statistics
 
 **Original action.c:** 8,466 lines
-**Migrated to C++:** ~4,164 lines (estimated from 50 actions)
-**Reduction:** ~49%
+**Migrated to C++:** ~4,421 lines (estimated from 52 actions)
+**Reduction:** ~52%
 
 ## Helper Function Exports
 

@@ -194,6 +194,7 @@ PCB_CXX_SRCS = \
 	actions/ChangeFlagAction.cpp \
 	actions/ChangeHoleAction.cpp \
 	actions/ChangeJoinAction.cpp \
+	actions/ChangeNameAction.cpp \
 	actions/ChangeSizeAction.cpp \
 	actions/ChangeOctagonAction.cpp \
 	actions/ChangePasteAction.cpp \
@@ -217,6 +218,7 @@ PCB_CXX_SRCS = \
 	actions/MoveObjectAction.cpp \
 	actions/MoveToCurrentLayerAction.cpp \
 	actions/NewAction.cpp \
+	actions/PasteBufferAction.cpp \
 	actions/PolygonAction.cpp \
 	actions/PSCalibAction.cpp \
 	actions/QuitAction.cpp \
