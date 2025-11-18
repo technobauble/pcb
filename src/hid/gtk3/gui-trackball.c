@@ -143,21 +143,15 @@ motion_notify_cb (GtkWidget *widget, GdkEventMotion *ev, gpointer userdata)
 }
 
 static gboolean
-ghid_trackball_expose (GtkWidget * widget, GdkEventExpose * ev)
+ghid_trackball_draw (GtkWidget * widget, cairo_t * cr)
 {
-  cairo_t *cr;
   cairo_pattern_t *pattern;
   GtkAllocation allocation;
-  GdkColor color;
+  GtkStyleContext *context;
+  GdkRGBA fg_color, bg_color;
   double radius;
 
-  cr = gdk_cairo_create (gtk_widget_get_window (widget));
-
-          /* set a clip region for the expose event */
-  cairo_rectangle (cr,
-                   ev->area.x, ev->area.y,
-                   ev->area.width, ev->area.height);
-  cairo_clip (cr);
+  /* GTK3: cairo_t is provided by the draw signal, no need to create/destroy */
 
   gtk_widget_get_allocation (widget, &allocation);
 
@@ -169,20 +163,22 @@ ghid_trackball_expose (GtkWidget * widget, GdkEventExpose * ev)
                                          2 * radius * 0.50,
                                          2 * radius * 0.71);
 
-  color = widget->style->fg[gtk_widget_get_state (widget)];
+  /* GTK3: Use GtkStyleContext instead of widget->style */
+  context = gtk_widget_get_style_context (widget);
+  gtk_style_context_get_color (context, gtk_widget_get_state_flags (widget), &fg_color);
 
   cairo_pattern_add_color_stop_rgb (pattern, 0.0,
-                                    (color.red   / 65535. * 0.5 + 4.5) / 5.,
-                                    (color.green / 65535. * 0.5 + 4.5) / 5.,
-                                    (color.blue  / 65535. * 0.5 + 4.5) / 5.);
+                                    (fg_color.red   * 0.5 + 4.5) / 5.,
+                                    (fg_color.green * 0.5 + 4.5) / 5.,
+                                    (fg_color.blue  * 0.5 + 4.5) / 5.);
   cairo_pattern_add_color_stop_rgb (pattern, 0.2,
-                                    (color.red   / 65535. * 1.5 + 3.7) / 5.,
-                                    (color.green / 65535. * 1.5 + 3.7) / 5.,
-                                    (color.blue  / 65535. * 1.5 + 3.7) / 5.);
+                                    (fg_color.red   * 1.5 + 3.7) / 5.,
+                                    (fg_color.green * 1.5 + 3.7) / 5.,
+                                    (fg_color.blue  * 1.5 + 3.7) / 5.);
   cairo_pattern_add_color_stop_rgb (pattern, 1.0,
-                                    (color.red   / 65535. * 5. + 0.) / 5.,
-                                    (color.green / 65535. * 5. + 0.) / 5.,
-                                    (color.blue  / 65535. * 5. + 0.) / 5.);
+                                    (fg_color.red   * 5. + 0.) / 5.,
+                                    (fg_color.green * 5. + 0.) / 5.,
+                                    (fg_color.blue  * 5. + 0.) / 5.);
   cairo_set_source (cr, pattern);
   cairo_pattern_destroy (pattern);
 
@@ -194,11 +190,13 @@ ghid_trackball_expose (GtkWidget * widget, GdkEventExpose * ev)
 
   cairo_fill_preserve (cr);
 
-  gdk_cairo_set_source_color (cr, &widget->style->bg[gtk_widget_get_state (widget)]);
+  /* GTK3: Use GdkRGBA instead of GdkColor */
+  gtk_style_context_get_background_color (context, gtk_widget_get_state_flags (widget), &bg_color);
+  gdk_cairo_set_source_rgba (cr, &bg_color);
   cairo_set_line_width (cr, 0.4);
   cairo_stroke (cr);
 
-  cairo_destroy (cr);
+  /* GTK3: Don't destroy cairo_t - it's owned by GTK */
 
   return FALSE;
 }
@@ -273,8 +271,8 @@ ghid_trackball_constructor (GType type,
   g_signal_connect (ball->view_2d, "toggled",
                     G_CALLBACK (view_2d_toggled_cb), ball);
 
-  g_signal_connect (ball->drawing_area, "expose-event",
-                    G_CALLBACK (ghid_trackball_expose), ball);
+  g_signal_connect (ball->drawing_area, "draw",
+                    G_CALLBACK (ghid_trackball_draw), ball);
   g_signal_connect (ball->drawing_area, "button-press-event",
                     G_CALLBACK (button_press_cb), ball);
   g_signal_connect (ball->drawing_area, "button-release-event",

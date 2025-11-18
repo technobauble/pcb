@@ -253,7 +253,7 @@ ghid_pinout_preview_class_init (GhidPinoutPreviewClass * klass)
   gobject_class->get_property = ghid_pinout_preview_get_property;
   gobject_class->constructed = ghid_pinout_preview_constructed;
 
-  gtk_widget_class->expose_event = ghid_pinout_preview_expose;
+  gtk_widget_class->draw = ghid_pinout_preview_draw;
 
   ghid_pinout_preview_parent_class = (GObjectClass *)g_type_class_peek_parent (klass);
 

@@ -1153,16 +1153,23 @@ ghid_screen_update (void)
 }
 
 gboolean
-ghid_drawing_area_expose_cb (GtkWidget *widget,
-                             GdkEventExpose *ev,
-                             GHidPort *port)
+ghid_drawing_area_draw_cb (GtkWidget *widget,
+                           cairo_t *cr,
+                           GHidPort *port)
 {
   render_priv *priv = port->render_priv;
-  GdkWindow *window = gtk_widget_get_window (gport->drawing_area);
 
-  gdk_draw_drawable (window, priv->bg_gc, port->pixmap,
-                     ev->area.x, ev->area.y, ev->area.x, ev->area.y,
-                     ev->area.width, ev->area.height);
+  /* GTK3: In GTK3, we receive a cairo_t directly from the draw signal.
+   * The pixmap will need to be migrated to cairo_surface_t.
+   * For now, this is a placeholder that will be completed when we
+   * migrate the pixmap and drawing infrastructure to Cairo.
+   */
+
+  /* TODO: Once pixmap is migrated to cairo_surface_t:
+   * cairo_set_source_surface (cr, port->surface, 0, 0);
+   * cairo_paint (cr);
+   */
+
   draw_crosshair (priv);
   return FALSE;
 }
@@ -1173,8 +1180,8 @@ ghid_port_drawing_realize_cb (GtkWidget *widget, gpointer data)
 }
 
 gboolean
-ghid_pinout_preview_expose (GtkWidget *widget,
-                            GdkEventExpose *ev)
+ghid_pinout_preview_draw (GtkWidget *widget,
+                          cairo_t *cr)
 {
   GhidPinoutPreview *pinout = GHID_PINOUT_PREVIEW (widget);
   GdkWindow *window = gtk_widget_get_window (widget);
@@ -1214,9 +1221,10 @@ ghid_pinout_preview_expose (GtkWidget *widget,
   PCB->MaxWidth =  pinout->x_max;
   PCB->MaxHeight = pinout->y_max;
 
-  /* clear background */
-  gdk_draw_rectangle (window, priv->bg_gc, TRUE,
-                      0, 0, allocation.width, allocation.height);
+  /* clear background - TODO: Use proper Cairo color from theme */
+  cairo_rectangle (cr, 0, 0, allocation.width, allocation.height);
+  cairo_set_source_rgb (cr, 0, 0, 0); /* Black background for now */
+  cairo_fill (cr);
 
   /* call the drawing routine */
   hid_expose_callback (&ghid_hid, NULL, pinout->element);

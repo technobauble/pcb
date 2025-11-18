@@ -869,9 +869,9 @@ ghid_screen_update (void)
 
 #define Z_NEAR 3.0
 gboolean
-ghid_drawing_area_expose_cb (GtkWidget *widget,
-                             GdkEventExpose *ev,
-                             GHidPort *port)
+ghid_drawing_area_draw_cb (GtkWidget *widget,
+                           cairo_t *cr,
+                           GHidPort *port)
 {
   render_priv *priv = port->render_priv;
   GtkAllocation allocation;
@@ -881,6 +881,12 @@ ghid_drawing_area_expose_cb (GtkWidget *widget,
   Coord new_x, new_y;
   Coord min_depth;
   Coord max_depth;
+
+  /* NOTE: This is the OpenGL rendering path. Full migration to GTK3
+   * OpenGL (GtkGLExt -> GtkGLArea) is scheduled for Milestone 3.
+   * For now, updating signature to match GTK3 draw signal.
+   * The cairo_t parameter is not used in OpenGL rendering.
+   */
 
   gtk_widget_get_allocation (widget, &allocation);
 
@@ -898,10 +904,9 @@ ghid_drawing_area_expose_cb (GtkWidget *widget,
 
   glViewport (0, 0, allocation.width, allocation.height);
 
+  /* TODO Milestone 3: Update clipping for GTK3/Cairo integration */
   glEnable (GL_SCISSOR_TEST);
-  glScissor (ev->area.x,
-             allocation.height - ev->area.height - ev->area.y,
-             ev->area.width, ev->area.height);
+  glScissor (0, 0, allocation.width, allocation.height);
 
   glMatrixMode (GL_PROJECTION);
   glLoadIdentity ();
@@ -1056,8 +1061,8 @@ ghid_port_drawing_realize_cb (GtkWidget *widget, gpointer data)
 }
 
 gboolean
-ghid_pinout_preview_expose (GtkWidget *widget,
-                            GdkEventExpose *ev)
+ghid_pinout_preview_draw (GtkWidget *widget,
+                          cairo_t *cr)
 {
   GhidPinoutPreview *pinout = GHID_PINOUT_PREVIEW (widget);
   GtkAllocation allocation;
@@ -1066,6 +1071,11 @@ ghid_pinout_preview_expose (GtkWidget *widget,
   Coord save_max_width;
   Coord save_max_height;
   double xz, yz;
+
+  /* NOTE: This is the OpenGL rendering path. Full migration to GTK3
+   * OpenGL (GtkGLExt -> GtkGLArea) is scheduled for Milestone 3.
+   * The cairo_t parameter is not used in OpenGL rendering.
+   */
 
   save_view = gport->view;
   save_width = gport->width;
@@ -1106,35 +1116,6 @@ ghid_pinout_preview_expose (GtkWidget *widget,
 #endif
 
   glViewport (0, 0, allocation.width, allocation.height);
-
-#if 0  /* We disable the scissor test here, as it is interacting badly with
-        * being handed expose events which don't cover the whole window.
-        * As we have a double-buffered GL window, we end up with unintialised
-        * contents remaining in the unpainted areas (outside the scissor
-        * region), and these are being flipped onto the screen.
-        *
-        * The debugging code below shows multiple expose events when the
-        * window is shown the first time, some of which are very small.
-        *
-        * XXX: There is clearly a perforamnce issue here, in that we may
-        *      be rendering the preview more times, and over a larger area
-        *      than is really required.
-        */
-
-  glEnable (GL_SCISSOR_TEST);
-  glScissor (ev->area.x,
-             allocation.height - ev->area.height - ev->area.y,
-             ev->area.width, ev->area.height);
-#endif
-
-#ifdef DEBUG
-  printf ("EVT: %i, %i, w=%i, h=%i, Scissor setup: glScissor (%f, %f, %f, %f);\n",
-          ev->area.x, ev->area.y, ev->area.width, ev->area.height,
-             (double)ev->area.x,
-             (double)(allocation.height - ev->area.height - ev->area.y),
-             (double)ev->area.width,
-             (double)ev->area.height);
-#endif
 
   glMatrixMode (GL_PROJECTION);
   glLoadIdentity ();
