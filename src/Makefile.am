@@ -349,7 +349,9 @@ hid/common/hidlist.h : Makefile
 	  echo "HID_DEF($${e})" >> $@; \
 	done
 
-libgtk_a_CPPFLAGS = -I$(top_srcdir) -I./hid/gtk
+libgtk_a_CPPFLAGS = -I$(top_srcdir) -I./hid/gtk \
+	-DGDK_VERSION_MIN_REQUIRED=GDK_VERSION_3_22 \
+	-DGDK_VERSION_MAX_ALLOWED=GDK_VERSION_3_24
 LIBGTK_SRCS = \
 	dolists.h \
 	hid/hidint.h \

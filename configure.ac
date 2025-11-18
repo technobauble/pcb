@@ -761,22 +761,38 @@ for e in $HIDLIST; do
 		AC_MSG_ERROR([Cannot find pkg-config, make sure it is installed and in your PATH])
 	fi
 
-	PKG_CHECK_MODULES(GTK, gtk+-2.0 >= 2.18.0, ,
-		[AC_MSG_ERROR([Cannot find gtk+ >= 2.18.0, install it and rerun ./configure
+	PKG_CHECK_MODULES(GTK, gtk+-3.0 >= 3.22.0, ,
+		[AC_MSG_ERROR([Cannot find gtk+ >= 3.22.0, install it and rerun ./configure
+Please install GTK3 development packages:
+  Debian/Ubuntu: sudo apt-get install libgtk-3-dev
+  Fedora/RHEL:   sudo dnf install gtk3-devel
+  macOS:         brew install gtk+3
+  Windows/MSYS2: pacman -S mingw-w64-x86_64-gtk3
 Please review the following errors:
 $GTK_PKG_ERRORS])]
 	)
-	GTK_VERSION=`$PKG_CONFIG gtk+-2.0 --modversion`
+	GTK_VERSION=`$PKG_CONFIG gtk+-3.0 --modversion`
 	GLIB_VERSION=`$PKG_CONFIG glib-2.0 --modversion`
+	AC_MSG_RESULT([Using GTK+ version $GTK_VERSION])
+
+	# Warn about deprecated GTK3 APIs
+	GTK_CFLAGS="$GTK_CFLAGS -DGDK_VERSION_MIN_REQUIRED=GDK_VERSION_3_22"
+	GTK_CFLAGS="$GTK_CFLAGS -DGDK_VERSION_MAX_ALLOWED=GDK_VERSION_3_24"
 
 	if test "x$enable_gl" = "xyes"; then
-		# Check for GtkGLExt
-		PKG_CHECK_MODULES(GTKGLEXT, gtkglext-1.0 >= 1.0.0, , [AC_MSG_ERROR([
-*** Required version of gtkglext is not installed - please install first ***
-Please review the following errors:
-$GTKGLEXT_PKG_ERRORS])]
-		)
-	GTKGLEXT_VER=`$PKG_CONFIG gtkglext-1.0 --modversion`
+		# GTK3 has built-in OpenGL support via GtkGLArea
+		# No external GtkGLExt dependency needed
+
+		# Still need OpenGL libraries for GL functions
+		AC_CHECK_LIB([GL], [glBegin], [HAVE_GL=yes], [HAVE_GL=no])
+		if test "x$HAVE_GL" = "xyes"; then
+			AC_DEFINE([HAVE_OPENGL], 1, [Define if you have OpenGL])
+			GL_LIBS="-lGL -lGLU"
+			AC_SUBST(GL_LIBS)
+			AC_MSG_RESULT([OpenGL support enabled])
+		else
+			AC_MSG_WARN([OpenGL not found, OpenGL rendering will be disabled])
+		fi
 	fi
 
 	;;
