@@ -5,10 +5,12 @@ extern "C" {
 #include "action.h"
 #include "data.h"
 #include "error.h"
+#include "misc.h"
 #include "move.h"
 #include "rats.h"
 #include "rubberband.h"
 #include "search.h"
+#include "set.h"
 }
 
 namespace pcb {
