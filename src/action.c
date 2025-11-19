@@ -2949,9 +2949,9 @@ ActionMode (int argc, char **argv, Coord x, Coord y)
 	  break;
 	case F_Cancel:
 	  {
-	    int pcb_action_context->saved_mode = Settings.Mode;
+	    int saved_mode_local = Settings.Mode;
 	    SetMode (NO_MODE);
-	    SetMode (pcb_action_context->saved_mode);
+	    SetMode (saved_mode_local);
 	  }
 	  break;
 	case F_Escape:
