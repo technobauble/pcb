@@ -57,4 +57,4 @@ BufferType Buffers[MAX_BUFFER];	/*!< my buffers. */
 LibraryType Library;		/*!< the library. */
 bool Bumped;			/*!< if the undo serial number has changed. */
 
-int addedLines;
+/* addedLines - moved to ActionContext (see actions/ActionContext.h) */

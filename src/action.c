@@ -74,6 +74,7 @@
 #include "rtree.h"
 #include "macro.h"
 #include "pcb-printf.h"
+#include "actions/ActionContext.h"
 
 #include <assert.h>
 #include <stdlib.h> /* rand() */
@@ -177,39 +178,13 @@ either round or, if the octagon flag is set, octagonal.
 %end-doc */
 
 /* ---------------------------------------------------------------------------
- * some local identifiers
+ * Global action context
+ *
+ * Replaces previous file-scoped static variables with centralized context.
+ * This enables C++ actions to access shared state and improves testability.
  */
-static PointType InsertedPoint;
-static LayerType *lastLayer;
-static struct
-{
-  PolygonType *poly;
-  LineType line;
-}
-fake;
-
-static struct
-{
-  Coord X, Y;
-  Cardinal Buffer;
-  bool Click;
-  bool Moving;		/* selected type clicked on */
-  int Hit;			/* move type clicked on */
-  void *ptr1;
-  void *ptr2;
-  void *ptr3;
-}
-Note;
-
-static int defer_updates = 0;
-static int defer_needs_update = 0;
-
-static Cardinal polyIndex = 0;
-static bool saved_mode = false;
-#ifdef HAVE_LIBSTROKE
-static bool mid_stroke = false;
-static BoxType StrokeBox;
-#endif
+static ActionContext global_action_context = {0};
+ActionContext *pcb_action_context = &global_action_context;
 static FunctionType Functions[] = {
   {"AddSelected", F_AddSelected},
   {"All", F_All},
@@ -364,7 +339,7 @@ FinishStroke (void)
   unsigned long num;
   void *ptr1, *ptr2, *ptr3;
 
-  mid_stroke = false;
+  pcb_action_context->mid_stroke = false;
   if (stroke_trans (msg))
     {
       num = atoi (msg);
@@ -381,13 +356,13 @@ FinishStroke (void)
 	case 987412:
 	case 8741236:
 	case 874123:
-	  RotateScreenObject (StrokeBox.X1, StrokeBox.Y1, SWAP_IDENT ? 1 : 3);
+	  RotateScreenObject (pcb_action_context->StrokeBox.X1, pcb_action_context->StrokeBox.Y1, SWAP_IDENT ? 1 : 3);
 	  break;
 	case 7896321:
 	case 786321:
 	case 789632:
 	case 896321:
-	  RotateScreenObject (StrokeBox.X1, StrokeBox.Y1, SWAP_IDENT ? 3 : 1);
+	  RotateScreenObject (pcb_action_context->StrokeBox.X1, pcb_action_context->StrokeBox.Y1, SWAP_IDENT ? 3 : 1);
 	  break;
 	case 258:
 	  SetMode (LINE_MODE);
@@ -429,7 +404,7 @@ FinishStroke (void)
 	case 12569:
 	case 12589:
 	case 14589:
-	  /* XXX: FIXME: Zoom to fit the box StrokeBox.[X1,Y1] - StrokeBox.[X2,Y2] */
+	  /* XXX: FIXME: Zoom to fit the box pcb_action_context->StrokeBox.[X1,Y1] - pcb_action_context->StrokeBox.[X2,Y2] */
 	  break;
 
 	default:
@@ -483,39 +458,39 @@ ClearWarnings ()
 static void
 click_cb (hidval hv)
 {
-  if (Note.Click)
+  if (pcb_action_context->Note.Click)
     {
       notify_crosshair_change (false);
-      Note.Click = false;
-      if (Note.Moving && !gui->shift_is_pressed ())
+      pcb_action_context->Note.Click = false;
+      if (pcb_action_context->Note.Moving && !gui->shift_is_pressed ())
 	{
-	  Note.Buffer = Settings.BufferNumber;
+	  pcb_action_context->Note.Buffer = Settings.BufferNumber;
 	  SetBufferNumber (MAX_BUFFER - 1);
 	  ClearBuffer (PASTEBUFFER);
-	  AddSelectedToBuffer (PASTEBUFFER, Note.X, Note.Y, true);
+	  AddSelectedToBuffer (PASTEBUFFER, pcb_action_context->Note.X, pcb_action_context->Note.Y, true);
 	  SaveUndoSerialNumber ();
 	  RemoveSelected ();
 	  SaveMode ();
-	  saved_mode = true;
+	  pcb_action_context->saved_mode = true;
 	  SetMode (PASTEBUFFER_MODE);
 	}
-      else if (Note.Hit && !gui->shift_is_pressed ())
+      else if (pcb_action_context->Note.Hit && !gui->shift_is_pressed ())
 	{
 	  SaveMode ();
-	  saved_mode = true;
+	  pcb_action_context->saved_mode = true;
 	  SetMode (gui->control_is_pressed ()? COPY_MODE : MOVE_MODE);
-	  Crosshair.AttachedObject.Ptr1 = Note.ptr1;
-	  Crosshair.AttachedObject.Ptr2 = Note.ptr2;
-	  Crosshair.AttachedObject.Ptr3 = Note.ptr3;
-	  Crosshair.AttachedObject.Type = Note.Hit;
-	  AttachForCopy (Note.X, Note.Y);
+	  Crosshair.AttachedObject.Ptr1 = pcb_action_context->Note.ptr1;
+	  Crosshair.AttachedObject.Ptr2 = pcb_action_context->Note.ptr2;
+	  Crosshair.AttachedObject.Ptr3 = pcb_action_context->Note.ptr3;
+	  Crosshair.AttachedObject.Type = pcb_action_context->Note.Hit;
+	  AttachForCopy (pcb_action_context->Note.X, pcb_action_context->Note.Y);
 	}
       else
 	{
 	  BoxType box;
 
-	  Note.Hit = 0;
-	  Note.Moving = false;
+	  pcb_action_context->Note.Hit = 0;
+	  pcb_action_context->Note.Moving = false;
 	  SaveUndoSerialNumber ();
 	  box.X1 = -MAX_COORD;
 	  box.Y1 = -MAX_COORD;
@@ -525,8 +500,8 @@ click_cb (hidval hv)
 	  if (!gui->shift_is_pressed () && SelectBlock (&box, false))
 	    SetChangedFlag (true);
 	  NotifyBlock ();
-	  Crosshair.AttachedBox.Point1.X = Note.X;
-	  Crosshair.AttachedBox.Point1.Y = Note.Y;
+	  Crosshair.AttachedBox.Point1.X = pcb_action_context->Note.X;
+	  Crosshair.AttachedBox.Point1.Y = pcb_action_context->Note.Y;
 	}
       notify_crosshair_change (true);
     }
@@ -541,7 +516,7 @@ ReleaseMode (void)
 {
   BoxType box;
 
-  if (Note.Click)
+  if (pcb_action_context->Note.Click)
     {
       BoxType box;
 
@@ -550,17 +525,17 @@ ReleaseMode (void)
       box.X2 = MAX_COORD;
       box.Y2 = MAX_COORD;
 
-      Note.Click = false;	/* inhibit timer action */
+      pcb_action_context->Note.Click = false;	/* inhibit timer action */
       SaveUndoSerialNumber ();
       /* unselect first if shift key not down */
       if (!gui->shift_is_pressed ())
 	{
 	  if (SelectBlock (&box, false))
 	    SetChangedFlag (true);
-	  if (Note.Moving)
+	  if (pcb_action_context->Note.Moving)
 	    {
-	      Note.Moving = 0;
-	      Note.Hit = 0;
+	      pcb_action_context->Note.Moving = 0;
+	      pcb_action_context->Note.Hit = 0;
 	      return;
 	    }
 	}
@@ -573,22 +548,22 @@ ReleaseMode (void)
         /* We didn't select anything new, so, the deselection should get its
          own SN. */
             IncrementUndoSerialNumber();
-      Note.Hit = 0;
-      Note.Moving = 0;
+      pcb_action_context->Note.Hit = 0;
+      pcb_action_context->Note.Moving = 0;
     }
-  else if (Note.Moving)
+  else if (pcb_action_context->Note.Moving)
     {
       RestoreUndoSerialNumber ();
       NotifyMode ();
       ClearBuffer (PASTEBUFFER);
-      SetBufferNumber (Note.Buffer);
-      Note.Moving = false;
-      Note.Hit = 0;
+      SetBufferNumber (pcb_action_context->Note.Buffer);
+      pcb_action_context->Note.Moving = false;
+      pcb_action_context->Note.Hit = 0;
     }
-  else if (Note.Hit)
+  else if (pcb_action_context->Note.Hit)
     {
       NotifyMode ();
-      Note.Hit = 0;
+      pcb_action_context->Note.Hit = 0;
     }
   else if (Settings.Mode == ARROW_MODE)
     {
@@ -607,9 +582,9 @@ ReleaseMode (void)
 	IncrementUndoSerialNumber ();
       Crosshair.AttachedBox.State = STATE_FIRST;
     }
-  if (saved_mode)
+  if (pcb_action_context->saved_mode)
     RestoreMode ();
-  saved_mode = false;
+  pcb_action_context->saved_mode = false;
 }
 
 #define HSIZE 257
@@ -751,7 +726,7 @@ AdjustAttachedObjects (void)
     case INSERTPOINT_MODE:
       pnt = AdjustInsertPoint ();
       if (pnt)
-	InsertedPoint = *pnt;
+	pcb_action_context->InsertedPoint = *pnt;
       break;
     case ROTATE_MODE:
       break;
@@ -822,7 +797,7 @@ NotifyLine (void)
 
     case STATE_SECOND:
       /* fall through to third state too */
-      lastLayer = CURRENT;
+      pcb_action_context->lastLayer = CURRENT;
     default:			/* all following points */
       Crosshair.AttachedLine.State = STATE_THIRD;
       break;
@@ -881,30 +856,30 @@ NotifyMode (void)
 	int test;
 	hidval hv;
 
-	Note.Click = true;
+	pcb_action_context->Note.Click = true;
 	/* do something after click time */
 	gui->add_timer (click_cb, CLICK_TIME, hv);
 
 	/* see if we clicked on something already selected
-	 * (Note.Moving) or clicked on a MOVE_TYPE
-	 * (Note.Hit)
+	 * (pcb_action_context->Note.Moving) or clicked on a MOVE_TYPE
+	 * (pcb_action_context->Note.Hit)
 	 */
 	for (test = (SELECT_TYPES | MOVE_TYPES) & ~RATLINE_TYPE;
 	     test; test &= ~type)
 	  {
-	    type = SearchScreen (Note.X, Note.Y, test, &ptr1, &ptr2, &ptr3);
-	    if (!Note.Hit && (type & MOVE_TYPES) &&
+	    type = SearchScreen (pcb_action_context->Note.X, pcb_action_context->Note.Y, test, &ptr1, &ptr2, &ptr3);
+	    if (!pcb_action_context->Note.Hit && (type & MOVE_TYPES) &&
 		!TEST_FLAG (LOCKFLAG, (PinType *) ptr2))
 	      {
-		Note.Hit = type;
-		Note.ptr1 = ptr1;
-		Note.ptr2 = ptr2;
-		Note.ptr3 = ptr3;
+		pcb_action_context->Note.Hit = type;
+		pcb_action_context->Note.ptr1 = ptr1;
+		pcb_action_context->Note.ptr2 = ptr2;
+		pcb_action_context->Note.ptr3 = ptr3;
 	      }
-	    if (!Note.Moving && (type & SELECT_TYPES) &&
+	    if (!pcb_action_context->Note.Moving && (type & SELECT_TYPES) &&
 		TEST_FLAG (SELECTEDFLAG, (PinType *) ptr2))
-	      Note.Moving = true;
-	    if ((Note.Hit && Note.Moving) || type == NO_TYPE)
+	      pcb_action_context->Note.Moving = true;
+	    if ((pcb_action_context->Note.Hit && pcb_action_context->Note.Moving) || type == NO_TYPE)
 	      break;
 	  }
 	break;
@@ -920,7 +895,7 @@ NotifyMode (void)
 		       "you can place vias\n"));
 	    break;
 	  }
-	if ((via = CreateNewVia (PCB->Data, Note.X, Note.Y,
+	if ((via = CreateNewVia (PCB->Data, pcb_action_context->Note.X, pcb_action_context->Note.Y,
 				 Settings.ViaThickness, 2 * Settings.Keepaway,
 				 Settings.ViaMaskAperture, Settings.ViaDrillingHole, NULL,
 				 NoFlags ())) != NULL)
@@ -941,9 +916,9 @@ NotifyMode (void)
 	  {
 	  case STATE_FIRST:
 	    Crosshair.AttachedBox.Point1.X =
-	      Crosshair.AttachedBox.Point2.X = Note.X;
+	      Crosshair.AttachedBox.Point2.X = pcb_action_context->Note.X;
 	    Crosshair.AttachedBox.Point1.Y =
-	      Crosshair.AttachedBox.Point2.Y = Note.Y;
+	      Crosshair.AttachedBox.Point2.Y = pcb_action_context->Note.Y;
 	    Crosshair.AttachedBox.State = STATE_SECOND;
 	    break;
 
@@ -954,8 +929,8 @@ NotifyMode (void)
 	      Coord wx, wy;
 	      Angle sa, dir;
 
-	      wx = Note.X - Crosshair.AttachedBox.Point1.X;
-	      wy = Note.Y - Crosshair.AttachedBox.Point1.Y;
+	      wx = pcb_action_context->Note.X - Crosshair.AttachedBox.Point1.X;
+	      wy = pcb_action_context->Note.Y - Crosshair.AttachedBox.Point1.Y;
 	      if (XOR (Crosshair.AttachedBox.otherway, abs (wy) > abs (wx)))
 		{
 		  Crosshair.AttachedBox.Point2.X =
@@ -1012,7 +987,7 @@ NotifyMode (void)
 		    Crosshair.AttachedBox.Point2.Y = bx->Y2;
 		  AddObjectToCreateUndoList (ARC_TYPE, CURRENT, arc, arc);
 		  IncrementUndoSerialNumber ();
-		  addedLines++;
+		  pcb_action_context->addedLines++;
 		  DrawArc (CURRENT, arc);
 		  Draw ();
 		  Crosshair.AttachedBox.State = STATE_THIRD;
@@ -1024,7 +999,7 @@ NotifyMode (void)
       }
     case LOCK_MODE:
       {
-	type = SearchScreen (Note.X, Note.Y, LOCK_TYPES, &ptr1, &ptr2, &ptr3);
+	type = SearchScreen (pcb_action_context->Note.X, pcb_action_context->Note.Y, LOCK_TYPES, &ptr1, &ptr2, &ptr3);
 	if (type == ELEMENT_TYPE)
 	  {
 	    ElementType *element = (ElementType *) ptr2;
@@ -1072,7 +1047,7 @@ NotifyMode (void)
       {
 	if (((type
 	      =
-	      SearchScreen (Note.X, Note.Y, PIN_TYPES, &ptr1, &ptr2,
+	      SearchScreen (pcb_action_context->Note.X, pcb_action_context->Note.Y, PIN_TYPES, &ptr1, &ptr2,
 			    &ptr3)) != NO_TYPE)
 	    && !TEST_FLAG (HOLEFLAG, (PinType *) ptr3))
 	  {
@@ -1116,7 +1091,7 @@ NotifyMode (void)
 	  RatType *line;
 	  if ((line = AddNet ()))
 	    {
-	      addedLines++;
+	      pcb_action_context->addedLines++;
 	      AddObjectToCreateUndoList (RATLINE_TYPE, line, line, line);
 	      IncrementUndoSerialNumber ();
 	      DrawRat (line);
@@ -1145,14 +1120,14 @@ NotifyMode (void)
 	      Crosshair.AttachedLine.Point2.X
 	      && Crosshair.AttachedLine.Point1.Y ==
 	      Crosshair.AttachedLine.Point2.Y
-	      && (Crosshair.AttachedLine.Point2.X != Note.X
-		  || Crosshair.AttachedLine.Point2.Y != Note.Y))
+	      && (Crosshair.AttachedLine.Point2.X != pcb_action_context->Note.X
+		  || Crosshair.AttachedLine.Point2.Y != pcb_action_context->Note.Y))
 	    {
 	      /* We will only need to paint the second line segment.
 	         Since we only check for vias on the first segment,
 	         swap them so the non-empty segment is the first segment. */
-	      Crosshair.AttachedLine.Point2.X = Note.X;
-	      Crosshair.AttachedLine.Point2.Y = Note.Y;
+	      Crosshair.AttachedLine.Point2.X = pcb_action_context->Note.X;
+	      Crosshair.AttachedLine.Point2.Y = pcb_action_context->Note.Y;
 	    }
 
 	  if ((Crosshair.AttachedLine.Point1.X !=
@@ -1173,7 +1148,7 @@ NotifyMode (void)
 					  2 * Settings.Keepaway,
 					  MakeFlags (line_flags))) != NULL)
                 {
-                  addedLines++;
+                  pcb_action_context->addedLines++;
                   AddObjectToCreateUndoList (LINE_TYPE, CURRENT, line, line);
                   DrawLine (CURRENT, line);
                 }
@@ -1182,7 +1157,7 @@ NotifyMode (void)
 	         isn't a pin already here */
 	      if (TEST_FLAG (AUTOBURIEDVIASFLAG, PCB))
 		{
-		  layer_from = GetLayerNumber (PCB->Data, lastLayer);
+		  layer_from = GetLayerNumber (PCB->Data, pcb_action_context->lastLayer);
 		  layer_to = GetLayerNumber (PCB->Data, CURRENT);
 		}
 	      else
@@ -1192,7 +1167,7 @@ NotifyMode (void)
 		}
 
 	      if (PCB->ViaOn && GetLayerGroupNumberByPointer (CURRENT) !=
-		  GetLayerGroupNumberByPointer (lastLayer) &&
+		  GetLayerGroupNumberByPointer (pcb_action_context->lastLayer) &&
 		  SearchObjectByLocation (PIN_TYPES, &ptr1, &ptr2, &ptr3,
 					  Crosshair.AttachedLine.Point1.X,
 					  Crosshair.AttachedLine.Point1.Y,
@@ -1216,38 +1191,38 @@ NotifyMode (void)
 	      Crosshair.AttachedLine.Point1.Y =
 		Crosshair.AttachedLine.Point2.Y;
 	      IncrementUndoSerialNumber ();
-	      lastLayer = CURRENT;
+	      pcb_action_context->lastLayer = CURRENT;
 	    }
-	  if (PCB->Clipping && (Note.X != Crosshair.AttachedLine.Point2.X
-				|| Note.Y !=
+	  if (PCB->Clipping && (pcb_action_context->Note.X != Crosshair.AttachedLine.Point2.X
+				|| pcb_action_context->Note.Y !=
 				Crosshair.AttachedLine.Point2.Y))
             {
               if ((line =
 		  CreateDrawnLineOnLayer (CURRENT,
 					  Crosshair.AttachedLine.Point2.X,
 					  Crosshair.AttachedLine.Point2.Y,
-					  Note.X, Note.Y,
+					  pcb_action_context->Note.X, pcb_action_context->Note.Y,
 					  Settings.LineThickness,
 					  2 * Settings.Keepaway,
 					  MakeFlags (line_flags))) != NULL)
                 {
-                  addedLines++;
+                  pcb_action_context->addedLines++;
                   AddObjectToCreateUndoList (LINE_TYPE, CURRENT, line, line);
                   IncrementUndoSerialNumber ();
                   DrawLine (CURRENT, line);
                 }
 	      /* move to new start point */
-	      Crosshair.AttachedLine.Point1.X = Note.X;
-	      Crosshair.AttachedLine.Point1.Y = Note.Y;
-	      Crosshair.AttachedLine.Point2.X = Note.X;
-	      Crosshair.AttachedLine.Point2.Y = Note.Y;
+	      Crosshair.AttachedLine.Point1.X = pcb_action_context->Note.X;
+	      Crosshair.AttachedLine.Point1.Y = pcb_action_context->Note.Y;
+	      Crosshair.AttachedLine.Point2.X = pcb_action_context->Note.X;
+	      Crosshair.AttachedLine.Point2.Y = pcb_action_context->Note.Y;
 	      if (TEST_FLAG (SWAPSTARTDIRFLAG, PCB))
 		{
 		  PCB->Clipping ^= 3;
 		}
 	    }
 	  if (TEST_FLAG (AUTODRCFLAG, PCB) && !TEST_SILK_LAYER (CURRENT))
-	    LookupConnection (Note.X, Note.Y, true, 1, CONNECTEDFLAG, false);
+	    LookupConnection (pcb_action_context->Note.X, pcb_action_context->Note.Y, true, 1, CONNECTEDFLAG, false);
 	  Draw ();
 	}
       break;
@@ -1307,8 +1282,8 @@ NotifyMode (void)
 		if (GetLayerGroupNumberByNumber (INDEXOFCURRENT) ==
 		    GetLayerGroupNumberBySide (BOTTOM_SIDE))
 		  flag |= ONSOLDERFLAG;
-		if ((text = CreateNewText (CURRENT, &PCB->Font, Note.X,
-					   Note.Y, 0, Settings.TextScale,
+		if ((text = CreateNewText (CURRENT, &PCB->Font, pcb_action_context->Note.X,
+					   pcb_action_context->Note.Y, 0, Settings.TextScale,
 					   string, MakeFlags (flag))) != NULL)
 		  {
 		    AddObjectToCreateUndoList (TEXT_TYPE, CURRENT, text, text);
@@ -1365,7 +1340,7 @@ NotifyMode (void)
 	    /* first notify, lookup object */
 	  case STATE_FIRST:
 	    Crosshair.AttachedObject.Type =
-	      SearchScreen (Note.X, Note.Y, POLYGON_TYPE,
+	      SearchScreen (pcb_action_context->Note.X, pcb_action_context->Note.Y, POLYGON_TYPE,
 			    &Crosshair.AttachedObject.Ptr1,
 			    &Crosshair.AttachedObject.Ptr2,
 			    &Crosshair.AttachedObject.Ptr3);
@@ -1429,7 +1404,7 @@ NotifyMode (void)
 		/* reset state of attached line */
 		memset (&Crosshair.AttachedPolygon, 0, sizeof (PolygonType));
 		Crosshair.AttachedObject.State = STATE_FIRST;
-		addedLines = 0;
+		pcb_action_context->addedLines = 0;
 
 		  break;
 		}
@@ -1464,7 +1439,7 @@ NotifyMode (void)
 	if (gui->shift_is_pressed ())
 	  {
 	    int type =
-	      SearchScreen (Note.X, Note.Y, ELEMENT_TYPE, &ptr1, &ptr2,
+	      SearchScreen (pcb_action_context->Note.X, pcb_action_context->Note.Y, ELEMENT_TYPE, &ptr1, &ptr2,
 			    &ptr3);
 	    if (type == ELEMENT_TYPE)
 	      {
@@ -1481,12 +1456,12 @@ NotifyMode (void)
 		  }
 	      }
 	  }
-	if (CopyPastebufferToLayout (Note.X, Note.Y))
+	if (CopyPastebufferToLayout (pcb_action_context->Note.X, pcb_action_context->Note.Y))
 	  SetChangedFlag (true);
 	if (e)
 	  {
 	    int type =
-	      SearchScreen (Note.X, Note.Y, ELEMENT_TYPE, &ptr1, &ptr2,
+	      SearchScreen (pcb_action_context->Note.X, pcb_action_context->Note.Y, ELEMENT_TYPE, &ptr1, &ptr2,
 			    &ptr3);
 	    if (type == ELEMENT_TYPE && ptr1)
 	      {
@@ -1516,7 +1491,7 @@ NotifyMode (void)
 
     case REMOVE_MODE:
       if ((type =
-	   SearchScreen (Note.X, Note.Y, REMOVE_TYPES, &ptr1, &ptr2,
+	   SearchScreen (pcb_action_context->Note.X, pcb_action_context->Note.Y, REMOVE_TYPES, &ptr1, &ptr2,
 			 &ptr3)) != NO_TYPE)
 	{
 	  if (TEST_FLAG (LOCKFLAG, (LineType *) ptr2))
@@ -1552,7 +1527,7 @@ NotifyMode (void)
       break;
 
     case ROTATE_MODE:
-      RotateScreenObject (Note.X, Note.Y,
+      RotateScreenObject (pcb_action_context->Note.X, pcb_action_context->Note.Y,
 			  gui->shift_is_pressed ()? (SWAP_IDENT ?
 						     1 : 3)
 			  : (SWAP_IDENT ? 3 : 1));
@@ -1570,7 +1545,7 @@ NotifyMode (void)
 	      COPY_TYPES : MOVE_TYPES;
 
 	    Crosshair.AttachedObject.Type =
-	      SearchScreen (Note.X, Note.Y, types,
+	      SearchScreen (pcb_action_context->Note.X, pcb_action_context->Note.Y, types,
 			    &Crosshair.AttachedObject.Ptr1,
 			    &Crosshair.AttachedObject.Ptr2,
 			    &Crosshair.AttachedObject.Ptr3);
@@ -1584,7 +1559,7 @@ NotifyMode (void)
 		    Crosshair.AttachedObject.Type = NO_TYPE;
 		  }
 		else
-		  AttachForCopy (Note.X, Note.Y);
+		  AttachForCopy (pcb_action_context->Note.X, pcb_action_context->Note.Y);
 	      }
 	    break;
 	  }
@@ -1596,16 +1571,16 @@ NotifyMode (void)
 			Crosshair.AttachedObject.Ptr1,
 			Crosshair.AttachedObject.Ptr2,
 			Crosshair.AttachedObject.Ptr3,
-			Note.X - Crosshair.AttachedObject.X,
-			Note.Y - Crosshair.AttachedObject.Y);
+			pcb_action_context->Note.X - Crosshair.AttachedObject.X,
+			pcb_action_context->Note.Y - Crosshair.AttachedObject.Y);
 	  else
 	    {
 	      MoveObjectAndRubberband (Crosshair.AttachedObject.Type,
 				       Crosshair.AttachedObject.Ptr1,
 				       Crosshair.AttachedObject.Ptr2,
 				       Crosshair.AttachedObject.Ptr3,
-				       Note.X - Crosshair.AttachedObject.X,
-				       Note.Y - Crosshair.AttachedObject.Y);
+				       pcb_action_context->Note.X - Crosshair.AttachedObject.X,
+				       pcb_action_context->Note.Y - Crosshair.AttachedObject.Y);
 	      SetLocalRef (0, 0, false);
 	    }
 	  SetChangedFlag (true);
@@ -1624,7 +1599,7 @@ NotifyMode (void)
 	  /* first notify, lookup object */
 	case STATE_FIRST:
 	  Crosshair.AttachedObject.Type =
-	    SearchScreen (Note.X, Note.Y, INSERT_TYPES,
+	    SearchScreen (pcb_action_context->Note.X, pcb_action_context->Note.Y, INSERT_TYPES,
 			  &Crosshair.AttachedObject.Ptr1,
 			  &Crosshair.AttachedObject.Ptr2,
 			  &Crosshair.AttachedObject.Ptr3);
@@ -1643,19 +1618,19 @@ NotifyMode (void)
 		  /* get starting point of nearest segment */
 		  if (Crosshair.AttachedObject.Type == POLYGON_TYPE)
 		    {
-		      fake.poly =
+		      pcb_action_context->fake.poly =
 			(PolygonType *) Crosshair.AttachedObject.Ptr2;
-		      polyIndex =
-			GetLowestDistancePolygonPoint (fake.poly, Note.X,
-						       Note.Y);
-		      fake.line.Point1 = fake.poly->Points[polyIndex];
-		      fake.line.Point2 = fake.poly->Points[
-			  prev_contour_point (fake.poly, polyIndex)];
-		      Crosshair.AttachedObject.Ptr2 = &fake.line;
+		      pcb_action_context->polyIndex =
+			GetLowestDistancePolygonPoint (pcb_action_context->fake.poly, pcb_action_context->Note.X,
+						       pcb_action_context->Note.Y);
+		      pcb_action_context->fake.line.Point1 = pcb_action_context->fake.poly->Points[pcb_action_context->polyIndex];
+		      pcb_action_context->fake.line.Point2 = pcb_action_context->fake.poly->Points[
+			  prev_contour_point (pcb_action_context->fake.poly, pcb_action_context->polyIndex)];
+		      Crosshair.AttachedObject.Ptr2 = &pcb_action_context->fake.line;
 
 		    }
 		  Crosshair.AttachedObject.State = STATE_SECOND;
-		  InsertedPoint = *AdjustInsertPoint ();
+		  pcb_action_context->InsertedPoint = *AdjustInsertPoint ();
 		}
 	    }
 	  break;
@@ -1664,15 +1639,15 @@ NotifyMode (void)
 	case STATE_SECOND:
 	  if (Crosshair.AttachedObject.Type == POLYGON_TYPE)
 	    InsertPointIntoObject (POLYGON_TYPE,
-				   Crosshair.AttachedObject.Ptr1, fake.poly,
-				   &polyIndex,
-				   InsertedPoint.X, InsertedPoint.Y, false, false);
+				   Crosshair.AttachedObject.Ptr1, pcb_action_context->fake.poly,
+				   &pcb_action_context->polyIndex,
+				   pcb_action_context->InsertedPoint.X, pcb_action_context->InsertedPoint.Y, false, false);
 	  else
 	    InsertPointIntoObject (Crosshair.AttachedObject.Type,
 				   Crosshair.AttachedObject.Ptr1,
 				   Crosshair.AttachedObject.Ptr2,
-				   &polyIndex,
-				   InsertedPoint.X, InsertedPoint.Y, false, false);
+				   &pcb_action_context->polyIndex,
+				   pcb_action_context->InsertedPoint.X, pcb_action_context->InsertedPoint.Y, false, false);
 	  SetChangedFlag (true);
 
 	  /* reset identifiers */
@@ -2014,10 +1989,10 @@ void
 EventMoveCrosshair (int ev_x, int ev_y)
 {
 #ifdef HAVE_LIBSTROKE
-  if (mid_stroke)
+  if (pcb_action_context->mid_stroke)
     {
-      StrokeBox.X2 = ev_x;
-      StrokeBox.Y2 = ev_y;
+      pcb_action_context->StrokeBox.X2 = ev_x;
+      pcb_action_context->StrokeBox.Y2 = ev_y;
       stroke_record (ev_x, ev_y);
       return;
     }
@@ -2942,8 +2917,8 @@ ActionMode (int argc, char **argv, Coord x, Coord y)
 
   if (function)
     {
-      Note.X = Crosshair.X;
-      Note.Y = Crosshair.Y;
+      pcb_action_context->Note.X = Crosshair.X;
+      pcb_action_context->Note.Y = Crosshair.Y;
       notify_crosshair_change (false);
       switch (GetFunctionID (function))
 	{
@@ -2973,9 +2948,9 @@ ActionMode (int argc, char **argv, Coord x, Coord y)
 	  break;
 	case F_Cancel:
 	  {
-	    int saved_mode = Settings.Mode;
+	    int pcb_action_context->saved_mode = Settings.Mode;
 	    SetMode (NO_MODE);
-	    SetMode (saved_mode);
+	    SetMode (pcb_action_context->saved_mode);
 	  }
 	  break;
 	case F_Escape:
@@ -3074,7 +3049,7 @@ ActionMode (int argc, char **argv, Coord x, Coord y)
 	  break;
 #else
 	case F_Release:
-	  if (mid_stroke)
+	  if (pcb_action_context->mid_stroke)
 	    FinishStroke ();
 	  else
 	    ReleaseMode ();
@@ -3091,9 +3066,9 @@ ActionMode (int argc, char **argv, Coord x, Coord y)
 	  break;
 	case F_Stroke:
 #ifdef HAVE_LIBSTROKE
-	  mid_stroke = true;
-	  StrokeBox.X1 = Crosshair.X;
-	  StrokeBox.Y1 = Crosshair.Y;
+	  pcb_action_context->mid_stroke = true;
+	  pcb_action_context->StrokeBox.X1 = Crosshair.X;
+	  pcb_action_context->StrokeBox.Y1 = Crosshair.Y;
 	  break;
 #else
 	  /* Handle middle mouse button restarts of drawing mode.  If not in
@@ -3116,7 +3091,7 @@ ActionMode (int argc, char **argv, Coord x, Coord y)
 	  else
 	    {
 	      SaveMode ();
-	      saved_mode = true;
+	      pcb_action_context->saved_mode = true;
 	      SetMode (ARROW_MODE);
 	      NotifyMode ();
 	    }
@@ -3634,7 +3609,7 @@ ActionRipUp (int argc, char **argv, Coord x, Coord y)
 	    if (SearchScreen (Crosshair.X, Crosshair.Y, ELEMENT_TYPE,
 			      &ptr1, &ptr2, &ptr3) != NO_TYPE)
 	      {
-		Note.Buffer = Settings.BufferNumber;
+		pcb_action_context->Note.Buffer = Settings.BufferNumber;
 		SetBufferNumber (MAX_BUFFER - 1);
 		ClearBuffer (PASTEBUFFER);
 		CopyObjectToBuffer (PASTEBUFFER->Data, PCB->Data,
@@ -3647,7 +3622,7 @@ ActionRipUp (int argc, char **argv, Coord x, Coord y)
 		MoveObjectToRemoveUndoList (ELEMENT_TYPE, ptr1, ptr2, ptr3);
 		RestoreUndoSerialNumber ();
 		CopyPastebufferToLayout (0, 0);
-		SetBufferNumber (Note.Buffer);
+		SetBufferNumber (pcb_action_context->Note.Buffer);
 		SetChangedFlag (true);
 	      }
 	  }
@@ -3756,8 +3731,8 @@ ActionDelete (int argc, char **argv, Coord x, Coord y)
   char *function = ARG (0);
   int id = GetFunctionID (function);
 
-  Note.X = Crosshair.X;
-  Note.Y = Crosshair.Y;
+  pcb_action_context->Note.X = Crosshair.X;
+  pcb_action_context->Note.Y = Crosshair.Y;
 
   if (id == -1) /* no arg */
     {
@@ -4500,8 +4475,8 @@ ActionChangePinName (int argc, char **argv, Coord x, Coord y)
    */
   if (changed)
     {
-      if (defer_updates)
-	defer_needs_update = 1;
+      if (pcb_action_context->defer_updates)
+	pcb_action_context->defer_needs_update = 1;
       else
 	{
 	  IncrementUndoSerialNumber ();
@@ -5457,7 +5432,7 @@ ActionSelect (int argc, char **argv, Coord x, Coord y)
 	case F_Convert:
 	  {
 	    Coord x, y;
-	    Note.Buffer = Settings.BufferNumber;
+	    pcb_action_context->Note.Buffer = Settings.BufferNumber;
 	    SetBufferNumber (MAX_BUFFER - 1);
 	    ClearBuffer (PASTEBUFFER);
 	    gui->get_coords (_("Select the Element's Mark Location"), &x, &y);
@@ -5469,7 +5444,7 @@ ActionSelect (int argc, char **argv, Coord x, Coord y)
 	    ConvertBufferToElement (PASTEBUFFER);
 	    RestoreUndoSerialNumber ();
 	    CopyPastebufferToLayout (x, y);
-	    SetBufferNumber (Note.Buffer);
+	    SetBufferNumber (pcb_action_context->Note.Buffer);
 	  }
 	  break;
 
@@ -6283,10 +6258,10 @@ ActionUndo (int argc, char **argv, Coord x, Coord y)
 		}
 	      FitCrosshairIntoGrid (Crosshair.X, Crosshair.Y);
 	      AdjustAttachedObjects ();
-	      if (--addedLines == 0)
+	      if (--pcb_action_context->addedLines == 0)
 		{
 		  Crosshair.AttachedLine.State = STATE_SECOND;
-		  lastLayer = CURRENT;
+		  pcb_action_context->lastLayer = CURRENT;
 		}
 	      else
 		{
@@ -6297,7 +6272,7 @@ ActionUndo (int argc, char **argv, Coord x, Coord y)
 					  Crosshair.AttachedLine.Point1.X,
 					  Crosshair.AttachedLine.Point1.Y, 0);
 		  ptr2 = (LineType *) ptrtmp;
-		  lastLayer = (LayerType *) ptr1;
+		  pcb_action_context->lastLayer = (LayerType *) ptr1;
 		}
 	      notify_crosshair_change (true);
 	      return 0;
@@ -6325,7 +6300,7 @@ ActionUndo (int argc, char **argv, Coord x, Coord y)
 	      Crosshair.AttachedBox.Point1.Y =
 		Crosshair.AttachedBox.Point2.Y = bx->Y1;
 	      AdjustAttachedObjects ();
-	      if (--addedLines == 0)
+	      if (--pcb_action_context->addedLines == 0)
 		Crosshair.AttachedBox.State = STATE_SECOND;
 	    }
 	}
@@ -6389,7 +6364,7 @@ ActionRedo (int argc, char **argv, Coord x, Coord y)
 	    Crosshair.AttachedLine.Point2.X = line->Point2.X;
 	  Crosshair.AttachedLine.Point1.Y =
 	    Crosshair.AttachedLine.Point2.Y = line->Point2.Y;
-	  addedLines++;
+	  pcb_action_context->addedLines++;
 	}
     }
   notify_crosshair_change (true);
@@ -6896,8 +6871,8 @@ ActionExecuteFile (int argc, char **argv, Coord x, Coord y)
       return 1;
     }
 
-  defer_updates = 1;
-  defer_needs_update = 0;
+  pcb_action_context->defer_updates = 1;
+  pcb_action_context->defer_needs_update = 0;
   while (fgets (line, sizeof (line), fp) != NULL)
     {
       n++;
@@ -6913,7 +6888,7 @@ ActionExecuteFile (int argc, char **argv, Coord x, Coord y)
       while (*sp && (*sp == ' ' || *sp == '\t'))
 	sp++;
 
-      /* 
+      /*
        * if we have anything left and its not a comment line
        * then execute it
        */
@@ -6925,8 +6900,8 @@ ActionExecuteFile (int argc, char **argv, Coord x, Coord y)
 	}
     }
 
-  defer_updates = 0;
-  if (defer_needs_update)
+  pcb_action_context->defer_updates = 0;
+  if (pcb_action_context->defer_needs_update)
     {
       IncrementUndoSerialNumber ();
       gui->invalidate_all ();
