@@ -359,7 +359,17 @@ public:
         }
 
         if (err) {
-            AFAIL(display);
+            Message(_("Syntax error. Usage:\n%s\n"),
+                    _("Display(NameOnPCB|Description|Value)\n"
+                      "Display(Grid|Redraw)\n"
+                      "Display(CycleClip|CycleCrosshair|Toggle45Degree|ToggleStartDirection)\n"
+                      "Display(ToggleGrid|ToggleRubberBandMode|ToggleUniqueNames)\n"
+                      "Display(ToggleMask|ToggleName|ToggleClearLine|ToggleFullPoly|ToggleSnapPin)\n"
+                      "Display(ToggleThindraw|ToggleThindrawPoly|ToggleOrthoMove|ToggleLocalRef)\n"
+                      "Display(ToggleCheckPlanes|ToggleShowDRC|ToggleAutoDRC)\n"
+                      "Display(ToggleLiveRoute|LockNames|OnlyNames)\n"
+                      "Display(Pinout|PinOrPadName)"));
+            return 1;
         }
 
         return 0;

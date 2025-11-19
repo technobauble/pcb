@@ -49,7 +49,7 @@ static ElementType* find_element_by_refdes(char* refdes) {
 
 // Helper function: parse layout attribute units
 static int parse_layout_attribute_units(const char* name, int def) {
-    const char* as = AttributeGet(PCB, name);
+    char* as = AttributeGet(PCB, const_cast<char*>(name));
     if (!as) {
         return def;
     }
@@ -109,9 +109,9 @@ public:
             }
             END_LOOP;
             if (number_of_footprints_not_found > 0) {
-                gui->confirm_dialog(_("Not all requested footprints were found.\n"
-                                    "See the message log for details"),
-                                   "Ok", nullptr);
+                const char* msg = _("Not all requested footprints were found.\n"
+                                    "See the message log for details");
+                gui->confirm_dialog(const_cast<char*>(msg), const_cast<char*>("Ok"), nullptr);
             }
             return 0;
         }
@@ -199,7 +199,7 @@ public:
             }
 
             er = ElementOrientation(e);
-            pe = PASTEBUFFER->Data->Element->data;
+            pe = static_cast<ElementType*>(PASTEBUFFER->Data->Element->data);
             if (!FRONT(e)) {
                 MirrorElementCoordinates(PASTEBUFFER->Data, pe, pe->MarkY * 2 - PCB->MaxHeight);
             }

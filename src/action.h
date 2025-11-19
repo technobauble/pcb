@@ -179,5 +179,6 @@ void ChangeFlag (char *what, char *flag_name, int value, char *cmd_name);
 void ClearWarnings (void);
 int GetFunctionID (char *str);
 void NotifyBlock (void);
+enum crosshair_shape CrosshairShapeIncrement (enum crosshair_shape shape);
 
 #endif

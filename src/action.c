@@ -2492,7 +2492,7 @@ If set, automatically created vias are buried vias.
 
 %end-doc */
 
-static enum crosshair_shape
+enum crosshair_shape
 CrosshairShapeIncrement (enum crosshair_shape shape)
 {
   switch(shape)
