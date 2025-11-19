@@ -336,9 +336,29 @@ ghid_draw_bg_image (void)
       h_scaled = h;
     }
   if (pixbuf)
-    gdk_pixbuf_render_to_drawable (pixbuf, gport->drawable, priv->bg_gc,
-				   x, y, 0, 0,
-				   w - x, h - y, GDK_RGB_DITHER_NORMAL, 0, 0);
+    {
+      /* GTK3: Use Cairo to render pixbuf */
+      if (priv->cr)
+        {
+          cairo_save (priv->cr);
+
+          /* Set the pixbuf as the source pattern, offset by -x, -y */
+          gdk_cairo_set_source_pixbuf (priv->cr, pixbuf, -x, -y);
+
+          /* Define the rectangle to paint (destination area) */
+          cairo_rectangle (priv->cr, 0, 0, w - x, h - y);
+
+          /* Fill the rectangle with the pixbuf pattern */
+          cairo_fill (priv->cr);
+
+          cairo_restore (priv->cr);
+        }
+
+      /* GTK2: Use deprecated render_to_drawable for compatibility */
+      gdk_pixbuf_render_to_drawable (pixbuf, gport->drawable, priv->bg_gc,
+                                     x, y, 0, 0,
+                                     w - x, h - y, GDK_RGB_DITHER_NORMAL, 0, 0);
+    }
 }
 
 #define WHICH_GC(gc) (cur_mask == HID_MASK_CLEAR ? priv->mask_gc : (gc)->gc)
