@@ -144,7 +144,10 @@ ghid_get_layer_depth (int layer_idx)
         {
         case SL_SILK:
           if (SL_MYSIDE (layer_idx))  /* Component side */
-            return layer_stack_3d.top_silk_z + layer_stack_3d.silkscreen_thickness;
+            {
+              /* Milestone 3B: Elevate component silkscreen above board */
+              return layer_stack_3d.component_z;
+            }
           else  /* Solder side */
             return layer_stack_3d.bottom_silk_z;
 
@@ -156,6 +159,9 @@ ghid_get_layer_depth (int layer_idx)
 
         case SL_INVISIBLE:
         case SL_ASSY:
+          /* Milestone 3B: Assembly layer also elevated with components */
+          return layer_stack_3d.component_z;
+
         case SL_PDRILL:
         case SL_UDRILL:
         case SL_RATS:
@@ -384,6 +390,58 @@ ghid_draw_3d_line (Coord x1, Coord y1, Coord x2, Coord y2, Coord z, Coord width,
   glVertex3f (p3x, p3y, z);
 
   /* End caps would be added here for round_cap style */
+
+  glEnd ();
+}
+
+/* Draw a simple 3D component body (placeholder box above board) */
+static void
+ghid_draw_component_body (Coord x1, Coord y1, Coord x2, Coord y2, Coord height)
+{
+  Coord z_base = layer_stack_3d.top_copper_z + layer_stack_3d.copper_thickness;
+  Coord z_top = z_base + height;
+
+  if (height <= 0 || global_view_2d)
+    return;  /* Skip if no height or in 2D mode */
+
+  /* Simple box representing component body */
+  glBegin (GL_QUADS);
+
+  /* Top face - visible from above */
+  glNormal3f (0, 0, 1);
+  glVertex3f (x1, y1, z_top);
+  glVertex3f (x1, y2, z_top);
+  glVertex3f (x2, y2, z_top);
+  glVertex3f (x2, y1, z_top);
+
+  /* Side faces for 3D appearance */
+  /* Front */
+  glNormal3f (0, -1, 0);
+  glVertex3f (x1, y1, z_base);
+  glVertex3f (x1, y1, z_top);
+  glVertex3f (x2, y1, z_top);
+  glVertex3f (x2, y1, z_base);
+
+  /* Back */
+  glNormal3f (0, 1, 0);
+  glVertex3f (x1, y2, z_base);
+  glVertex3f (x2, y2, z_base);
+  glVertex3f (x2, y2, z_top);
+  glVertex3f (x1, y2, z_top);
+
+  /* Left */
+  glNormal3f (-1, 0, 0);
+  glVertex3f (x1, y1, z_base);
+  glVertex3f (x1, y2, z_base);
+  glVertex3f (x1, y2, z_top);
+  glVertex3f (x1, y1, z_top);
+
+  /* Right */
+  glNormal3f (1, 0, 0);
+  glVertex3f (x2, y1, z_base);
+  glVertex3f (x2, y1, z_top);
+  glVertex3f (x2, y2, z_top);
+  glVertex3f (x2, y2, z_base);
 
   glEnd ();
 }
