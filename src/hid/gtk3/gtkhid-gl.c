@@ -198,6 +198,34 @@ ghid_get_layer_thickness (int layer_idx)
   return 0;
 }
 
+/* Check if current layer is a via/drill layer */
+static gboolean
+ghid_is_drill_layer (int layer_idx)
+{
+  if (layer_idx < 0)
+    {
+      int type = SL_TYPE (layer_idx);
+      return (type == SL_PDRILL || type == SL_UDRILL);
+    }
+  return FALSE;
+}
+
+/* Get via height (spans from bottom to top copper) */
+static Coord
+ghid_get_via_height (void)
+{
+  /* Vias span from bottom copper to top copper */
+  return layer_stack_3d.top_copper_z + layer_stack_3d.copper_thickness -
+         layer_stack_3d.bottom_copper_z;
+}
+
+/* Get via z-position (start at bottom copper) */
+static Coord
+ghid_get_via_z_bottom (void)
+{
+  return layer_stack_3d.bottom_copper_z;
+}
+
 /* ===== End Milestone 3B: 3D Layer Coordinate System ===== */
 
 /* ===== Milestone 3B: 3D Geometry Helpers ===== */
@@ -894,6 +922,18 @@ ghid_fill_circle (hidGC gc, Coord cx, Coord cy, Coord radius)
   /* Milestone 3B: Use 3D cylinder rendering in 3D mode */
   if (!global_view_2d)
     {
+      /* Special handling for vias/drills - span from bottom to top copper */
+      if (ghid_is_drill_layer (current_layer_idx))
+        {
+          Coord via_height = ghid_get_via_height ();
+          Coord via_z = ghid_get_via_z_bottom ();
+
+          hidgl_flush_triangles (&buffer);
+          ghid_draw_3d_cylinder (cx, cy, via_z, radius, via_height, 16);
+          return;
+        }
+
+      /* Normal pads/pins - use layer thickness */
       Coord thickness = ghid_get_layer_thickness (current_layer_idx);
       if (thickness > 0)
         {
