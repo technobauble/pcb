@@ -94,130 +94,7 @@
 /* ---------------------------------------------------------------------------
  * some local types
  */
-typedef enum
-{
-  F_AddSelected,
-  F_All,
-  F_AllConnections,
-  F_AllRats,
-  F_AllUnusedPins,
-  F_Arc,
-  F_Arrow,
-  F_Block,
-  F_Description,
-  F_Cancel,
-  F_Center,
-  F_Clear,
-  F_ClearAndRedraw,
-  F_ClearList,
-  F_Close,
-  F_Found,
-  F_Connection,
-  F_Convert,
-  F_Copy,
-  F_CycleClip,
-  F_CycleCrosshair,
-  F_DeleteRats,
-  F_Drag,
-  F_DrillReport,
-  F_Element,
-  F_ElementByName,
-  F_ElementConnections,
-  F_ElementToBuffer,
-  F_Escape,
-  F_Find,
-  F_FlipElement,
-  F_FoundPins,
-  F_Grid,
-  F_InsertPoint,
-  F_Layer,
-  F_Layout,
-  F_LayoutAs,
-  F_LayoutToBuffer,
-  F_Line,
-  F_LineSize,
-  F_Lock,
-  F_Mirror,
-  F_Move,
-  F_NameOnPCB,
-  F_Netlist,
-  F_NetByName,
-  F_None,
-  F_Notify,
-  F_Object,
-  F_ObjectByName,
-  F_PasteBuffer,
-  F_PadByName,
-  F_PinByName,
-  F_PinOrPadName,
-  F_Pinout,
-  F_Polygon,
-  F_PolygonHole,
-  F_PreviousPoint,
-  F_RatsNest,
-  F_Rectangle,
-  F_Redraw,
-  F_Release,
-  F_Revert,
-  F_Remove,
-  F_RemoveSelected,
-  F_Report,
-  F_Reset,
-  F_ResetLinesAndPolygons,
-  F_ResetPinsViasAndPads,
-  F_Restore,
-  F_Rotate,
-  F_Save,
-  F_Selected,
-  F_SelectedArcs,
-  F_SelectedElements,
-  F_SelectedLines,
-  F_SelectedNames,
-  F_SelectedObjects,
-  F_SelectedPads,
-  F_SelectedPins,
-  F_SelectedTexts,
-  F_SelectedVias,
-  F_SelectedRats,
-  F_Stroke,
-  F_Text,
-  F_TextByName,
-  F_TextScale,
-  F_Thermal,
-  F_ToLayout,
-  F_ToggleAllDirections,
-  F_ToggleAutoDRC,
-  F_ToggleClearLine,
-  F_ToggleFullPoly,
-  F_ToggleGrid,
-  F_ToggleHideNames,
-  F_ToggleMask,
-  F_ToggleName,
-  F_ToggleObject,
-  F_ToggleShowDRC,
-  F_ToggleLiveRoute,
-  F_ToggleRubberBandMode,
-  F_ToggleStartDirection,
-  F_ToggleSnapPin,
-  F_ToggleThindraw,
-  F_ToggleLockNames,
-  F_ToggleOnlyNames,
-  F_ToggleThindrawPoly,
-  F_ToggleOrthoMove,
-  F_ToggleLocalRef,
-  F_ToggleCheckPlanes,
-  F_ToggleUniqueNames,
-  F_Via,
-  F_ViaByName,
-  F_Value,
-  F_ViaDrillingHole,
-  F_ViaSize,
-  F_Zoom,
-  F_ThroughHole,
-  F_BuriedVias,
-  F_ToggleAutoBuriedVias
-}
-FunctionID;
+/* FunctionID enum has been moved to action.h for use by C++ actions */
 
 typedef struct			/* used to identify subfunctions */
 {
@@ -460,19 +337,19 @@ static FunctionType Functions[] = {
 /* ---------------------------------------------------------------------------
  * some local routines
  */
-static int GetFunctionID (String);
+/* GetFunctionID is now exported - see action.h */
 static void AdjustAttachedBox (void);
 static void NotifyLine (void);
 static void NotifyBlock (void);
 static void NotifyMode (void);
-static void ClearWarnings (void);
+/* Exported helper function - now declared in action.h */
+void ClearWarnings (void);
 #ifdef HAVE_LIBSTROKE
 static void FinishStroke (void);
 extern void stroke_init (void);
 extern void stroke_record (int x, int y);
 extern int stroke_trans (char *s);
 #endif
-static void ChangeFlag (char *, char *, int, char *);
 
 #ifdef HAVE_LIBSTROKE
 
@@ -567,8 +444,9 @@ FinishStroke (void)
 
 /*!
  * \brief Clear warning color from pins/pads.
+ * Exported helper function for C++ actions.
  */
-static void
+void
 ClearWarnings ()
 {
   Settings.RatWarn = false;
@@ -592,6 +470,8 @@ ClearWarnings ()
   ENDALL_LOOP;
   Draw ();
 }
+
+/* ClearWarnings is now exported for use by C++ actions */
 
 /*!
  * \brief Click callback.
@@ -752,8 +632,11 @@ hashfunc(String s)
 
 /*!
  * \brief Get function ID of passed string.
+ *
+ * Exported for use by C++ actions. Returns the FunctionID enum value
+ * corresponding to the string, or -1 if not found.
  */
-static int
+int
 GetFunctionID (String Ident)
 {
   int i, h;
@@ -1838,6 +1721,10 @@ Does a Restore if there was nothing to undo, else does a Close.
 
 %end-doc */
 
+/* NOTE: This action has been migrated to C++ (see src/actions/AtomicAction.cpp)
+ * The dispatcher in hid_actionv() will use the C++ version automatically.
+ * This C version remains as a fallback if C++ actions are not available.
+ */
 static int
 ActionAtomic (int argc, char **argv, Coord x, Coord y)
 {
@@ -1878,6 +1765,10 @@ static const char dumplibrary_help[] =
 
 %end-doc */
 
+/* NOTE: This action has been migrated to C++ (see src/actions/DumpLibraryAction.cpp)
+ * The dispatcher in hid_actionv() will use the C++ version automatically.
+ * This C version remains as a fallback if C++ actions are not available.
+ */
 static int
 ActionDumpLibrary (int argc, char **argv, Coord x, Coord y)
 {
@@ -1937,6 +1828,7 @@ other, not their absolute positions on the board.
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/FlipAction.cpp */
 static int
 ActionFlip (int argc, char **argv, Coord x, Coord y)
 {
@@ -1989,6 +1881,10 @@ followed by a newline.
 
 %end-doc */
 
+/* NOTE: This action has been migrated to C++ (see src/actions/MessageAction.cpp)
+ * The dispatcher in hid_actionv() will use the C++ version automatically.
+ * This C version remains as a fallback if C++ actions are not available.
+ */
 static int
 ActionMessage (int argc, char **argv, Coord x, Coord y)
 {
@@ -2039,6 +1935,7 @@ Pins and Vias may have thermals whether or not there is a polygon available
 to connect with. However, they will have no effect without the polygon.
 %end-doc */
 
+/* MIGRATED to C++: src/actions/SetThermalAction.cpp */
 static int
 ActionSetThermal (int argc, char **argv, Coord x, Coord y)
 {
@@ -2166,6 +2063,7 @@ Changes the size of new text.
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/SetValueAction.cpp */
 static int
 ActionSetValue (int argc, char **argv, Coord x, Coord y)
 {
@@ -2255,6 +2153,10 @@ save) before quitting.
 
 %end-doc */
 
+/* NOTE: This action has been migrated to C++ (see src/actions/QuitAction.cpp)
+ * The dispatcher in hid_actionv() will use the C++ version automatically.
+ * This C version remains as a fallback if C++ actions are not available.
+ */
 static int
 ActionQuit (int argc, char **argv, Coord x, Coord y)
 {
@@ -2300,6 +2202,7 @@ All ``found'' objects are marked ``not found''.
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/ConnectionAction.cpp */
 static int
 ActionConnection (int argc, char **argv, Coord x, Coord y)
 {
@@ -3252,6 +3155,10 @@ static const char removeselected_help[] = N_("Removes any selected objects.");
 
 %end-doc */
 
+/* NOTE: This action has been migrated to C++ (see src/actions/RemoveSelectedAction.cpp)
+ * The dispatcher in hid_actionv() will use the C++ version automatically.
+ * This C version remains as a fallback if C++ actions are not available.
+ */
 static int
 ActionRemoveSelected (int argc, char **argv, Coord x, Coord y)
 {
@@ -3644,6 +3551,7 @@ that this uses the highest numbered paste buffer.
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/RipUpAction.cpp */
 static int
 ActionRipUp (int argc, char **argv, Coord x, Coord y)
 {
@@ -3773,6 +3681,7 @@ Selects the shortest unselected rat on the board.
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/AddRatsAction.cpp */
 static int
 ActionAddRats (int argc, char **argv, Coord x, Coord y)
 {
@@ -3889,6 +3798,10 @@ static const char deleterats_help[] = N_("Delete rat lines.");
 
 %end-doc */
 
+/* NOTE: This action has been migrated to C++ (see src/actions/DeleteRatsAction.cpp)
+ * The dispatcher in hid_actionv() will use the C++ version automatically.
+ * This C version remains as a fallback if C++ actions are not available.
+ */
 static int
 ActionDeleteRats (int argc, char **argv, Coord x, Coord y)
 {
@@ -3926,6 +3839,7 @@ connecting them are minimized.  Note that you cannot undo this.
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/AutoPlaceSelectedAction.cpp */
 static int
 ActionAutoPlaceSelected (int argc, char **argv, Coord x, Coord y)
 {
@@ -3968,6 +3882,7 @@ responsive.
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/AutoRouteAction.cpp */
 static int
 ActionAutoRoute (int argc, char **argv, Coord x, Coord y)
 {
@@ -4013,6 +3928,10 @@ cursor location.
 
 %end-doc */
 
+/* NOTE: This action has been migrated to C++ (see src/actions/MarkCrosshairAction.cpp)
+ * The dispatcher in hid_actionv() will use the C++ version automatically.
+ * This C version remains as a fallback if C++ actions are not available.
+ */
 static int
 ActionMarkCrosshair (int argc, char **argv, Coord x, Coord y)
 {
@@ -4067,6 +3986,7 @@ of the silk layer lines and arcs for this element.
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/ChangeSizeAction.cpp */
 static int
 ActionChangeSize (int argc, char **argv, Coord x, Coord y)
 {
@@ -4162,6 +4082,7 @@ static const char changedrillsize_help[] =
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/Change2ndSizeAction.cpp */
 static int
 ActionChange2ndSize (int argc, char **argv, Coord x, Coord y)
 {
@@ -4229,6 +4150,7 @@ changes the polygon clearance.
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/ChangeClearSizeAction.cpp */
 static int
 ActionChangeClearSize (int argc, char **argv, Coord x, Coord y)
 {
@@ -4307,6 +4229,7 @@ the mask edge.
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/MinMaskGapAction.cpp */
 static int
 ActionMinMaskGap (int argc, char **argv, Coord x, Coord y)
 {
@@ -4403,6 +4326,7 @@ polygon edges.
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/MinClearGapAction.cpp */
 static int
 ActionMinClearGap (int argc, char **argv, Coord x, Coord y)
 {
@@ -4512,6 +4436,7 @@ ChangePinName(U3, 7, VCC)
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/ChangePinNameAction.cpp */
 static int
 ActionChangePinName (int argc, char **argv, Coord x, Coord y)
 {
@@ -4610,6 +4535,7 @@ Changes the name of the currently active layer.
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/ChangeNameAction.cpp */
 int
 ActionChangeName (int argc, char **argv, Coord x, Coord y)
 {
@@ -4701,6 +4627,7 @@ off are automatically deleted.
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/MorphPolygonAction.cpp */
 static int
 ActionMorphPolygon (int argc, char **argv, Coord x, Coord y)
 {
@@ -4756,6 +4683,7 @@ appear on the silk layer when you print the layout.
 %end-doc */
 
 static int
+/* MIGRATED to C++: src/actions/ToggleHideNameAction.cpp */
 ActionToggleHideName (int argc, char **argv, Coord x, Coord y)
 {
   char *function = ARG (0);
@@ -4830,6 +4758,7 @@ polygon, insulating them from each other.
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/ChangeJoinAction.cpp */
 static int
 ActionChangeJoin (int argc, char **argv, Coord x, Coord y)
 {
@@ -4891,6 +4820,7 @@ Note that @code{Pins} means both pins and pads.
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/ChangeSquareAction.cpp */
 static int
 ActionChangeSquare (int argc, char **argv, Coord x, Coord y)
 {
@@ -4948,6 +4878,7 @@ Note that @code{Pins} means pins and pads.
 @pinshapes
 
 %end-doc */
+/* MIGRATED to C++: src/actions/SetSquareAction.cpp */
 
 static int
 ActionSetSquare (int argc, char **argv, Coord x, Coord y)
@@ -5007,6 +4938,7 @@ Note that @code{Pins} means pins and pads.
 @pinshapes
 
 %end-doc */
+/* MIGRATED to C++: src/actions/ClearSquareAction.cpp */
 
 static int
 ActionClearSquare (int argc, char **argv, Coord x, Coord y)
@@ -5066,6 +4998,7 @@ static const char changeoctagon_help[] =
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/ChangeOctagonAction.cpp */
 static int
 ActionChangeOctagon (int argc, char **argv, Coord x, Coord y)
 {
@@ -5127,6 +5060,7 @@ static const char setoctagon_help[] = N_("Sets the octagon-flag of objects.");
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/SetOctagonAction.cpp */
 static int
 ActionSetOctagon (int argc, char **argv, Coord x, Coord y)
 {
@@ -5189,6 +5123,7 @@ static const char clearoctagon_help[] =
 @pinshapes
 
 %end-doc */
+/* MIGRATED to C++: src/actions/ClearOctagonAction.cpp */
 
 static int
 ActionClearOctagon (int argc, char **argv, Coord x, Coord y)
@@ -5252,6 +5187,7 @@ plated-through hole (not set), or an unplated hole (set).
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/ChangeHoleAction.cpp */
 static int
 ActionChangeHole (int argc, char **argv, Coord x, Coord y)
 {
@@ -5301,6 +5237,7 @@ The "no paste flag" of a pad determines whether the solderpaste
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/ChangePasteAction.cpp */
 static int
 ActionChangePaste (int argc, char **argv, Coord x, Coord y)
 {
@@ -5748,6 +5685,7 @@ Save the content of the active Buffer to a file. This is the graphical way to cr
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/SaveToAction.cpp */
 static int
 ActionSaveTo (int argc, char **argv, Coord x, Coord y)
 {
@@ -5853,6 +5791,10 @@ saved in @code{./pcb.settings}.
 
 %end-doc */
 
+/* NOTE: This action has been migrated to C++ (see src/actions/SaveSettingsAction.cpp)
+ * The dispatcher in hid_actionv() will use the C++ version automatically.
+ * This C version remains as a fallback if C++ actions are not available.
+ */
 static int
 ActionSaveSettings (int argc, char **argv, Coord x, Coord y)
 {
@@ -5899,6 +5841,7 @@ you may have made.
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/LoadFromAction.cpp */
 static int
 ActionLoadFrom (int argc, char **argv, Coord x, Coord y)
 {
@@ -5965,6 +5908,7 @@ If a name is not given, one is prompted for.
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/NewAction.cpp */
 static int
 ActionNew (int argc, char **argv, Coord x, Coord y)
 {
@@ -6078,6 +6022,7 @@ Selects the given buffer to be the current paste buffer.
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/PasteBufferAction.cpp */
 static int
 ActionPasteBuffer (int argc, char **argv, Coord x, Coord y)
 {
@@ -6421,6 +6366,7 @@ three "undone" lines.
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/RedoAction.cpp */
 static int
 ActionRedo (int argc, char **argv, Coord x, Coord y)
 {
@@ -6472,6 +6418,10 @@ will call Polygon(PreviousPoint) when appropriate to do so.
 
 %end-doc */
 
+/* NOTE: This action has been migrated to C++ (see src/actions/PolygonAction.cpp)
+ * The dispatcher in hid_actionv() will use the C++ version automatically.
+ * This C version remains as a fallback if C++ actions are not available.
+ */
 static int
 ActionPolygon (int argc, char **argv, Coord x, Coord y)
 {
@@ -6507,6 +6457,10 @@ static const char routestyle_help[] =
 
 %end-doc */
 
+/* NOTE: This action has been migrated to C++ (see src/actions/RouteStyleAction.cpp)
+ * The dispatcher in hid_actionv() will use the C++ version automatically.
+ * This C version remains as a fallback if C++ actions are not available.
+ */
 static int
 ActionRouteStyle (int argc, char **argv, Coord x, Coord y)
 {
@@ -6549,6 +6503,7 @@ units, currently 1/100 mil.
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/MoveObjectAction.cpp */
 static int
 ActionMoveObject (int argc, char **argv, Coord x, Coord y)
 {
@@ -6599,6 +6554,7 @@ or from solder to component, won't automatically flip it.  Use the
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/MoveToCurrentLayerAction.cpp */
 static int
 ActionMoveToCurrentLayer (int argc, char **argv, Coord x, Coord y)
 {
@@ -6645,6 +6601,7 @@ sizes (thickness, keepaway, drill, etc) according to that item.
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/SetSameAction.cpp */
 static int
 ActionSetSame (int argc, char **argv, Coord x, Coord y)
 {
@@ -6727,6 +6684,10 @@ SetFlag(SelectedPins,thermal)
 
 %end-doc */
 
+/* NOTE: This action has been migrated to C++ (see src/actions/SetFlagAction.cpp)
+ * The dispatcher in hid_actionv() will use the C++ version automatically.
+ * This C version remains as a fallback if C++ actions are not available.
+ */
 static int
 ActionSetFlag (int argc, char **argv, Coord x, Coord y)
 {
@@ -6758,6 +6719,10 @@ ClrFlag(SelectedLines,join)
 
 %end-doc */
 
+/* NOTE: This action has been migrated to C++ (see src/actions/ClrFlagAction.cpp)
+ * The dispatcher in hid_actionv() will use the C++ version automatically.
+ * This C version remains as a fallback if C++ actions are not available.
+ */
 static int
 ActionClrFlag (int argc, char **argv, Coord x, Coord y)
 {
@@ -6788,6 +6753,10 @@ cleared.  If the value is 1, the flag is set.
 
 %end-doc */
 
+/* NOTE: This action has been migrated to C++ (see src/actions/ChangeFlagAction.cpp)
+ * The dispatcher in hid_actionv() will use the C++ version automatically.
+ * This C version remains as a fallback if C++ actions are not available.
+ */
 static int
 ActionChangeFlag (int argc, char **argv, Coord x, Coord y)
 {
@@ -6802,7 +6771,7 @@ ActionChangeFlag (int argc, char **argv, Coord x, Coord y)
 }
 
 
-static void
+void
 ChangeFlag (char *what, char *flag_name, int value, char *cmd_name)
 {
   bool (*set_object) (int, void *, void *, void *);
@@ -6964,6 +6933,7 @@ ActionExecuteFile (int argc, char **argv, Coord x, Coord y)
 
 /* --------------------------------------------------------------------------- */
 
+/* MIGRATED to C++: src/actions/PSCalibAction.cpp */
 static int
 ActionPSCalib (int argc, char **argv, Coord x, Coord y)
 {
@@ -7256,6 +7226,7 @@ not specified, the given attribute is removed if present.
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/ElementSetAttrAction.cpp */
 static int
 ActionElementSetAttr (int argc, char **argv, Coord x, Coord y)
 {
@@ -7318,6 +7289,10 @@ Runs the given command, which is a system executable.
 
 %end-doc */
 
+/* NOTE: This action has been migrated to C++ (see src/actions/ExecCommandAction.cpp)
+ * The dispatcher in hid_actionv() will use the C++ version automatically.
+ * This C version remains as a fallback if C++ actions are not available.
+ */
 static int
 ActionExecCommand (int argc, char **argv, Coord x, Coord y)
 {
@@ -7975,7 +7950,7 @@ pcb, an element, or a layer.
 
 %end-doc */
 
-
+/* MIGRATED to C++: src/actions/AttributesAction.cpp */
 static int
 ActionAttributes (int argc, char **argv, Coord x, Coord y)
 {

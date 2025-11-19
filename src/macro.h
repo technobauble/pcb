@@ -171,7 +171,7 @@
   for (__iter = (top)->Via, __next = g_list_next (__iter);          \
        __iter != NULL;                                              \
        __iter = __next, __next = g_list_next (__iter), n++) {       \
-    PinType *via = __iter->data;
+    PinType *via = (PinType *)__iter->data;
 
 #define DRILL_LOOP(top) do             {               \
         Cardinal        n;                                      \
@@ -207,7 +207,7 @@
   for (__iter = (top)->Element, __next = g_list_next (__iter);      \
        __iter != NULL;                                              \
        __iter = __next, __next = g_list_next (__iter), n++) {       \
-    ElementType *element = __iter->data;
+    ElementType *element = (ElementType *)__iter->data;
 
 #define RAT_LOOP(top) do {                                          \
   GList *__iter, *__next;                                           \
@@ -215,7 +215,7 @@
   for (__iter = (top)->Rat, __next = g_list_next (__iter);          \
        __iter != NULL;                                              \
        __iter = __next, __next = g_list_next (__iter), n++) {       \
-    RatType *line = __iter->data;
+    RatType *line = (RatType *)__iter->data;
 
 #define	ELEMENTTEXT_LOOP(element) do { 	\
 	Cardinal	n;				\
@@ -238,7 +238,7 @@
   for (__iter = (element)->Pin, __next = g_list_next (__iter);      \
        __iter != NULL;                                              \
        __iter = __next, __next = g_list_next (__iter), n++) {       \
-    PinType *pin = __iter->data;
+    PinType *pin = (PinType *)__iter->data;
 
 #define PAD_LOOP(element) do {                                      \
   GList *__iter, *__next;                                           \
@@ -246,7 +246,7 @@
   for (__iter = (element)->Pad, __next = g_list_next (__iter);      \
        __iter != NULL;                                              \
        __iter = __next, __next = g_list_next (__iter), n++) {       \
-    PadType *pad = __iter->data;
+    PadType *pad = (PadType *)__iter->data;
 
 #define ARC_LOOP(element) do {                                      \
   GList *__iter, *__next;                                           \
@@ -254,7 +254,7 @@
   for (__iter = (element)->Arc, __next = g_list_next (__iter);      \
        __iter != NULL;                                              \
        __iter = __next, __next = g_list_next (__iter), n++) {       \
-    ArcType *arc = __iter->data;
+    ArcType *arc = (ArcType *)__iter->data;
 
 #define ELEMENTLINE_LOOP(element) do {                              \
   GList *__iter, *__next;                                           \
@@ -262,7 +262,7 @@
   for (__iter = (element)->Line, __next = g_list_next (__iter);     \
        __iter != NULL;                                              \
        __iter = __next, __next = g_list_next (__iter), n++) {       \
-    LineType *line = __iter->data;
+    LineType *line = (LineType *)__iter->data;
 
 #define ELEMENTARC_LOOP(element) do {                               \
   GList *__iter, *__next;                                           \
@@ -270,7 +270,7 @@
   for (__iter = (element)->Arc, __next = g_list_next (__iter);      \
        __iter != NULL;                                              \
        __iter = __next, __next = g_list_next (__iter), n++) {       \
-    ArcType *arc = __iter->data;
+    ArcType *arc = (ArcType *)__iter->data;
 
 #define LINE_LOOP(layer) do {                                       \
   GList *__iter, *__next;                                           \
@@ -278,7 +278,7 @@
   for (__iter = (layer)->Line, __next = g_list_next (__iter);       \
        __iter != NULL;                                              \
        __iter = __next, __next = g_list_next (__iter), n++) {       \
-    LineType *line = __iter->data;
+    LineType *line = (LineType *)__iter->data;
 
 #define TEXT_LOOP(layer) do {                                       \
   GList *__iter, *__next;                                           \
@@ -286,7 +286,7 @@
   for (__iter = (layer)->Text, __next = g_list_next (__iter);       \
        __iter != NULL;                                              \
        __iter = __next, __next = g_list_next (__iter), n++) {       \
-    TextType *text = __iter->data;
+    TextType *text = (TextType *)__iter->data;
 
 #define POLYGON_LOOP(layer) do {                                    \
   GList *__iter, *__next;                                           \
@@ -294,7 +294,7 @@
   for (__iter = (layer)->Polygon, __next = g_list_next (__iter);    \
        __iter != NULL;                                              \
        __iter = __next, __next = g_list_next (__iter), n++) {       \
-    PolygonType *polygon = __iter->data;
+    PolygonType *polygon = (PolygonType *)__iter->data;
 
 #define	POLYGONPOINT_LOOP(polygon) do	{	\
 	Cardinal			n;		\
