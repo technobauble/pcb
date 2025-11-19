@@ -53,8 +53,8 @@ ghid_dialog_input (const char * prompt, const char * initial)
   dialog = gtk_dialog_new_with_buttons (_("PCB User Input"),
 					GTK_WINDOW (out->top_window),
 					GTK_DIALOG_MODAL,
-					GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
-					GTK_STOCK_OK, GTK_RESPONSE_OK, NULL);
+					"_Cancel", GTK_RESPONSE_CANCEL,
+					"_OK", GTK_RESPONSE_OK, NULL);
 
   gtk_dialog_set_default_response (GTK_DIALOG (dialog), GTK_RESPONSE_OK);
   vbox = gtk_box_new (GTK_ORIENTATION_VERTICAL, 4);
@@ -118,8 +118,8 @@ ghid_dialog_confirm_all (gchar * all_message)
 					GTK_WINDOW (out->top_window),
 					(GtkDialogFlags)(GTK_DIALOG_MODAL |
 							 GTK_DIALOG_DESTROY_WITH_PARENT),
-					GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
-					GTK_STOCK_OK, GTK_RESPONSE_OK,
+					"_Cancel", GTK_RESPONSE_CANCEL,
+					"_OK", GTK_RESPONSE_OK,
 					_("Sequence OK"),
 					GUI_DIALOG_RESPONSE_ALL, NULL);
 
@@ -227,8 +227,8 @@ ghid_dialog_close_confirm ()
   gtk_message_dialog_set_markup (GTK_MESSAGE_DIALOG (dialog), str);
   gtk_dialog_add_buttons (GTK_DIALOG (dialog),
                           _("Close _without saving"), GTK_RESPONSE_NO,
-                          GTK_STOCK_CANCEL,          GTK_RESPONSE_CANCEL,
-                          GTK_STOCK_SAVE,            GTK_RESPONSE_YES,
+                          "_Cancel",          GTK_RESPONSE_CANCEL,
+                          "_Save",            GTK_RESPONSE_YES,
                           NULL);
   gtk_dialog_set_default_response (GTK_DIALOG (dialog), GTK_RESPONSE_YES);
 
@@ -275,8 +275,8 @@ ghid_dialog_file_select_open (gchar * title, gchar ** path, gchar * shortcuts)
   dialog = gtk_file_chooser_dialog_new (title,
 					GTK_WINDOW (out->top_window),
 					GTK_FILE_CHOOSER_ACTION_OPEN,
-					GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
-					GTK_STOCK_OK, GTK_RESPONSE_OK,
+					"_Cancel", GTK_RESPONSE_CANCEL,
+					"_OK", GTK_RESPONSE_OK,
 					NULL);
 
   gtk_dialog_set_default_response (GTK_DIALOG (dialog), GTK_RESPONSE_OK);
@@ -383,8 +383,8 @@ ghid_dialog_file_select_multiple(gchar * title, gchar ** path, gchar * shortcuts
   dialog = gtk_file_chooser_dialog_new (title,
 					GTK_WINDOW (out->top_window),
 					GTK_FILE_CHOOSER_ACTION_OPEN,
-					GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
-					GTK_STOCK_OK, GTK_RESPONSE_OK,
+					"_Cancel", GTK_RESPONSE_CANCEL,
+					"_OK", GTK_RESPONSE_OK,
 					NULL);
 
   gtk_dialog_set_default_response (GTK_DIALOG (dialog), GTK_RESPONSE_OK);
@@ -465,8 +465,8 @@ ghid_dialog_file_select_save (gchar * title, gchar ** path, gchar * file,
   dialog = gtk_file_chooser_dialog_new (title,
 					GTK_WINDOW (out->top_window),
 					GTK_FILE_CHOOSER_ACTION_SAVE,
-					GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
-					GTK_STOCK_OK, GTK_RESPONSE_OK,
+					"_Cancel", GTK_RESPONSE_CANCEL,
+					"_OK", GTK_RESPONSE_OK,
 					NULL);
 
   gtk_file_chooser_set_do_overwrite_confirmation (GTK_FILE_CHOOSER (dialog),
@@ -610,8 +610,8 @@ ghid_fileselect (const char *title, const char *descr,
 					(flags & HID_FILESELECT_READ) ? 
 					GTK_FILE_CHOOSER_ACTION_OPEN : 
 					GTK_FILE_CHOOSER_ACTION_SAVE,
-					GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
-					GTK_STOCK_OK, GTK_RESPONSE_OK,
+					"_Cancel", GTK_RESPONSE_CANCEL,
+					"_OK", GTK_RESPONSE_OK,
 					NULL);
 
   gtk_dialog_set_default_response (GTK_DIALOG (dialog), GTK_RESPONSE_OK);
