@@ -3146,6 +3146,7 @@ ActionRemoveSelected (int argc, char **argv, Coord x, Coord y)
 
 /* --------------------------------------------------------------------------- */
 
+/* MIGRATED to RenumberAction.cpp - self-contained, no dependencies */
 static const char renumber_syntax[] = N_("Renumber()\n"
                                       "Renumber(filename)");
 
@@ -6145,6 +6146,7 @@ ActionPasteBuffer (int argc, char **argv, Coord x, Coord y)
 
 /* --------------------------------------------------------------------------- */
 
+/* MIGRATED to UndoAction.cpp - uses pcb_action_context->addedLines and pcb_action_context->lastLayer */
 static const char undo_syntax[] = N_("Undo()\n"
                                   "Undo(ClearList)");
 
@@ -7502,6 +7504,7 @@ tempfile_unlink (char * name)
 }
 
 /* ---------------------------------------------------------------- */
+/* MIGRATED to ImportAction.cpp - schematic import with gnetlist/make */
 static const char import_syntax[] =
   N_("Import()\n"
   "Import([gnetlist|make[,source,source,...]])\n"

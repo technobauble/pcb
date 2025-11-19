@@ -211,6 +211,7 @@ PCB_CXX_SRCS = \
 	actions/ElementSetAttrAction.cpp \
 	actions/ExecCommandAction.cpp \
 	actions/ExecuteFileAction.cpp \
+	actions/ImportAction.cpp \
 	actions/FlipAction.cpp \
 	actions/LoadFromAction.cpp \
 	actions/MarkCrosshairAction.cpp \
@@ -227,6 +228,7 @@ PCB_CXX_SRCS = \
 	actions/QuitAction.cpp \
 	actions/RedoAction.cpp \
 	actions/RemoveSelectedAction.cpp \
+	actions/RenumberAction.cpp \
 	actions/RipUpAction.cpp \
 	actions/RouteStyleAction.cpp \
 	actions/SaveSettingsAction.cpp \
@@ -240,6 +242,7 @@ PCB_CXX_SRCS = \
 	actions/SetValueAction.cpp \
 	actions/SetViaLayersAction.cpp \
 	actions/ToggleHideNameAction.cpp \
+	actions/UndoAction.cpp \
 	actions/UnselectAction.cpp
 
 LIST_SRCS = ${PCB_SRCS}
