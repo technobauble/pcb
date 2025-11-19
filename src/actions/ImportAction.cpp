@@ -12,6 +12,7 @@ extern "C" {
 #include "mymem.h"
 #include "pcb-printf.h"
 #include "rats.h"
+#include "remove.h"
 }
 
 #include <cstdio>

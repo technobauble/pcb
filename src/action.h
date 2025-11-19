@@ -180,5 +180,9 @@ void ClearWarnings (void);
 int GetFunctionID (char *str);
 void NotifyBlock (void);
 enum crosshair_shape CrosshairShapeIncrement (enum crosshair_shape shape);
+int pcb_spawnvp (char **argv);
+char *tempfile_name_new (char *name);
+int tempfile_unlink (char *name);
+int ActionExecuteFile (int argc, char **argv, Coord x, Coord y);
 
 #endif
