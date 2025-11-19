@@ -1417,8 +1417,18 @@ ghid_build_pcb_top_window (void)
 
   /* -- The PCB layout output drawing area */
 
+#ifdef ENABLE_GL
+  /* GTK3: Use GtkGLArea for OpenGL rendering */
+  gport->drawing_area = gtk_gl_area_new ();
+  gtk_gl_area_set_has_depth_buffer (GTK_GL_AREA (gport->drawing_area), TRUE);
+  gtk_gl_area_set_required_version (GTK_GL_AREA (gport->drawing_area), 2, 1);
+  /* Note: ghid_init_drawing_widget is now a no-op for GtkGLArea */
+  ghid_init_drawing_widget (gport->drawing_area, gport);
+#else
+  /* GTK3: Use GtkDrawingArea for Cairo rendering */
   gport->drawing_area = gtk_drawing_area_new ();
   ghid_init_drawing_widget (gport->drawing_area, gport);
+#endif
 
   gtk_widget_add_events (gport->drawing_area, GDK_EXPOSURE_MASK
 			 | GDK_LEAVE_NOTIFY_MASK | GDK_ENTER_NOTIFY_MASK
