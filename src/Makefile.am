@@ -208,6 +208,7 @@ PCB_CXX_SRCS = \
 	actions/DumpLibraryAction.cpp \
 	actions/ElementSetAttrAction.cpp \
 	actions/ExecCommandAction.cpp \
+	actions/ExecuteFileAction.cpp \
 	actions/FlipAction.cpp \
 	actions/LoadFromAction.cpp \
 	actions/MarkCrosshairAction.cpp \
@@ -234,6 +235,7 @@ PCB_CXX_SRCS = \
 	actions/SetSquareAction.cpp \
 	actions/SetThermalAction.cpp \
 	actions/SetValueAction.cpp \
+	actions/SetViaLayersAction.cpp \
 	actions/ToggleHideNameAction.cpp
 
 LIST_SRCS = ${PCB_SRCS}

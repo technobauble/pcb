@@ -6862,6 +6862,7 @@ ChangeFlag (char *what, char *flag_name, int value, char *cmd_name)
 
 /* --------------------------------------------------------------------------- */
 
+/* MIGRATED to C++: src/actions/ExecuteFileAction.cpp */
 static const char executefile_syntax[] = N_("ExecuteFile(filename)");
 
 static const char executefile_help[] = N_("Run actions from the given file.");
@@ -6872,6 +6873,7 @@ Lines starting with @code{#} are ignored.
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/ExecuteFileAction.cpp */
 static int
 ActionExecuteFile (int argc, char **argv, Coord x, Coord y)
 {
@@ -8059,6 +8061,7 @@ ActionAttributes (int argc, char **argv, Coord x, Coord y)
 
 /* --------------------------------------------------------------------------- */
 
+/* MIGRATED to C++: src/actions/SetViaLayersAction.cpp */
 static const char setvialayers_syntax[] =
   N_("SetViaLayers(Object|SelectedVias|Selected[,ThroughHole|TH])\n"
      "SetViaLayers(Object|SelectedVias|Selected,from,to)\n"
@@ -8090,6 +8093,7 @@ If no parameter us used, dialog is displayed (if implemented in the respective G
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/SetViaLayersAction.cpp */
 static bool
 identify_layer (char *layer_name, Cardinal *layer_no)
 {
@@ -8123,6 +8127,7 @@ identify_layer (char *layer_name, Cardinal *layer_no)
   return (layer != -1);
 }
 
+/* MIGRATED to C++: src/actions/SetViaLayersAction.cpp */
 static int
 ActionSetViaLayers (int argc, char **argv, Coord x, Coord y)
 {
