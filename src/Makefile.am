@@ -205,7 +205,9 @@ PCB_CXX_SRCS = \
 	actions/ClrFlagAction.cpp \
 	actions/ConnectionAction.cpp \
 	actions/DeleteRatsAction.cpp \
+	actions/DisperseElementsAction.cpp \
 	actions/DumpLibraryAction.cpp \
+	actions/ElementListAction.cpp \
 	actions/ElementSetAttrAction.cpp \
 	actions/ExecCommandAction.cpp \
 	actions/ExecuteFileAction.cpp \
@@ -229,6 +231,7 @@ PCB_CXX_SRCS = \
 	actions/RouteStyleAction.cpp \
 	actions/SaveSettingsAction.cpp \
 	actions/SaveToAction.cpp \
+	actions/SelectAction.cpp \
 	actions/SetFlagAction.cpp \
 	actions/SetOctagonAction.cpp \
 	actions/SetSameAction.cpp \
@@ -236,7 +239,8 @@ PCB_CXX_SRCS = \
 	actions/SetThermalAction.cpp \
 	actions/SetValueAction.cpp \
 	actions/SetViaLayersAction.cpp \
-	actions/ToggleHideNameAction.cpp
+	actions/ToggleHideNameAction.cpp \
+	actions/UnselectAction.cpp
 
 LIST_SRCS = ${PCB_SRCS}
 

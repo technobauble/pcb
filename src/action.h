@@ -178,5 +178,6 @@ void ActionGetXY (char *);
 void ChangeFlag (char *what, char *flag_name, int value, char *cmd_name);
 void ClearWarnings (void);
 int GetFunctionID (char *str);
+void NotifyBlock (void);
 
 #endif

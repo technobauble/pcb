@@ -340,7 +340,7 @@ static FunctionType Functions[] = {
 /* GetFunctionID is now exported - see action.h */
 static void AdjustAttachedBox (void);
 static void NotifyLine (void);
-static void NotifyBlock (void);
+/* NotifyBlock - exported in action.h for C++ actions */
 static void NotifyMode (void);
 /* Exported helper function - now declared in action.h */
 void ClearWarnings (void);
@@ -831,8 +831,10 @@ NotifyLine (void)
 
 /*!
  * \brief Create first or second corner of a marked block.
+ *
+ * Exported for use by C++ actions (Select, Unselect).
  */
-static void
+void
 NotifyBlock (void)
 {
   notify_crosshair_change (false);
