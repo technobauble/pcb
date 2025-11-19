@@ -188,6 +188,9 @@ PCB_CXX_SRCS = \
 	actions/modes/EditorMode.h \
 	actions/modes/ModeManager.cpp \
 	actions/modes/RemoveMode.cpp \
+	actions/modes/ViaMode.cpp \
+	actions/modes/ThermalMode.cpp \
+	actions/modes/LockMode.cpp \
 	actions/AddRatsAction.cpp \
 	actions/AtomicAction.cpp \
 	actions/AttributesAction.cpp \

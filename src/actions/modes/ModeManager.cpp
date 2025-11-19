@@ -45,12 +45,14 @@ class LineMode;
 class ArrowMode;
 
 // Factory functions (defined in respective mode .cpp files)
-// We add these as we implement each mode
+// P1 modes (simple)
 extern std::unique_ptr<EditorMode> createRemoveMode(ActionContext* context);
-// More will be added as we implement modes:
-// extern std::unique_ptr<EditorMode> createViaMode(ActionContext* context);
-// extern std::unique_ptr<EditorMode> createThermalMode(ActionContext* context);
-// extern std::unique_ptr<EditorMode> createLockMode(ActionContext* context);
+extern std::unique_ptr<EditorMode> createViaMode(ActionContext* context);
+extern std::unique_ptr<EditorMode> createThermalMode(ActionContext* context);
+extern std::unique_ptr<EditorMode> createLockMode(ActionContext* context);
+// More will be added as we implement P2, P3, P4 modes:
+// extern std::unique_ptr<EditorMode> createTextMode(ActionContext* context);
+// extern std::unique_ptr<EditorMode> createRectangleMode(ActionContext* context);
 // ... etc
 
 } // namespace modes
@@ -76,11 +78,11 @@ void ModeManager::registerMode(int id, std::unique_ptr<EditorMode> mode) {
 void ModeManager::initializeModes() {
     // Register modes as we implement them
 
-    // Phase 1: Simple modes (Days 1-3)
+    // Phase 1: Simple modes (Days 1-3) ✅ COMPLETE
     registerMode(REMOVE_MODE, createRemoveMode(context_));
-    // TODO: registerMode(VIA_MODE, createViaMode(context_));
-    // TODO: registerMode(THERMAL_MODE, createThermalMode(context_));
-    // TODO: registerMode(LOCK_MODE, createLockMode(context_));
+    registerMode(VIA_MODE, createViaMode(context_));
+    registerMode(THERMAL_MODE, createThermalMode(context_));
+    registerMode(LOCK_MODE, createLockMode(context_));
 
     // Phase 2: Medium complexity modes (Days 4-10)
     // TODO: registerMode(TEXT_MODE, createTextMode(context_));
