@@ -3,6 +3,7 @@
 extern "C" {
 #include "global.h"
 #include "action.h"
+#include "actions/ActionContext.h"
 #include "crosshair.h"
 #include "data.h"
 #include "set.h"
@@ -34,7 +35,7 @@ public:
                     Crosshair.AttachedLine.Point2.X = line->Point2.X;
                 Crosshair.AttachedLine.Point1.Y =
                     Crosshair.AttachedLine.Point2.Y = line->Point2.Y;
-                addedLines++;
+                pcb_action_context->addedLines++;
             }
         }
         notify_crosshair_change(true);
