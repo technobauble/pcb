@@ -1,99 +1,133 @@
 # Action Migration Progress
 
-**Date:** November 17, 2025
-**Branch:** claude/refactor-action-dependencies-01A7QiJjB6c7sdmiSbqNkH4k
+**Date:** November 19, 2025
+**Branch:** claude/fix-savebufferelements-error-01Sqseb6JL3wUpGkFNQjHSko
 
 ---
 
 ## Summary
 
 **Total Actions:** 65
-**Migrated:** 52 (80%) - **FOUR-FIFTHS COMPLETE!** 🎉
-**Remaining:** 13 (20%)
+**Migrated:** 63 (97%) - **HYBRID APPROACH COMPLETE!** 🎉
+**Remaining:** 2 (3%) - Deferred pending NotifyMode() refactoring
+
+---
+
+## Major Milestone: ActionContext Pattern
+
+### Phase 1: Infrastructure (November 19, 2025)
+
+Created **ActionContext** pattern to centralize shared static state, enabling the final action migrations:
+
+**File:** `src/actions/ActionContext.h`
+
+**Purpose:** Replaces file-scoped static variables in action.c with a centralized context accessible to both C and C++ code.
+
+**Shared State Managed:**
+- `Note` struct - Mouse/selection state (84 references)
+- `lastLayer` - Undo tracking for layer operations (6 references)
+- `addedLines` - Line creation tracking (8 references, moved from global)
+- `defer_updates`/`defer_needs_update` - Update batching (6 references)
+- `InsertedPoint`, `polyIndex`, `saved_mode` - Polygon editing state (19 references)
+- `fake` struct - Temporary geometry for operations (6 references)
+- `mid_stroke`, `StrokeBox` - Libstroke gesture state (11 references)
+
+**Usage:**
+```c
+// In C code (action.c)
+pcb_action_context->lastLayer = CURRENT;
+pcb_action_context->addedLines++;
+
+// In C++ code (UndoAction.cpp)
+extern "C" {
+#include "actions/ActionContext.h"
+}
+pcb_action_context->addedLines--;
+```
+
+**Benefits:**
+- ✅ Enables C++ actions to access shared state
+- ✅ Documents all shared state in one location
+- ✅ Improves testability (can create mock contexts)
+- ✅ Foundation for future multi-document support
+- ✅ Unblocked migration of ActionUndo, ActionRenumber, ActionImport
 
 ---
 
 ## Migrated Actions
 
-### Batch 1: Initial POC (Previous Session)
-1. ✅ **Message** - Display messages to log window
-2. ✅ **SaveSettings** - Save PCB settings
-3. ✅ **DumpLibrary** - Dump library contents
-4. ✅ **Quit** - Exit the application
-5. ✅ **SetFlag** - Set object flags
-6. ✅ **ClrFlag** - Clear object flags
-7. ✅ **ChangeFlag** - Change object flags
+### Batch 1-10: Previous Sessions (52 actions)
+See previous documentation for actions 1-52.
 
-### Batch 2: Simple Utility Actions (This Session)
-8. ✅ **Atomic** - Group actions into single undo operation
-9. ✅ **MarkCrosshair** - Set/reset crosshair mark
-10. ✅ **ExecCommand** - Run system commands
-11. ✅ **RemoveSelected** - Remove selected objects
-12. ✅ **DeleteRats** - Delete rat lines (airwires)
-13. ✅ **Polygon** - Polygon drawing operations
-14. ✅ **RouteStyle** - Select routing styles
+### Batch 11: Quick Wins Enabled by ActionContext (November 19, 2025)
+53. ✅ **DisperseElements** - Scatter selected elements (~126 lines, grid layout algorithm)
+54. ✅ **ElementList** - Library element management (~254 lines, footprint cache)
+55. ✅ **ExecuteFile** - Execute action script file (~84 lines, uses defer_updates from ActionContext)
+56. ✅ **Select** - Select objects by pattern/type (~169 lines, uses NotifyBlock)
+57. ✅ **SetViaLayers** - Set via layer range (~132 lines, layer identification)
+58. ✅ **Unselect** - Unselect objects (~151 lines, mirrors Select logic)
 
-### Batch 3: GetFunctionID Validation (This Session)
-15. ✅ **New** - Create new layout (file operation, 45 lines)
-16. ✅ **MoveToCurrentLayer** - Move objects to current layer (validates GetFunctionID export, 29 lines)
+**Key Achievement:** Exported `NotifyBlock()` from action.c for Select/Unselect
 
-### Batch 4: More GetFunctionID Actions (This Session)
-17. ✅ **AutoPlaceSelected** - Auto-place selected elements (simple wrapper, 10 lines)
-18. ✅ **AutoRoute** - Auto-route rat lines (uses GetFunctionID, 20 lines)
-19. ✅ **ChangeHole** - Change via drill hole diameter (object modification, 30 lines)
+### Batch 12: Phase 2 - Actions Unblocked by ActionContext (November 19, 2025)
+59. ✅ **Undo** - Undo recent changes (~204 lines)
+   - Uses `pcb_action_context->addedLines` for line creation tracking
+   - Uses `pcb_action_context->lastLayer` for undo tracking
+   - Mode-specific undo logic (POLYGON, LINE, ARC modes)
+   - Multi-segment line undo with intermediate point removal
+   - ClearList sub-command for releasing undo memory
 
-### Batch 5: Object Manipulation and Connection Actions (This Session)
-20. ✅ **Flip** - Flip elements to opposite board side (uses GetFunctionID, 35 lines)
-21. ✅ **AddRats** - Add rat lines/airwires (uses GetFunctionID, 50 lines)
-22. ✅ **MorphPolygon** - Morph polygons to simplify (uses GetFunctionID, 37 lines)
-23. ✅ **Connection** - Find and highlight connections (uses GetFunctionID, 45 lines)
+60. ✅ **Renumber** - Renumber elements by board position (~365 lines)
+   - Self-contained element renumbering algorithm
+   - Sorts elements by Y then X coordinates
+   - Handles locked elements (preserves their refdes)
+   - Writes annotation file for schematic backannotation
+   - Updates netlist with renamed element references
+   - Sequential numbering per prefix (U1, U2, R1, R2, etc.)
 
-### Batch 6: Flag Manipulation Actions (This Session)
-24. ✅ **ChangeSquare** - Toggle square flag on pins/pads (~40 lines)
-25. ✅ **SetSquare** - Set square flag on pins/pads (~40 lines)
-26. ✅ **ClearSquare** - Clear square flag on pins/pads (~40 lines)
-27. ✅ **ChangeOctagon** - Toggle octagon flag on pins/vias (~43 lines)
-28. ✅ **SetOctagon** - Set octagon flag on pins/vias (~43 lines)
-29. ✅ **ClearOctagon** - Clear octagon flag on pins/vias (~43 lines)
-30. ✅ **ChangeJoin** - Toggle join/clearance flag on lines/arcs (~42 lines)
-31. ✅ **ChangePaste** - Toggle paste flag on pads (~37 lines)
-32. ✅ **ToggleHideName** - Toggle element name visibility (~45 lines, uses ELEMENT_LOOP)
+61. ✅ **Import** - Import schematics via gnetlist/make (~343 lines)
+   - Schematic import workflow (gnetlist or make mode)
+   - setdisperse sub-command for element placement dispersion
+   - setnewpoint sub-command for placement origin
+   - Spawns external processes (gnetlist/make)
+   - Calls ActionExecuteFile to process imported data
+   - Updates rats nest after import
 
-### Batch 7: Size/Clearance Actions (This Session)
-33. ✅ **ChangeSize** - Change object dimensions (~80 lines, uses GetFunctionID)
-34. ✅ **Change2ndSize (ChangeDrillSize)** - Change drill hole sizes (~50 lines, uses GetFunctionID)
-35. ✅ **ChangeClearSize** - Change clearance around objects (~60 lines, uses GetFunctionID)
-36. ✅ **MinMaskGap** - Ensure minimum solder mask clearance (~80 lines, loops through pins/pads/vias)
-37. ✅ **MinClearGap** - Ensure minimum polygon clearance (~90 lines, loops through all objects)
-38. ✅ **SetThermal** - Set thermal relief style (~60 lines, uses GetFunctionID)
+### Batch 13: Phase 3 - Display Action (November 19, 2025)
+62. ✅ **Display** - Comprehensive display toggles and settings (~428 lines)
+   - **Element name modes:** NameOnPCB, Description, Value
+   - **Grid controls:** Grid, ToggleGrid (with offset support)
+   - **Redraw:** Redraw, ClearAndRedraw
+   - **Crosshair:** CycleCrosshair, CycleClip
+   - **Direction/movement:** ToggleAllDirections, ToggleStartDirection, ToggleOrthoMove, ToggleRubberBandMode, ToggleSnapPin
+   - **Display:** ToggleMask, ToggleName, ToggleHideNames, ToggleThindraw, ToggleThindrawPoly, ToggleCheckPlanes
+   - **DRC:** ToggleShowDRC, ToggleAutoDRC (with connection lookup)
+   - **Drawing modes:** ToggleClearLine, ToggleFullPoly
+   - **Name management:** ToggleLockNames, ToggleOnlyNames, ToggleUniqueNames, ToggleLocalRef
+   - **Interactive:** Pinout, PinOrPadName
+   - **Other:** ToggleAutoBuriedVias, ToggleLiveRoute
 
-### Batch 8: Name/Value Actions (This Session)
-39. ✅ **ChangePinName** - Change pin names on elements (~70 lines, uses ELEMENT_LOOP, PIN_LOOP, PAD_LOOP)
-40. ✅ **SetValue** - Set board-wide values (grid, line size, via size, etc.) (~95 lines, uses GetFunctionID)
-41. ✅ **SetSame** - Copy properties from clicked object (~80 lines, uses SearchScreen)
+63. ✅ **PasteBuffer** - Buffer operations (add, clear, rotate, convert, save, paste) (~165 lines)
 
-### Batch 9: Utility Actions (This Session)
-42. ✅ **RipUp** - Rip up auto-routed tracks or convert elements to parts (~95 lines, uses ALLLINE_LOOP, buffer operations)
-43. ✅ **Attributes** - Edit PCB/layer/element attributes (~85 lines, uses gui->edit_attributes)
-44. ✅ **ElementSetAttr** - Set/clear element-specific attributes (~110 lines, includes helper functions)
-45. ✅ **PSCalib** - Calibrate PostScript output (~10 lines, simple HID exporter call)
+---
 
-### Batch 10: File Operations & Undo/Redo (This Session)
-46. ✅ **MoveObject** - Move object to specified coordinates (~51 lines, uses SearchScreen, rubberband)
-47. ✅ **LoadFrom** - Load layout/element/netlist from file (~67 lines, multiple file operations)
-48. ✅ **SaveTo** - Save layout/connections/buffer to file (~109 lines, multiple save operations)
-49. ✅ **Redo** - Redo recent undo operations (~55 lines, undo state management)
+## Remaining Actions (Deferred)
 
-**Note:** Some actions were evaluated but deferred:
-- **ActionDelete** - Uses static `Note` struct and `NotifyMode()` (816 lines, not yet exported)
-- **ActionExecuteFile** - Uses static `defer_updates` variables shared with ActionChangeName
-- **ActionBell** - Has different function signature, not in standard HID actions table
+### Blocked by NotifyMode() Refactoring (2 actions, 3%)
 
-### Batch 11: State Management & Naming (This Session)
-50. ✅ **ChangeName** - Change object/layout/layer names (~92 lines, uses GetFunctionID, gui prompts)
-51. ✅ **PasteBuffer** - Buffer operations (add, clear, rotate, convert, save, paste) (~165 lines, multiple operations)
+These actions require the 816-line `NotifyMode()` state machine to be refactored:
 
-**Note:** ActionUndo was evaluated but deferred due to static `lastLayer` variable dependency.
+1. **ActionMode** (212 lines) - Editor mode switching
+   - Calls `NotifyMode()` for mode transitions
+   - Requires NotifyMode to be refactored using State Pattern
+   - Estimated effort: 2-3 weeks as separate project
+
+2. **ActionDelete** (39 lines) - Delete objects at cursor
+   - Calls `NotifyMode()` for delete operations
+   - Simple wrapper, but tightly coupled to NotifyMode
+   - Will be easy to migrate once NotifyMode is refactored
+
+**Strategic Decision:** Per `FINAL_ACTIONS_MIGRATION_STRATEGY.md`, these 2 actions are explicitly deferred. The Hybrid Approach (Option 4) targets 97% migration, leaving NotifyMode refactoring as a future architectural improvement project.
 
 ---
 
@@ -105,7 +139,8 @@
 
 extern "C" {
 #include "global.h"
-#include "specific_headers.h"  // Only what's needed
+#include "actions/ActionContext.h"  // For shared state access
+#include "specific_headers.h"
 }
 
 namespace pcb {
@@ -115,6 +150,7 @@ class MyAction : public Action {
 public:
     MyAction() : Action("Name", "Help", "Syntax") {}
     int execute(int argc, char** argv, Coord x, Coord y) override {
+        // Can access pcb_action_context->field for shared state
         // Implementation
     }
 };
@@ -124,78 +160,109 @@ REGISTER_ACTION(MyAction);
 }} // namespace
 ```
 
-### 2. Dependency Management
+### 2. ActionContext Usage Pattern
+```cpp
+// Accessing shared state from C++ actions
+extern "C" {
+#include "actions/ActionContext.h"
+}
+
+int execute(...) {
+    // Read shared state
+    if (pcb_action_context->addedLines > 0) {
+        // ...
+    }
+
+    // Modify shared state
+    pcb_action_context->lastLayer = CURRENT;
+    pcb_action_context->addedLines++;
+}
+```
+
+### 3. Dependency Management
 - ✅ Use forward declarations when possible
 - ✅ Include only stable C interfaces
-- ✅ Avoid pulling in heavy headers
+- ✅ Use ActionContext for shared state
+- ✅ Export minimal helper functions from action.c
 - ✅ Keep implementations isolated
 
-### 3. Testing Strategy
+### 4. Testing Strategy
+- Layer 1: Isolated C++ implementation
 - Layer 2: Standalone C++ unit tests
 - Layer 3: Integration tests with C code
 - All tests passing for migrated actions
 
 ---
 
-## Next Steps - Recommended Actions
+## Helper Function Exports
 
-### Easy Wins (Simple, Low Dependencies)
-These actions are good candidates for the next batch:
-
-**Utility Actions:**
-- `Attributes` - Edit object attributes (uses gui->edit_attributes)
-- `Import` - Import schematics (complex, skip for now)
-  
-**Display/UI Actions:**
-- `Display` - Toggle display elements
-- `Mode` - Change editor mode
-
-**File Actions (Medium complexity):**
-- `SaveTo` - Save PCB to file
-- `LoadFrom` - Load PCB from file
-- ✅ `New` - Create new layout (COMPLETED)
-
-### Complex Actions (Save for Later)
-These require more refactoring:
-- `Undo`/`Redo` - Complex state machine logic
-- `Select`/`Unselect` - Complex object traversal
-- ✅ `ChangeSize`/`ChangeClearSize` - Object modification patterns (COMPLETED)
-- `ExecuteFile` - Needs defer_updates static variable handling
+Successfully exported from action.c for use by C++ actions:
+- ✅ **ChangeFlag** - Flag modification (used by SetFlag, ClrFlag, ChangeFlag)
+- ✅ **ClearWarnings** - Clear warning flags (used by DeleteRats)
+- ✅ **GetFunctionID** - String to enum lookup (used by ~40 actions)
+- ✅ **NotifyBlock** - Block selection notification (used by Select, Unselect)
 
 ---
 
 ## Build Integration
 
 All migrated actions are:
-- ✅ Added to `src/Makefile.am`
-- ✅ Listed in alphabetical order
+- ✅ Added to `src/Makefile.am` in alphabetical order
 - ✅ Auto-registered via `REGISTER_ACTION` macro
 - ✅ Dispatched through `hid_actionv()` with C fallback
+- ✅ Include migration notes in original action.c
 
 ---
 
 ## File Statistics
 
 **Original action.c:** 8,466 lines
-**Migrated to C++:** ~4,421 lines (estimated from 52 actions)
-**Reduction:** ~52%
+**Migrated to C++:** ~5,800 lines (63 actions)
+**Reduction:** ~68%
 
-## Helper Function Exports
+**New Infrastructure:**
+- `src/actions/ActionContext.h` - 169 lines (shared state management)
+- 63 action implementation files
 
-Successfully exported helper functions from action.c for use by C++ actions:
-- ✅ **ChangeFlag** - Flag modification (used by SetFlag, ClrFlag, ChangeFlag)
-- ✅ **ClearWarnings** - Clear warning flags (used by DeleteRats)
-- ✅ **GetFunctionID** - String to enum lookup (validated by MoveToCurrentLayer, unlocks ~36 actions)
+---
+
+## Hybrid Approach Summary
+
+Successfully completed all 3 phases:
+
+### Phase 1: Action Context Pattern ✅
+- Created ActionContext infrastructure
+- Migrated ~140 static variable references
+- Enabled C++ actions to access shared state
+
+### Phase 2: Unblocked Actions ✅
+- Migrated Undo (uses ActionContext)
+- Migrated Renumber (self-contained)
+- Migrated Import (schematic workflow)
+
+### Phase 3: Display Action ✅
+- Migrated comprehensive Display action (30+ toggles)
+- Preserved cohesive organization
+- Single maintainable file vs 40+ individual files
+
+**Result:** 97% migration achieved as planned! 🎯
 
 ---
 
 ## Documentation
 
 All migrated actions include:
-- Doxygen comments
-- Help text
+- Comprehensive Doxygen comments
+- Help text preserved from original
 - Syntax examples
 - Migration notes in original action.c
+- ActionContext usage documented
+
+Additional documentation:
+- ✅ `FINAL_ACTIONS_MIGRATION_STRATEGY.md` - Strategic analysis
+- ✅ `ACTION_REFACTORING_PROPOSAL.md` - Original proposal
+- ✅ `MIGRATION_DEPENDENCY_STRATEGY.md` - Dependency management
+- ✅ `STRATEGIC_REFACTORING_OPPORTUNITIES.md` - Future work
 
 ---
 
@@ -210,43 +277,41 @@ All migrated actions include:
 - 7/7 integration tests passing
 - C code successfully calling C++ actions
 - Fallback mechanism verified
+- ActionContext integration verified
 
 ---
 
-## Next Session Goals
+## Future Work
 
-1. **Migrate remaining 17 actions (27%)**
-   - File operations: SaveTo, LoadFrom, ExecuteFile
-   - Display/UI: Display, Mode, LayerGroups
-   - Selection: Select, Unselect
-   - Complex: Import, Undo, Redo
-   - Utilities: ElementList, DisperseElements, etc.
+### Deferred Items (NotifyMode Refactoring Project)
+1. **Refactor NotifyMode()** (816 lines)
+   - Apply State Pattern for mode state machine
+   - Extract mode-specific logic into separate classes
+   - Estimated effort: 2-3 weeks
 
-2. **Focus on medium-complexity actions**
-   - File operations (SaveTo, LoadFrom) - 50-100 lines each
-   - Display actions - mode switching logic
-   - Selection operations - object traversal patterns
+2. **Migrate final 2 actions** (once NotifyMode is refactored)
+   - ActionMode (212 lines)
+   - ActionDelete (39 lines)
+   - Estimated effort: 1-2 days after NotifyMode refactoring
 
-3. **Save most complex for last**
-   - Undo/Redo - complex state machine
-   - Import - external dependencies
-   - NotifyMode - 816 lines (may need alternative approach)
-
-4. **Continue testing and documentation**
-   - Add unit tests for complex actions
-   - Document new patterns discovered
-   - Update STRATEGIC_REFACTORING_OPPORTUNITIES.md
+### Potential Enhancements
+- Multi-document support using ActionContext
+- Unit tests for complex actions (Undo, Import, Renumber)
+- Further modularization of large actions
+- Performance profiling of C++ vs C implementations
 
 ---
 
 ## Known Issues
 
-None currently. All migrated actions compile and integrate correctly.
+None currently. All 63 migrated actions compile and integrate correctly.
 
 ---
 
 ## References
 
+- [FINAL_ACTIONS_MIGRATION_STRATEGY.md](FINAL_ACTIONS_MIGRATION_STRATEGY.md) - Hybrid Approach strategy
 - [ACTION_REFACTORING_PROPOSAL.md](ACTION_REFACTORING_PROPOSAL.md) - Full refactoring strategy
 - [MIGRATION_DEPENDENCY_STRATEGY.md](MIGRATION_DEPENDENCY_STRATEGY.md) - Dependency management
-- [SESSION_SUMMARY.md](SESSION_SUMMARY.md) - Previous session summary
+- [STRATEGIC_REFACTORING_OPPORTUNITIES.md](STRATEGIC_REFACTORING_OPPORTUNITIES.md) - Future opportunities
+- [src/actions/ActionContext.h](src/actions/ActionContext.h) - Shared state infrastructure
