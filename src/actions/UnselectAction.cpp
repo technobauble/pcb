@@ -6,6 +6,7 @@ extern "C" {
 #include "crosshair.h"
 #include "data.h"
 #include "draw.h"
+#include "error.h"
 #include "select.h"
 #include "set.h"
 #include "undo.h"

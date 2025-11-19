@@ -8,6 +8,7 @@ extern "C" {
 #include "data.h"
 #include "error.h"
 #include "search.h"
+#include "set.h"
 }
 
 #include <algorithm>
