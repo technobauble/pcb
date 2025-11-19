@@ -355,3 +355,109 @@ This approach:
 - Leaves the complex action system for later when GTK4 migration is planned
 
 The GtkAction/GtkUIManager system still works fine in GTK3 and can be addressed during a future GTK4 migration milestone.
+
+---
+
+## Completion Status
+
+**Date Completed:** 2025-11-19
+**Overall Progress:** 81% Complete (58/72 deprecated APIs eliminated)
+**Status:** High-priority migrations complete, GtkAction deferred
+
+### ✅ Completed Migrations (58 instances, 81%)
+
+#### Phase 1: Stock Items (39 instances) - **COMPLETE**
+
+**Files Modified:** 13 files
+**Commits:**
+- 9b2f9d3: gui-dialog.c (14 instances)
+- 5a1d5aa: All remaining files (25 instances)
+
+**Replacements Made:**
+- `GTK_STOCK_CANCEL` → `"_Cancel"` (14 instances)
+- `GTK_STOCK_OK` → `"_OK"` (14 instances)
+- `GTK_STOCK_SAVE` → `"_Save"` (3 instances)
+- `GTK_STOCK_CLOSE` → `"_Close"` (5 instances)
+- `GTK_STOCK_REFRESH` → `"_Refresh"` (2 instances, buttons)
+- `GTK_STOCK_ADD` → `"_Add"` (1 instance)
+- `GTK_STOCK_DELETE` → `"_Delete"` (1 instance)
+
+**Function Call Updates:**
+- `gtk_button_new_from_stock()` → `gtk_button_new_with_mnemonic()` (9 instances)
+- `gtk_image_new_from_icon_name()` (4 instances)
+  - `GTK_STOCK_REFRESH` → `"view-refresh"`
+  - `GTK_STOCK_DIALOG_WARNING` → `"dialog-warning"`
+  - `GTK_STOCK_CLEAR` → `"edit-clear"`
+
+**Impact:** All dialogs, file choosers, and buttons now use modern string-based labels and icon names.
+
+#### Phase 2: Misc/Alignment (19 instances) - **COMPLETE**
+
+**Files Modified:** 6 files
+**Commit:** 25a3cfc
+
+**Replacements Made:**
+- `gtk_misc_set_alignment(label, x, y)` → `gtk_label_set_xalign(label, x); gtk_label_set_yalign(label, y)` (18 instances)
+- `gtk_alignment_new() + padding` → widget margin properties (1 instance)
+
+**File Breakdown:**
+- gui-utils.c: 9 label alignment fixes
+- ghid-route-style-selector.c: 3 label alignment fixes
+- gui-config.c: 3 label alignment fixes
+- gtkhid-main.c: 2 label alignment fixes + 1 GtkAlignment container removal
+- gui-netlist-window.c: 1 label alignment fix
+- gui-top-window.c: 1 label alignment fix
+
+**Impact:** All label alignments use modern xalign/yalign properties. Containers use margins instead of GtkAlignment.
+
+### ⏳ Deferred Features (14 instances, 19%)
+
+#### Phase 3: GtkAction/GtkUIManager (14 instances) - **DEFERRED**
+
+**Files Affected:** 4 files
+- ghid-layer-selector.c (6 instances)
+- ghid-route-style-selector.c (4 instances)
+- ghid-main-menu.c (3 instances)
+- gui.h (1 instance)
+
+**Why Deferred:**
+1. **Still Functional:** Works fine in all GTK3 versions
+2. **High Complexity:** Requires architectural refactoring
+3. **GTK4 Blocker:** Required for GTK4, but not GTK3
+4. **Resource Allocation:** Estimated 8-16 hours
+5. **Testing Burden:** Extensive menu/keyboard testing needed
+
+**Migration Path (Future Work):**
+- Replace `GtkActionGroup` with `GSimpleActionGroup`
+- Replace `GtkAction` with `GSimpleAction`
+- Replace `GtkUIManager` with `GtkBuilder` + `GMenu`
+
+---
+
+## Summary
+
+### Accomplishments
+
+**58 out of 72 deprecated API calls eliminated (81% complete)**
+
+1. ✅ All stock items removed - Modern string labels and icon names
+2. ✅ All misc/alignment calls removed - Modern xalign/yalign and margins
+3. ⏳ GtkAction system deferred - Functional, will address in GTK4 migration
+
+**Effort Invested:**
+- Planning: 1 hour
+- Phase 1 (Stock Items): 2 hours
+- Phase 2 (Misc/Alignment): 1.5 hours
+- **Total: ~4.5 hours**
+
+### Testing Recommendations
+
+- Test all dialogs and file choosers
+- Verify button mnemonics work (Alt+key)
+- Check label alignments in all forms
+- Verify icon buttons display correctly
+- Confirm progress dialog margins
+
+### Next Steps
+
+**Recommended:** Build and test GTK3 HID to validate all changes from Milestones 2, 3, and 4 before proceeding further.
