@@ -1326,15 +1326,11 @@ ghid_request_debug_draw (void)
 void
 ghid_flush_debug_draw (void)
 {
-  GtkWidget *widget = gport->drawing_area;
-  GdkGLDrawable *pGlDrawable = gtk_widget_get_gl_drawable (widget);
-
+  /* GTK3: GtkGLArea automatically swaps buffers when render callback returns.
+   * For immediate drawing outside render callback, just flush.
+   */
   hidgl_flush_triangles (&buffer);
-
-  if (gdk_gl_drawable_is_double_buffered (pGlDrawable))
-    gdk_gl_drawable_swap_buffers (pGlDrawable);
-  else
-    glFlush ();
+  glFlush ();
 }
 
 void
