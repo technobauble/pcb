@@ -115,8 +115,8 @@ ghid_attribute_dialog (HID_Attribute * attrs,
 					GTK_WINDOW (out->top_window),
 					(GtkDialogFlags)(GTK_DIALOG_MODAL
 							 | GTK_DIALOG_DESTROY_WITH_PARENT),
-					GTK_STOCK_CANCEL, GTK_RESPONSE_NONE,
-					GTK_STOCK_OK, GTK_RESPONSE_OK, NULL);
+					"_Cancel", GTK_RESPONSE_NONE,
+					"_OK", GTK_RESPONSE_OK, NULL);
   gtk_window_set_wmclass (GTK_WINDOW (dialog), "PCB_attribute_editor", "PCB");
 
   content_area = gtk_dialog_get_content_area (GTK_DIALOG (dialog));
@@ -419,7 +419,7 @@ ghid_dialog_export (void)
 					       (GtkDialogFlags)(GTK_DIALOG_MODAL
 					       |
 								GTK_DIALOG_DESTROY_WITH_PARENT),
-					       GTK_STOCK_CANCEL,
+					       "_Cancel",
 					       GTK_RESPONSE_CANCEL, NULL);
   gtk_window_set_wmclass (GTK_WINDOW (export_dialog), "PCB_Export", "PCB");
 

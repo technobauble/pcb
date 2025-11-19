@@ -662,7 +662,7 @@ ghid_dialog_report (gchar * title, gchar * message)
   dialog = gtk_dialog_new_with_buttons (title ? title : "PCB",
 					GTK_WINDOW (top_win),
 					GTK_DIALOG_DESTROY_WITH_PARENT,
-					GTK_STOCK_OK, GTK_RESPONSE_NONE,
+					"_OK", GTK_RESPONSE_NONE,
 					NULL);
   g_signal_connect_swapped (GTK_OBJECT (dialog), "response",
 			    G_CALLBACK (gtk_widget_destroy),

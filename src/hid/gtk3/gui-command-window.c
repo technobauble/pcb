@@ -411,7 +411,7 @@ ghid_command_window_show (gboolean raise)
   hbox = gtk_hbutton_box_new ();
   gtk_button_box_set_layout (GTK_BUTTON_BOX (hbox), GTK_BUTTONBOX_END);
   gtk_box_pack_start (GTK_BOX (vbox), hbox, FALSE, FALSE, 3);
-  button = gtk_button_new_from_stock (GTK_STOCK_CLOSE);
+  button = gtk_button_new_with_mnemonic ("_Close");
   g_signal_connect (G_OBJECT (button), "clicked",
 		    G_CALLBACK (command_window_close_cb), NULL);
   gtk_box_pack_start (GTK_BOX (hbox), button, TRUE, TRUE, 0);

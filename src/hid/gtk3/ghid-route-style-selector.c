@@ -188,8 +188,8 @@ ghid_route_style_selector_edit_dialog (GHidRouteStyleSelector *rss)
   dialog = gtk_dialog_new_with_buttons (_("Edit Route Styles"),
                                         GTK_WINDOW (window),
                                         GTK_DIALOG_DESTROY_WITH_PARENT,
-                                        GTK_STOCK_CANCEL, GTK_RESPONSE_NONE,
-                                        GTK_STOCK_OK, GTK_RESPONSE_OK, NULL);
+                                        "_Cancel", GTK_RESPONSE_NONE,
+                                        "_OK", GTK_RESPONSE_OK, NULL);
 
   label = gtk_label_new (_("Edit Style:"));
   gtk_misc_set_alignment (GTK_MISC (label), 1.0, 0.5);

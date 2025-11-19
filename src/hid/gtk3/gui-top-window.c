@@ -246,12 +246,12 @@ show_file_modified_externally_prompt (void)
   button = gtk_info_bar_add_button (GTK_INFO_BAR (ghidgui->info_bar),
                                     _("Reload"),
                                     GTK_RESPONSE_ACCEPT);
-  button_image = gtk_image_new_from_stock (GTK_STOCK_REFRESH,
-                                           GTK_ICON_SIZE_BUTTON);
+  button_image = gtk_image_new_from_icon_name ("view-refresh",
+                                               GTK_ICON_SIZE_BUTTON);
   gtk_button_set_image (GTK_BUTTON (button), button_image);
 
   gtk_info_bar_add_button (GTK_INFO_BAR (ghidgui->info_bar),
-                           GTK_STOCK_CANCEL,
+                           "_Cancel",
                            GTK_RESPONSE_CANCEL);
   gtk_info_bar_set_message_type (GTK_INFO_BAR (ghidgui->info_bar),
                                  GTK_MESSAGE_WARNING);
@@ -274,8 +274,8 @@ show_file_modified_externally_prompt (void)
 
   content_area = gtk_info_bar_get_content_area (GTK_INFO_BAR (ghidgui->info_bar));
 
-  icon = gtk_image_new_from_stock (GTK_STOCK_DIALOG_WARNING,
-                                   GTK_ICON_SIZE_DIALOG);
+  icon = gtk_image_new_from_icon_name ("dialog-warning",
+                                       GTK_ICON_SIZE_DIALOG);
   gtk_box_pack_start (GTK_BOX (content_area),
                       icon, FALSE, FALSE, 0);
 

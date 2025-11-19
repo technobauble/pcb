@@ -803,12 +803,12 @@ ghid_drc_window_show (gboolean raise)
 
   gtk_box_set_spacing (GTK_BOX (hbox), 6);
 
-  button = gtk_button_new_from_stock (GTK_STOCK_REFRESH);
+  button = gtk_button_new_with_mnemonic ("_Refresh");
   g_signal_connect (G_OBJECT (button), "clicked",
 		    G_CALLBACK (drc_refresh_cb), NULL);
   gtk_box_pack_start (GTK_BOX (hbox), button, TRUE, TRUE, 0);
 
-  button = gtk_button_new_from_stock (GTK_STOCK_CLOSE);
+  button = gtk_button_new_with_mnemonic ("_Close");
   g_signal_connect (G_OBJECT (button), "clicked",
 		    G_CALLBACK (drc_close_cb), NULL);
   gtk_box_pack_start (GTK_BOX (hbox), button, TRUE, TRUE, 0);

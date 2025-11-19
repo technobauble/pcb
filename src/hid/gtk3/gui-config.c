@@ -1716,7 +1716,7 @@ config_layers_tab_create (GtkWidget * tab_vbox)
   gtk_box_pack_start(GTK_BOX(vbox1), hbox, TRUE, TRUE, 0);
   gtk_box_pack_start(GTK_BOX(hbox), button, FALSE, FALSE, 0);
 
-  button = gtk_button_new_from_stock(GTK_STOCK_DELETE);
+  button = gtk_button_new_with_mnemonic("_Delete");
   g_signal_connect(G_OBJECT(button), (gchar *)"clicked",
 		   G_CALLBACK(edit_layer_button_cb), (gchar *)"c,-1");
   hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
@@ -1726,7 +1726,7 @@ config_layers_tab_create (GtkWidget * tab_vbox)
   vbox1 = ghid_category_vbox(vbox,
 			_("Add new layer above currently selected layer:"),
 			4, 2, TRUE, TRUE);
-  button = gtk_button_new_from_stock(GTK_STOCK_ADD);
+  button = gtk_button_new_with_mnemonic("_Add");
   g_signal_connect(G_OBJECT(button), (gchar *)"clicked",
 		   G_CALLBACK(edit_layer_button_cb), (gchar *)"-1,c");
   hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
@@ -2262,7 +2262,7 @@ ghid_config_window_show (void)
   gtk_box_set_spacing (GTK_BOX (hbox), 5);
   gtk_box_pack_start (GTK_BOX (main_vbox), hbox, FALSE, FALSE, 0);
 
-  button = gtk_button_new_from_stock (GTK_STOCK_OK);
+  button = gtk_button_new_with_mnemonic ("_OK");
   gtk_widget_set_can_default (button, TRUE);
   g_signal_connect (G_OBJECT (button), "clicked",
 		    G_CALLBACK (config_close_cb), NULL);

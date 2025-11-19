@@ -89,7 +89,7 @@ ghid_pinout_window_show (GHidPort * out, ElementType * element)
   hbox = gtk_hbutton_box_new ();
   gtk_button_box_set_layout (GTK_BUTTON_BOX (hbox), GTK_BUTTONBOX_END);
   gtk_box_pack_start (GTK_BOX (vbox), hbox, FALSE, FALSE, 0);
-  button = gtk_button_new_from_stock (GTK_STOCK_CLOSE);
+  button = gtk_button_new_with_mnemonic ("_Close");
   g_signal_connect (G_OBJECT (button), "clicked",
                     G_CALLBACK (pinout_close_cb), top_window);
   gtk_box_pack_start (GTK_BOX (hbox), button, TRUE, TRUE, 0);

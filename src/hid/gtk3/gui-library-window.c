@@ -803,8 +803,8 @@ create_lib_treeview (GhidLibraryWindow * library_window)
 				     "relief", GTK_RELIEF_NONE, NULL));
 
   gtk_container_add (GTK_CONTAINER (button),
-		     gtk_image_new_from_stock (GTK_STOCK_CLEAR,
-					       GTK_ICON_SIZE_SMALL_TOOLBAR));
+		     gtk_image_new_from_icon_name ("edit-clear",
+					           GTK_ICON_SIZE_SMALL_TOOLBAR));
   g_signal_connect (button,
 		    "clicked",
 		    G_CALLBACK
@@ -823,8 +823,8 @@ create_lib_treeview (GhidLibraryWindow * library_window)
 				     /* GtkButton */
 				     "relief", GTK_RELIEF_NONE, NULL));
   gtk_container_add (GTK_CONTAINER (button),
-		     gtk_image_new_from_stock (GTK_STOCK_REFRESH,
-					       GTK_ICON_SIZE_SMALL_TOOLBAR));
+		     gtk_image_new_from_icon_name ("view-refresh",
+					           GTK_ICON_SIZE_SMALL_TOOLBAR));
   /* add the refresh button to the filter area */
   gtk_box_pack_start (GTK_BOX (hbox), button, FALSE, FALSE, 0);
   g_signal_connect (button,
@@ -927,7 +927,7 @@ library_window_constructor (GType type,
   /* now add buttons in the action area */
   gtk_dialog_add_buttons (GTK_DIALOG (library_window),
 			  /*  - close button */
-			  GTK_STOCK_CLOSE, GTK_RESPONSE_CLOSE, NULL);
+			  "_Close", GTK_RESPONSE_CLOSE, NULL);
 
   return object;
 }

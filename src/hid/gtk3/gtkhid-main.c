@@ -743,7 +743,7 @@ make_progress_dialog (void)
                                             /* Modal so nothing else can get events whilst
                                                the main mainloop isn't running */
                                             GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
-                                            GTK_STOCK_CANCEL,
+                                            "_Cancel",
                                             GTK_RESPONSE_CANCEL,
                                             NULL);
 
@@ -1008,10 +1008,10 @@ ghid_attributes (char *owner, AttributeListType *attrs)
   attributes_dialog = gtk_dialog_new_with_buttons (owner,
 						   GTK_WINDOW (ghid_port.top_window),
 						   GTK_DIALOG_MODAL,
-						   GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
+						   "_Cancel", GTK_RESPONSE_CANCEL,
 						   _("Revert"), GA_RESPONSE_REVERT,
 						   _("New"), GA_RESPONSE_NEW,
-						   GTK_STOCK_OK, GTK_RESPONSE_OK, NULL);
+						   "_OK", GTK_RESPONSE_OK, NULL);
 
   attr_table = gtk_grid_new ();
   gtk_grid_set_column_homogeneous (GTK_GRID (attr_table), FALSE);
