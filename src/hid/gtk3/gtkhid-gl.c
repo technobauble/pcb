@@ -810,13 +810,17 @@ ghid_shutdown_renderer (GHidPort *port)
 void
 ghid_init_drawing_widget (GtkWidget *widget, GHidPort *port)
 {
-  render_priv *priv = port->render_priv;
-
-  gtk_widget_set_gl_capability (widget,
-                                priv->glconfig,
-                                NULL,
-                                TRUE,
-                                GDK_GL_RGBA_TYPE);
+  /* GTK3: When widget is GtkGLArea, no manual GL capability setup needed.
+   * GtkGLArea automatically creates GL context with proper configuration
+   * (RGBA, depth buffer, double buffering) when the widget is realized.
+   *
+   * Properties can be set directly on GtkGLArea if needed:
+   *   gtk_gl_area_set_has_depth_buffer (GTK_GL_AREA (widget), TRUE);
+   *   gtk_gl_area_set_required_version (GTK_GL_AREA (widget), 2, 1);
+   *
+   * For now, this function is a no-op. It will be removed once widget
+   * creation is migrated to gtk_gl_area_new() in gui-top-window.c.
+   */
 }
 
 void
@@ -827,13 +831,12 @@ ghid_drawing_area_configure_hook (GHidPort *port)
 gboolean
 ghid_start_drawing (GHidPort *port, GtkWidget *widget)
 {
-  GdkGLContext *pGlContext = gtk_widget_get_gl_context (widget);
-  GdkGLDrawable *pGlDrawable = gtk_widget_get_gl_drawable (widget);
-
-  /* make GL-context "current" */
-  if (!gdk_gl_drawable_gl_begin (pGlDrawable, pGlContext))
-    return FALSE;
-
+  /* GTK3: GtkGLArea automatically makes context current in render callback.
+   * For explicit context activation (e.g., in event handlers), use:
+   *   gtk_gl_area_make_current (GTK_GL_AREA (widget));
+   *
+   * For now, just track that we're in a drawing context.
+   */
   port->render_priv->in_context = true;
 
   return TRUE;
@@ -842,17 +845,15 @@ ghid_start_drawing (GHidPort *port, GtkWidget *widget)
 void
 ghid_end_drawing (GHidPort *port, GtkWidget *widget)
 {
-  GdkGLDrawable *pGlDrawable = gtk_widget_get_gl_drawable (widget);
-
-  if (gdk_gl_drawable_is_double_buffered (pGlDrawable))
-    gdk_gl_drawable_swap_buffers (pGlDrawable);
-  else
-    glFlush ();
-
+  /* GTK3: GtkGLArea automatically handles buffer swapping when the render
+   * callback returns. No manual swap_buffers needed.
+   *
+   * For explicit flushing (if needed):
+   *   glFlush ();
+   *
+   * Context is automatically released after render callback completes.
+   */
   port->render_priv->in_context = false;
-
-  /* end drawing to current GL-context */
-  gdk_gl_drawable_gl_end (pGlDrawable);
 }
 
 void
@@ -1043,13 +1044,14 @@ ghid_drawing_area_draw_cb (GtkWidget *widget,
 void
 ghid_port_drawing_realize_cb (GtkWidget *widget, gpointer data)
 {
-  GdkGLContext *glcontext = gtk_widget_get_gl_context (widget);
-  GdkGLDrawable *gldrawable = gtk_widget_get_gl_drawable (widget);
-
-  if (!gdk_gl_drawable_gl_begin (gldrawable, glcontext))
-    return;
-
-  gdk_gl_drawable_gl_end (gldrawable);
+  /* GTK3: GtkGLArea handles GL context creation automatically during realize.
+   * The old code here was a workaround for mesa i965 driver bugs in GTK2.
+   * Modern mesa + GTK3 don't need this workaround.
+   *
+   * If GL context initialization is needed, use:
+   *   gtk_gl_area_make_current (GTK_GL_AREA (widget));
+   *   // One-time GL setup here
+   */
   return;
 }
 
