@@ -61,6 +61,8 @@ typedef struct render_priv {
   /* GTK3 Cairo rendering */
   cairo_surface_t *surface;  /* Offscreen surface for double-buffering */
   cairo_t *cr;               /* Current cairo context during drawing */
+  cairo_surface_t *mask_surface;  /* 1-bit alpha mask surface */
+  cairo_t *mask_cr;          /* Cairo context for drawing to mask */
 
   /* GTK2 GDK compatibility - to be phased out */
   GdkGC *bg_gc;
@@ -386,6 +388,29 @@ ghid_use_mask (enum mask_mode mode)
       g_return_if_reached ();
 
     case HID_MASK_CLEAR:
+      /* GTK3: Create Cairo mask surface if needed */
+      if (priv->cr && !priv->mask_surface)
+        {
+          priv->mask_surface = cairo_image_surface_create (CAIRO_FORMAT_A1,
+                                                            gport->width,
+                                                            gport->height);
+          priv->mask_cr = cairo_create (priv->mask_surface);
+        }
+
+      /* GTK3: Clear the mask surface to fully transparent (all zeros) */
+      if (priv->mask_cr)
+        {
+          cairo_save (priv->mask_cr);
+          cairo_set_operator (priv->mask_cr, CAIRO_OPERATOR_CLEAR);
+          cairo_paint (priv->mask_cr);
+          cairo_restore (priv->mask_cr);
+
+          /* Set up for drawing: source is white, which sets mask bits to 1 */
+          cairo_set_source_rgb (priv->mask_cr, 1.0, 1.0, 1.0);
+          cairo_set_operator (priv->mask_cr, CAIRO_OPERATOR_SOURCE);
+        }
+
+      /* GTK2: Original GdkPixmap mask handling */
       if (!gport->mask)
 	gport->mask = gdk_pixmap_new (0, gport->width, gport->height, 1);
       gport->drawable = gport->mask;
@@ -623,18 +648,53 @@ use_gc (hidGC gc)
       abort ();
     }
 
-  /* GTK3: Create Cairo context for drawing to surface */
+  /* GTK3: Create Cairo context for drawing to surface or mask */
   if (priv->surface)
     {
-      /* Clean up any existing context */
-      if (priv->cr)
-        cairo_destroy (priv->cr);
+      cairo_surface_t *target_surface;
 
-      /* Create new context for this surface */
-      priv->cr = cairo_create (priv->surface);
+      /* Select target based on mask mode */
+      if (cur_mask == HID_MASK_CLEAR && priv->mask_surface)
+        {
+          /* Drawing to mask surface: use mask_cr
+           * Note: We set priv->cr to mask_cr so that all drawing operations
+           * automatically go to the mask surface */
+          target_surface = priv->mask_surface;
 
-      /* Set up Cairo state from GC */
-      gdk_cairo_set_source_rgba (priv->cr, &gc->color);
+          /* Clean up any existing main context */
+          if (priv->cr && priv->cr != priv->mask_cr)
+            cairo_destroy (priv->cr);
+
+          /* Create or reuse mask context */
+          if (priv->mask_cr)
+            cairo_destroy (priv->mask_cr);
+
+          priv->mask_cr = cairo_create (target_surface);
+          priv->cr = priv->mask_cr;  /* Redirect main cr to mask */
+
+          /* When drawing to mask, use white (becomes alpha=1 in A1 format) */
+          cairo_set_source_rgb (priv->cr, 1.0, 1.0, 1.0);
+          cairo_set_operator (priv->cr, CAIRO_OPERATOR_SOURCE);
+        }
+      else
+        {
+          /* Normal drawing to main surface */
+          target_surface = priv->surface;
+
+          /* Clean up any existing context */
+          if (priv->cr)
+            cairo_destroy (priv->cr);
+
+          priv->cr = cairo_create (target_surface);
+
+          /* Normal drawing: use GC color */
+          gdk_cairo_set_source_rgba (priv->cr, &gc->color);
+
+          /* TODO: Apply mask here if mask_seq is active
+           * This requires using cairo_mask_surface() or similar to apply
+           * the stencil mask to the drawing operations. */
+        }
+
       cairo_set_line_width (priv->cr, Vz (gc->width));
 
       /* Set line cap */
@@ -1372,6 +1432,17 @@ ghid_shutdown_renderer (GHidPort *port)
 
   gui->graphics->destroy_gc (priv->crosshair_gc);
   ghid_cancel_lead_user ();
+
+  /* GTK3: Clean up Cairo resources */
+  if (priv->cr)
+    cairo_destroy (priv->cr);
+  if (priv->surface)
+    cairo_surface_destroy (priv->surface);
+  if (priv->mask_cr)
+    cairo_destroy (priv->mask_cr);
+  if (priv->mask_surface)
+    cairo_surface_destroy (priv->mask_surface);
+
   g_free (port->render_priv);
   port->render_priv = NULL;
 }
@@ -1393,6 +1464,18 @@ ghid_drawing_area_configure_hook (GHidPort *port)
 
   priv->surface = cairo_image_surface_create (CAIRO_FORMAT_RGB24,
                                               port->width, port->height);
+
+  /* GTK3: Recreate mask surface if it exists (resize scenario) */
+  if (priv->mask_surface)
+    {
+      if (priv->mask_cr)
+        cairo_destroy (priv->mask_cr);
+      cairo_surface_destroy (priv->mask_surface);
+
+      priv->mask_surface = cairo_image_surface_create (CAIRO_FORMAT_A1,
+                                                        port->width, port->height);
+      priv->mask_cr = cairo_create (priv->mask_surface);
+    }
 
   if (!done_once)
     {
