@@ -60,6 +60,146 @@ static GLfloat last_modelview_matrix[4][4] = {{1.0, 0.0, 0.0, 0.0},
                                               {0.0, 0.0, 0.0, 1.0}};
 static int global_view_2d = 1;
 
+/* ===== Milestone 3B: 3D Layer Coordinate System ===== */
+
+/* 3D rendering constants for standard PCB stackup */
+#define COPPER_THICKNESS_MIL 1.4      /* 1 oz copper = 1.4 mil */
+#define BOARD_THICKNESS_MIL 62.0      /* Standard FR4 = 62 mil (1.57mm) */
+#define SOLDERMASK_THICKNESS_MIL 0.8  /* Typical solder mask */
+#define SILKSCREEN_THICKNESS_MIL 0.4  /* Silkscreen layer */
+#define COMPONENT_ELEVATION_MIL 10.0  /* Component height above board */
+
+/* 3D layer depth configuration */
+typedef struct {
+  /* Layer z-coordinates in PCB units (from bottom to top) */
+  Coord bottom_soldermask_z;     /* Bottom of board (z = 0) */
+  Coord bottom_copper_z;
+  Coord bottom_silk_z;
+  Coord board_center_z;          /* Middle of FR4 substrate */
+  Coord top_silk_z;
+  Coord top_copper_z;
+  Coord top_soldermask_z;        /* Top of board */
+  Coord component_z;             /* Top of components */
+
+  /* Thickness values in PCB units */
+  Coord copper_thickness;
+  Coord soldermask_thickness;
+  Coord silkscreen_thickness;
+  Coord board_thickness;
+} Ghid3DLayerStack;
+
+static Ghid3DLayerStack layer_stack_3d;
+
+/* Initialize 3D layer stack for a standard 2-layer board */
+static void
+ghid_init_3d_layer_stack (void)
+{
+  Coord copper_thick = MIL_TO_COORD (COPPER_THICKNESS_MIL);
+  Coord board_thick = MIL_TO_COORD (BOARD_THICKNESS_MIL);
+  Coord mask_thick = MIL_TO_COORD (SOLDERMASK_THICKNESS_MIL);
+  Coord silk_thick = MIL_TO_COORD (SILKSCREEN_THICKNESS_MIL);
+
+  /* Calculate layer z-coordinates from bottom to top */
+  layer_stack_3d.bottom_soldermask_z = 0;  /* Bottom at z = 0 */
+  layer_stack_3d.bottom_copper_z = mask_thick;
+  layer_stack_3d.bottom_silk_z = mask_thick + copper_thick;
+  layer_stack_3d.board_center_z = board_thick / 2;
+  layer_stack_3d.top_silk_z = board_thick - mask_thick - copper_thick;
+  layer_stack_3d.top_copper_z = board_thick - mask_thick;
+  layer_stack_3d.top_soldermask_z = board_thick;
+  layer_stack_3d.component_z = board_thick + MIL_TO_COORD (COMPONENT_ELEVATION_MIL);
+
+  /* Store thicknesses */
+  layer_stack_3d.copper_thickness = copper_thick;
+  layer_stack_3d.soldermask_thickness = mask_thick;
+  layer_stack_3d.silkscreen_thickness = silk_thick;
+  layer_stack_3d.board_thickness = board_thick;
+}
+
+/* Get z-coordinate for a given layer in 3D mode */
+static Coord
+ghid_get_layer_depth (int layer_idx)
+{
+  /* In 2D mode, everything is flat at z = 0 */
+  if (global_view_2d)
+    return 0;
+
+  /* Map PCB layer indices to z-coordinates */
+  if (layer_idx >= 0 && layer_idx < max_copper_layer)
+    {
+      /* Copper layer - determine if top or bottom side */
+      /* For now, assume component side (top) for layers 0-(n/2-1),
+       * solder side (bottom) for layers n/2-(n-1) */
+      if (layer_idx < max_copper_layer / 2)
+        return layer_stack_3d.top_copper_z;
+      else
+        return layer_stack_3d.bottom_copper_z;
+    }
+
+  /* Special layers */
+  if (layer_idx < 0)
+    {
+      switch (SL_TYPE (layer_idx))
+        {
+        case SL_SILK:
+          if (SL_MYSIDE (layer_idx))  /* Component side */
+            return layer_stack_3d.top_silk_z + layer_stack_3d.silkscreen_thickness;
+          else  /* Solder side */
+            return layer_stack_3d.bottom_silk_z;
+
+        case SL_MASK:
+          if (SL_MYSIDE (layer_idx))  /* Component side */
+            return layer_stack_3d.top_soldermask_z;
+          else  /* Solder side */
+            return layer_stack_3d.bottom_soldermask_z;
+
+        case SL_INVISIBLE:
+        case SL_ASSY:
+        case SL_PDRILL:
+        case SL_UDRILL:
+        case SL_RATS:
+          return layer_stack_3d.top_copper_z + layer_stack_3d.copper_thickness;
+        }
+    }
+
+  /* Default to top copper */
+  return layer_stack_3d.top_copper_z;
+}
+
+/* Get thickness for a given layer in 3D mode */
+static Coord
+ghid_get_layer_thickness (int layer_idx)
+{
+  /* In 2D mode, no thickness */
+  if (global_view_2d)
+    return 0;
+
+  /* Map PCB layer indices to thickness values */
+  if (layer_idx >= 0 && layer_idx < max_copper_layer)
+    return layer_stack_3d.copper_thickness;
+
+  /* Special layers */
+  if (layer_idx < 0)
+    {
+      switch (SL_TYPE (layer_idx))
+        {
+        case SL_SILK:
+          return layer_stack_3d.silkscreen_thickness;
+
+        case SL_MASK:
+          return layer_stack_3d.soldermask_thickness;
+
+        default:
+          return 0;
+        }
+    }
+
+  return 0;
+}
+
+/* ===== End Milestone 3B: 3D Layer Coordinate System ===== */
+
+
 typedef struct render_priv {
   /* GTK3: GdkGLConfig removed - GtkGLArea handles configuration */
   bool trans_lines;
@@ -154,6 +294,9 @@ ghid_set_layer (const char *name, int group, int empty)
 
   end_subcomposite ();
   start_subcomposite ();
+
+  /* Milestone 3B: Set depth for 3D layer rendering */
+  hidgl_set_depth (ghid_get_layer_depth (idx));
 
   if (idx >= 0 && idx < max_copper_layer + SILK_LAYER)
     {
@@ -782,6 +925,9 @@ ghid_init_renderer (int *argc, char ***argv, GHidPort *port)
 
   port->render_priv = priv = g_new0 (render_priv, 1);
   port->render_priv->crosshair_gc = gui->graphics->make_gc ();
+
+  /* Milestone 3B: Initialize 3D layer stack */
+  ghid_init_3d_layer_stack ();
 
   priv->time_since_expose = g_timer_new ();
 
