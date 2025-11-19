@@ -206,6 +206,7 @@ PCB_CXX_SRCS = \
 	actions/ConnectionAction.cpp \
 	actions/DeleteRatsAction.cpp \
 	actions/DisperseElementsAction.cpp \
+	actions/DisplayAction.cpp \
 	actions/DumpLibraryAction.cpp \
 	actions/ElementListAction.cpp \
 	actions/ElementSetAttrAction.cpp \

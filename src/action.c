@@ -2353,6 +2353,7 @@ ActionDisperseElements (int argc, char **argv, Coord x, Coord y)
 
 /* --------------------------------------------------------------------------- */
 
+/* MIGRATED to DisplayAction.cpp - comprehensive display toggles and settings */
 static const char display_syntax[] =
   N_("Display(NameOnPCB|Description|Value)\n"
   "Display(Grid|Redraw)\n"
