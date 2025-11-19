@@ -127,10 +127,15 @@ draw signal → cairo_* with provided cairo_t
 
 ---
 
-## IMPLEMENTATION STATUS - IN PROGRESS (93%)
+## IMPLEMENTATION STATUS - NEARLY COMPLETE (97%)
 
 **Last Updated:** November 19, 2025
-**Commits:** 97cf2ae, 306b02a, 14dc392 (background image), 61670ae (mask infrastructure)
+**Commits:**
+- 97cf2ae, 306b02a: Core Cairo infrastructure
+- 14dc392: Background image rendering
+- 61670ae: Mask infrastructure
+- 71488be: Lead user indicator
+- a741147: Crosshair XOR replacement
 
 ### ✅ Completed Features
 
@@ -157,46 +162,39 @@ draw signal → cairo_* with provided cairo_t
 - ✅ Dual-path rendering (GTK2 + GTK3 compatibility)
 - ⚙️ Mask/stencil operations (infrastructure in place, application pending)
 
-### ⏳ Deferred Features (7%)
+**UI Features:**
+- ✅ Crosshair rendering (all 3 styles: Basic, Union Jack, Dozen)
+- ✅ Lead user indicator (animated pulsing circles)
 
-**Rationale:** These features require more complex architectural decisions
-and are best addressed when GTK3 runtime testing is available.
+### ⏳ Deferred Features (3%)
 
-**1. Crosshair XOR Rendering**
-- **Current:** ~8 gdk_draw_line calls with GDK_XOR function
-- **Files:** gtkhid-gdk.c (draw_crosshair, draw_slanted_cross, etc.)
-- **Challenge:** Cairo doesn't support XOR composition mode
-- **Proposed Solution:**
-  - Use overlay surface with semi-transparent lines, OR
-  - Use CAIRO_OPERATOR_DIFFERENCE for inversion effect, OR
-  - Draw crosshair directly on widget context (not offscreen surface)
-- **Impact:** Non-critical - crosshair is UI enhancement only
+**Rationale:** Mask application requires additional integration work and testing
+to ensure correct rendering behavior.
 
-**2. Mask/Stencil Operations** - ⚙️ **Partially Implemented**
+**Mask/Stencil Operations** - ⚙️ **60% Complete**
 - **Status:** Infrastructure complete, application pending
 - **Completed:**
   - ✅ Cairo mask surface (CAIRO_FORMAT_A1) created
   - ✅ Mask lifecycle management (create/resize/destroy)
   - ✅ Drawing redirection to mask surface (HID_MASK_CLEAR mode)
   - ✅ Dual-path compatibility maintained
+  - ✅ Mask surface recreated on window resize
+  - ✅ Proper cleanup in shutdown_renderer()
 - **Remaining Work:**
   - ⏳ Mask application during normal rendering (cairo_mask_surface integration)
   - ⏳ Integration into rendering pipeline
+  - ⏳ Testing with solder mask rendering
 - **Commit:** 61670ae
 - **Impact:** Medium - affects solder mask rendering
-
-**3. Lead User Indicator**
-- **Current:** gdk_draw_arc() in draw_lead_user()
-- **Files:** gtkhid-gdk.c
-- **Challenge:** Animated arc with special rendering
-- **Proposed Solution:** Simple cairo_arc migration
-- **Impact:** Low - UI enhancement only
+- **Estimated effort:** 1-2 hours to complete
 
 ### Migration to Milestone 3
 
-With 93% of Milestone 2 complete, the core drawing infrastructure is
+With 97% of Milestone 2 complete, the core drawing infrastructure is
 fully functional. Recent progress:
 - ✅ Background image rendering migrated to Cairo
+- ✅ Crosshair rendering (all 3 styles with Cairo semi-transparency)
+- ✅ Lead user indicator (animated pulsing circles)
 - ⚙️ Mask/stencil infrastructure implemented (application pending)
 
 Remaining deferred features can be addressed:

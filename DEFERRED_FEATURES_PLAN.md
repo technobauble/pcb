@@ -11,33 +11,48 @@ During the GTK3 HID migration, several features were deferred due to complexity 
 
 ---
 
+## Current Status (Updated 2025-11-19)
+
+### ✅ Completed Features
+
+1. **Background Image Rendering** - ✅ **COMPLETE** (Commit: 14dc392)
+   - Migrated to Cairo using `gdk_cairo_set_source_pixbuf()`
+   - Effort: 30 minutes
+   - Impact: Milestone 2 → 90%
+
+2. **Crosshair XOR Rendering** - ✅ **COMPLETE** (Commit: a741147)
+   - Implemented Cairo semi-transparent overlay (alpha=0.5)
+   - All 3 styles supported: Basic, Union Jack, Dozen
+   - Effort: 4 hours actual (estimated 4-6 hours)
+   - Impact: Milestone 2 → 95%
+
+3. **Lead User Indicator** - ✅ **COMPLETE** (Commit: 71488be)
+   - Animated pulsing circles using Cairo
+   - Semi-transparent yellow rendering
+   - Effort: 1 hour
+   - Impact: Milestone 2 → 97%
+
+### ⏳ Remaining Features
+
+**Milestone 2:** 97% Complete (only mask application remaining)
+
+---
+
 ## Deferred Features Summary
 
-### From Milestone 2: Cairo Drawing (15% deferred)
+### From Milestone 2: Cairo Drawing (3% remaining)
 
-1. **Crosshair XOR Rendering**
-   - Complexity: HIGH
-   - Effort: 4-6 hours
-   - Priority: LOW (UI enhancement only)
-   - Blocker: Cairo lacks XOR composition mode
+1. ~~**Crosshair XOR Rendering**~~ - ✅ COMPLETE
 
-2. **Mask/Stencil Operations**
+2. **Mask/Stencil Operations** - ⚙️ **60% Complete** (Infrastructure done)
    - Complexity: MEDIUM-HIGH
-   - Effort: 3-4 hours
+   - Remaining Effort: 1-2 hours
    - Priority: MEDIUM (affects solder mask rendering)
-   - Blocker: Requires Cairo mask surface implementation
+   - Status: Infrastructure complete (Commit: 61670ae), application pending
 
-3. **Background Image Rendering**
-   - Complexity: LOW
-   - Effort: 30 minutes
-   - Priority: HIGH (simple fix, clear solution)
-   - Blocker: None - straightforward API replacement
+3. ~~**Background Image Rendering**~~ - ✅ COMPLETE
 
-4. **Lead User Indicator**
-   - Complexity: LOW
-   - Effort: 1 hour
-   - Priority: MEDIUM (UI enhancement)
-   - Blocker: Depends on crosshair implementation
+4. ~~**Lead User Indicator**~~ - ✅ COMPLETE
 
 ### From Milestone 3: OpenGL (5% deferred)
 
