@@ -30,7 +30,7 @@
 #  error autoconf couldnt find gl.h
 #endif
 
-#include <gtk/gtkgl.h>
+/* GTK3: GtkGLArea is built into GTK3, no external library needed */
 #include "hid/common/hidgl.h"
 
 #include "hid/common/draw_helpers.h"
@@ -61,7 +61,7 @@ static GLfloat last_modelview_matrix[4][4] = {{1.0, 0.0, 0.0, 0.0},
 static int global_view_2d = 1;
 
 typedef struct render_priv {
-  GdkGLConfig *glconfig;
+  /* GTK3: GdkGLConfig removed - GtkGLArea handles configuration */
   bool trans_lines;
   bool in_context;
   int subcomposite_stencil_bit;
@@ -785,17 +785,10 @@ ghid_init_renderer (int *argc, char ***argv, GHidPort *port)
 
   priv->time_since_expose = g_timer_new ();
 
-  gtk_gl_init(argc, argv);
-
-  /* setup GL-context */
-  priv->glconfig = gdk_gl_config_new_by_mode (GDK_GL_MODE_RGBA    |
-                                              GDK_GL_MODE_STENCIL |
-                                              GDK_GL_MODE_DOUBLE);
-  if (!priv->glconfig)
-    {
-      printf ("Could not setup GL-context!\n");
-      return; /* Should we abort? */
-    }
+  /* GTK3: No manual GL initialization needed - GtkGLArea handles this
+   * automatically when the widget is realized. GL context creation,
+   * configuration, and management are all done by GTK3.
+   */
 
   /* Setup HID function pointers specific to the GL renderer*/
   ghid_hid.end_layer = ghid_end_layer;
