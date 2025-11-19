@@ -127,10 +127,10 @@ draw signal → cairo_* with provided cairo_t
 
 ---
 
-## IMPLEMENTATION STATUS - COMPLETED (90%)
+## IMPLEMENTATION STATUS - IN PROGRESS (93%)
 
-**Date Completed:** November 19, 2025
-**Commits:** 97cf2ae, 306b02a, 14dc392 (background image rendering)
+**Last Updated:** November 19, 2025
+**Commits:** 97cf2ae, 306b02a, 14dc392 (background image), 61670ae (mask infrastructure)
 
 ### ✅ Completed Features
 
@@ -155,8 +155,9 @@ draw signal → cairo_* with provided cairo_t
 - ✅ Background image rendering (Cairo pixbuf rendering)
 - ✅ Offlimits areas (dead space around PCB)
 - ✅ Dual-path rendering (GTK2 + GTK3 compatibility)
+- ⚙️ Mask/stencil operations (infrastructure in place, application pending)
 
-### ⏳ Deferred Features (10%)
+### ⏳ Deferred Features (7%)
 
 **Rationale:** These features require more complex architectural decisions
 and are best addressed when GTK3 runtime testing is available.
@@ -171,14 +172,17 @@ and are best addressed when GTK3 runtime testing is available.
   - Draw crosshair directly on widget context (not offscreen surface)
 - **Impact:** Non-critical - crosshair is UI enhancement only
 
-**2. Mask/Stencil Operations**
-- **Current:** ghid_use_mask() with HID_MASK_CLEAR/AFTER
-- **Files:** gtkhid-gdk.c (ghid_use_mask function)
-- **Challenge:** Uses GdkPixmap with 1-bit depth for stenciling
-- **Proposed Solution:**
-  - Create separate cairo_surface_t for mask (A1 format)
-  - Use cairo_mask() / cairo_mask_surface()
-  - Implement proper mask lifecycle management
+**2. Mask/Stencil Operations** - ⚙️ **Partially Implemented**
+- **Status:** Infrastructure complete, application pending
+- **Completed:**
+  - ✅ Cairo mask surface (CAIRO_FORMAT_A1) created
+  - ✅ Mask lifecycle management (create/resize/destroy)
+  - ✅ Drawing redirection to mask surface (HID_MASK_CLEAR mode)
+  - ✅ Dual-path compatibility maintained
+- **Remaining Work:**
+  - ⏳ Mask application during normal rendering (cairo_mask_surface integration)
+  - ⏳ Integration into rendering pipeline
+- **Commit:** 61670ae
 - **Impact:** Medium - affects solder mask rendering
 
 **3. Lead User Indicator**
@@ -190,8 +194,12 @@ and are best addressed when GTK3 runtime testing is available.
 
 ### Migration to Milestone 3
 
-With 90% of Milestone 2 complete, the core drawing infrastructure is
-fully functional. Deferred features can be addressed:
+With 93% of Milestone 2 complete, the core drawing infrastructure is
+fully functional. Recent progress:
+- ✅ Background image rendering migrated to Cairo
+- ⚙️ Mask/stencil infrastructure implemented (application pending)
+
+Remaining deferred features can be addressed:
 
 1. **During Milestone 3** - If they block OpenGL work
 2. **After all milestones** - As polish/refinement phase

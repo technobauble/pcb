@@ -94,31 +94,28 @@ cairo_paint (cr);
 
 ### Medium Priority (Moderate Effort, Clear Value)
 
-#### 2. Mask/Stencil Operations
-**Effort:** 3-4 hours | **Value:** MEDIUM | **Risk:** MEDIUM
+#### 2. Mask/Stencil Operations - ⚙️ **In Progress (60% Complete)**
+**Effort:** 1-2 hours remaining | **Value:** MEDIUM | **Risk:** LOW
 
-**Current Issue:**
-- Uses deprecated 1-bit depth GdkPixmap for stenciling
-- ghid_use_mask() function needs Cairo implementation
+**Status:** Infrastructure implemented, application pending
 
-**Solution:**
-- Create cairo_surface_t with CAIRO_FORMAT_A1 for mask
-- Use cairo_mask() / cairo_mask_surface()
-- Implement proper mask lifecycle
+**Completed (Commit 61670ae):**
+- ✅ Created cairo_surface_t with CAIRO_FORMAT_A1 for mask
+- ✅ Implemented mask lifecycle management (create/resize/destroy)
+- ✅ Updated ghid_use_mask() to handle Cairo mask surface
+- ✅ Drawing redirection: priv->cr points to mask_cr in HID_MASK_CLEAR mode
+- ✅ Dual-path compatibility maintained
 
-**Implementation Steps:**
-1. Analyze current mask usage patterns
-2. Create Cairo mask surface infrastructure
-3. Implement cairo_mask() in USE_GC macro
-4. Update ghid_use_mask() function
-5. Test with solder mask rendering
-6. Commit in small pieces
+**Remaining Work:**
+- Mask application during normal rendering (HID_MASK_AFTER mode)
+- Integrate cairo_mask_surface() into rendering pipeline
+- Test with solder mask rendering
 
-**Why Second:**
-- Affects actual rendering (solder masks)
-- Clear Cairo equivalents exist
-- Testable with visual inspection
-- Moderate complexity but well-understood
+**Why Continue:**
+- 60% done, finish what we started
+- Clear path forward with cairo_mask_surface()
+- Affects functional rendering (solder masks)
+- Low remaining effort (1-2 hours)
 
 ---
 
