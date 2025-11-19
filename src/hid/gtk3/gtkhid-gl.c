@@ -1167,6 +1167,14 @@ ghid_pinout_preview_draw (GtkWidget *widget,
 GdkPixmap *
 ghid_render_pixmap (int cx, int cy, double zoom, int width, int height, int depth)
 {
+  /* TODO GTK3: This function still uses GtkGLExt for offscreen OpenGL rendering.
+   * Migration to GTK3 requires one of:
+   *   1. Use GtkGLArea offscreen rendering (gtk_gl_area_attach_buffers + FBO)
+   *   2. Use native OpenGL FBO (framebuffer object) rendering
+   *   3. Rewrite using Cairo for offscreen rendering
+   * This is deferred from Milestone 3 as it's not critical for main display.
+   * The function is used for export/print operations that render to pixmap.
+   */
   GdkGLConfig *glconfig;
   GdkPixmap *pixmap;
   GdkGLPixmap *glpixmap;
