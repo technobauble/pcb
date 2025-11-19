@@ -1050,23 +1050,56 @@ ghid_drawing_area_render_cb (GtkGLArea *area,
   return FALSE;
 }
 
-/* This realize callback is used to work around a crash bug in some mesa
- * versions (observed on a machine running the intel i965 driver. It isn't
- * obvious why it helps, but somehow fiddling with the GL context here solves
- * the issue. The problem appears to have been fixed in recent mesa versions.
+/* GTK3 Milestone 3A: Realize callback for one-time OpenGL initialization.
+ * Called after GL context is created but before first render.
  */
 void
 ghid_port_drawing_realize_cb (GtkWidget *widget, gpointer data)
 {
-  /* GTK3: GtkGLArea handles GL context creation automatically during realize.
-   * The old code here was a workaround for mesa i965 driver bugs in GTK2.
-   * Modern mesa + GTK3 don't need this workaround.
-   *
-   * If GL context initialization is needed, use:
-   *   gtk_gl_area_make_current (GTK_GL_AREA (widget));
-   *   // One-time GL setup here
-   */
-  return;
+  GHidPort *port = (GHidPort *) data;
+
+  /* Make GL context current for initialization */
+  if (GTK_IS_GL_AREA (widget))
+    {
+      gtk_gl_area_make_current (GTK_GL_AREA (widget));
+
+      /* Check for GL errors during context creation */
+      GError *error = gtk_gl_area_get_error (GTK_GL_AREA (widget));
+      if (error != NULL)
+        {
+          g_warning ("Failed to initialize GL: %s", error->message);
+          return;
+        }
+
+      /* One-time GL state initialization */
+      glEnable (GL_DEPTH_TEST);
+      glDepthFunc (GL_LEQUAL);
+      glClearDepth (1.0);
+
+      /* Enable smooth shading */
+      glShadeModel (GL_SMOOTH);
+
+      /* Enable blending for transparency */
+      glEnable (GL_BLEND);
+      glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+      /* Line smoothing for better visual quality */
+      glEnable (GL_LINE_SMOOTH);
+      glHint (GL_LINE_SMOOTH_HINT, GL_NICEST);
+
+      /* Initialize stencil buffer usage tracking */
+      hidgl_reset_stencil_usage ();
+
+      /* Report GL capabilities */
+      const GLubyte *vendor = glGetString (GL_VENDOR);
+      const GLubyte *renderer = glGetString (GL_RENDERER);
+      const GLubyte *version = glGetString (GL_VERSION);
+      g_message ("OpenGL initialized: %s / %s / %s", vendor, renderer, version);
+
+      /* Check available stencil bits */
+      GLint stencil_bits = hidgl_stencil_bits ();
+      g_message ("Available stencil bits: %d", stencil_bits);
+    }
 }
 
 gboolean
