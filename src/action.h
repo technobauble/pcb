@@ -185,4 +185,11 @@ char *tempfile_name_new (char *name);
 int tempfile_unlink (char *name);
 int ActionExecuteFile (int argc, char **argv, Coord x, Coord y);
 
+/* Mode manager functions (defined in modes/ModeManager.cpp) */
+void initializeModeManager (void);
+void destroyModeManager (void);
+
+/* Legacy mode functions (temporary during transition) */
+void NotifyMode_Legacy (void);
+
 #endif

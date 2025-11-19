@@ -841,8 +841,10 @@ NotifyBlock (void)
  *
  * New created objects are added to the create undo list of course.
  */
-static void
-NotifyMode (void)
+// Legacy NotifyMode implementation - will be fully replaced by State Pattern
+// TEMPORARY: Used as fallback during incremental migration when mode not yet implemented
+void
+NotifyMode_Legacy (void)
 {
   void *ptr1, *ptr2, *ptr3;
   int type;

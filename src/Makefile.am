@@ -182,8 +182,12 @@ PCB_SRCS = \
 PCB_CXX_SRCS = \
 	actions/Action.h \
 	actions/Action.cpp \
+	actions/ActionContext.h \
 	actions/action_bridge.h \
 	actions/action_bridge.cpp \
+	actions/modes/EditorMode.h \
+	actions/modes/ModeManager.cpp \
+	actions/modes/RemoveMode.cpp \
 	actions/AddRatsAction.cpp \
 	actions/AtomicAction.cpp \
 	actions/AttributesAction.cpp \

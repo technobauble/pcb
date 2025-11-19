@@ -25,6 +25,10 @@
 #include "action_bridge.h"
 #include "Action.h"
 
+extern "C" {
+#include "action.h"
+}
+
 #include <iostream>
 #include <vector>
 #include <cstring>
@@ -74,10 +78,14 @@ void pcb_action_init(void)
     // C++ static initialization will have already occurred, but we can
     // use this as an explicit initialization point if needed in the future.
 
+    // Initialize the mode manager for editor modes (State Pattern)
+    initializeModeManager();
+
     #ifdef DEBUG_ACTIONS
     std::cout << "pcb_action_init: C++ action system initialized with "
               << pcb::actions::ActionRegistry::instance().count()
               << " actions" << std::endl;
+    std::cout << "Mode manager initialized" << std::endl;
     #endif
 }
 
