@@ -934,57 +934,60 @@ ghid_drawing_area_draw_cb (GtkWidget *widget,
   glStencilMask (0);
   glStencilFunc (GL_ALWAYS, 0, 0);
 
-  /* Test the 8 corners of a cube spanning the event */
+  /* GTK3: GtkGLArea render callback always renders full widget.
+   * Use allocation dimensions instead of ev->area (which doesn't exist).
+   * Test the 8 corners of a cube spanning the widget.
+   */
   min_depth = -50; /* FIXME */
   max_depth =  0;  /* FIXME */
 
-  ghid_unproject_to_z_plane (ev->area.x,
-                             ev->area.y,
+  ghid_unproject_to_z_plane (0,
+                             0,
                              min_depth, &new_x, &new_y);
   max_x = min_x = new_x;
   max_y = min_y = new_y;
 
-  ghid_unproject_to_z_plane (ev->area.x,
-                             ev->area.y,
+  ghid_unproject_to_z_plane (0,
+                             0,
                              max_depth, &new_x, &new_y);
   min_x = MIN (min_x, new_x);  max_x = MAX (max_x, new_x);
   min_y = MIN (min_y, new_y);  max_y = MAX (max_y, new_y);
 
   /* */
-  ghid_unproject_to_z_plane (ev->area.x + ev->area.width,
-                             ev->area.y,
+  ghid_unproject_to_z_plane (allocation.width,
+                             0,
                              min_depth, &new_x, &new_y);
   min_x = MIN (min_x, new_x);  max_x = MAX (max_x, new_x);
   min_y = MIN (min_y, new_y);  max_y = MAX (max_y, new_y);
 
-  ghid_unproject_to_z_plane (ev->area.x + ev->area.width, ev->area.y,
+  ghid_unproject_to_z_plane (allocation.width, 0,
                              max_depth, &new_x, &new_y);
   min_x = MIN (min_x, new_x);  max_x = MAX (max_x, new_x);
   min_y = MIN (min_y, new_y);  max_y = MAX (max_y, new_y);
 
   /* */
-  ghid_unproject_to_z_plane (ev->area.x + ev->area.width,
-                             ev->area.y + ev->area.height,
+  ghid_unproject_to_z_plane (allocation.width,
+                             allocation.height,
                              min_depth, &new_x, &new_y);
   min_x = MIN (min_x, new_x);  max_x = MAX (max_x, new_x);
   min_y = MIN (min_y, new_y);  max_y = MAX (max_y, new_y);
 
-  ghid_unproject_to_z_plane (ev->area.x + ev->area.width,
-                             ev->area.y + ev->area.height,
+  ghid_unproject_to_z_plane (allocation.width,
+                             allocation.height,
                              max_depth, &new_x, &new_y);
   min_x = MIN (min_x, new_x);  max_x = MAX (max_x, new_x);
   min_y = MIN (min_y, new_y);  max_y = MAX (max_y, new_y);
 
   /* */
-  ghid_unproject_to_z_plane (ev->area.x,
-                             ev->area.y + ev->area.height,
+  ghid_unproject_to_z_plane (0,
+                             allocation.height,
                              min_depth,
                              &new_x, &new_y);
   min_x = MIN (min_x, new_x);  max_x = MAX (max_x, new_x);
   min_y = MIN (min_y, new_y);  max_y = MAX (max_y, new_y);
 
-  ghid_unproject_to_z_plane (ev->area.x,
-                             ev->area.y + ev->area.height,
+  ghid_unproject_to_z_plane (0,
+                             allocation.height,
                              max_depth,
                              &new_x, &new_y);
   min_x = MIN (min_x, new_x);  max_x = MAX (max_x, new_x);
