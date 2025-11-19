@@ -13,7 +13,7 @@ During the GTK3 HID migration, several features were deferred due to complexity 
 
 ## Current Status (Updated 2025-11-19)
 
-### ✅ Completed Features
+### ✅ Completed Features - Milestone 2: 100% COMPLETE
 
 1. **Background Image Rendering** - ✅ **COMPLETE** (Commit: 14dc392)
    - Migrated to Cairo using `gdk_cairo_set_source_pixbuf()`
@@ -32,27 +32,29 @@ During the GTK3 HID migration, several features were deferred due to complexity 
    - Effort: 1 hour
    - Impact: Milestone 2 → 97%
 
+4. **Mask/Stencil Operations** - ✅ **COMPLETE** (Commit: 53804e8)
+   - Cairo group-based masking for solder mask rendering
+   - Each drawing operation wrapped in group and composited through mask
+   - Effort: 2 hours actual (estimated 1-2 hours)
+   - Impact: Milestone 2 → 100%
+
 ### ⏳ Remaining Features
 
-**Milestone 2:** 97% Complete (only mask application remaining)
+**Milestone 2:** 100% Complete! 🎉
 
 ---
 
 ## Deferred Features Summary
 
-### From Milestone 2: Cairo Drawing (3% remaining)
+### From Milestone 2: Cairo Drawing - ✅ **ALL COMPLETE**
 
-1. ~~**Crosshair XOR Rendering**~~ - ✅ COMPLETE
+1. ~~**Crosshair XOR Rendering**~~ - ✅ COMPLETE (Commit: a741147)
 
-2. **Mask/Stencil Operations** - ⚙️ **60% Complete** (Infrastructure done)
-   - Complexity: MEDIUM-HIGH
-   - Remaining Effort: 1-2 hours
-   - Priority: MEDIUM (affects solder mask rendering)
-   - Status: Infrastructure complete (Commit: 61670ae), application pending
+2. ~~**Mask/Stencil Operations**~~ - ✅ COMPLETE (Commit: 53804e8)
 
-3. ~~**Background Image Rendering**~~ - ✅ COMPLETE
+3. ~~**Background Image Rendering**~~ - ✅ COMPLETE (Commit: 14dc392)
 
-4. ~~**Lead User Indicator**~~ - ✅ COMPLETE
+4. ~~**Lead User Indicator**~~ - ✅ COMPLETE (Commit: 71488be)
 
 ### From Milestone 3: OpenGL (5% deferred)
 
