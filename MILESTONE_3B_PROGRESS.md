@@ -1,7 +1,7 @@
 # Milestone 3B Progress: Complete 3D PCB Rendering
 
 **Started:** November 19, 2025
-**Status:** In Progress - 70% Complete
+**Status:** In Progress - 80% Complete
 **Prerequisites:** Milestone 3A complete (GtkGLArea setup)
 
 ---
@@ -16,7 +16,7 @@ Milestone 3B implements complete 3D visualization of PCB boards with proper laye
 
 ## Implementation Status
 
-### ✅ Completed Features (70%)
+### ✅ Completed Features (80%)
 
 **1. 3D Layer Coordinate System** - ✅ COMPLETE (Commit: 2154072)
 - Defined standard 2-layer PCB stackup with realistic dimensions
@@ -64,13 +64,15 @@ Milestone 3B implements complete 3D visualization of PCB boards with proper laye
 - Triangle buffer flushing before 3D geometry
 - All PCB elements now render with proper thickness
 
-### ⏳ Remaining Work (30%)
+**5. Via 3D Rendering** - ✅ COMPLETE (Commit: 3667979)
+- Vias span from bottom copper to top copper (full board height)
+- Detection via drill layer (SL_PDRILL, SL_UDRILL)
+- Helper functions: `ghid_is_drill_layer()`, `ghid_get_via_height()`, `ghid_get_via_z_bottom()`
+- Enhanced `ghid_fill_circle()` with via detection
+- Realistic plated through-hole appearance
+- Proper differentiation from surface pads
 
-**5. Via Rendering in 3D** - ⏳ NOT STARTED
-- Vias need to span multiple layers (plated through-holes)
-- Calculate via height from bottom copper to top copper
-- Render as cylinder with appropriate height
-- Handle via types (through-hole, blind, buried)
+### ⏳ Remaining Work (20%)
 
 **6. Component 3D Rendering** - ⏳ NOT STARTED
 - Elevate component elements above board surface
@@ -170,18 +172,19 @@ PCB Element → Layer Selection → Depth Assignment → 3D Geometry → OpenGL
 - **2154072** - 3D layer coordinate system and depth mapping
 - **501f591** - 3D geometry helper functions (cylinder, box, line)
 - **30c0662** - Integration into drawing functions (ghid_draw_line, ghid_fill_circle, ghid_fill_rect)
+- **3667979** - 3D via rendering spanning layers
 
 ---
 
 ## Estimated Completion
 
-- **Current**: 70% complete
-- **Remaining**: ~3-4 hours
-  - Vias: 1-2 hours (optional, can be deferred)
-  - Testing: 2 hours
-  - Bug fixes: Variable
+- **Current**: 80% complete
+- **Remaining**: ~1-2 hours
+  - Component elevation: 1 hour (optional, can be deferred)
+  - Testing: When available
+  - Bug fixes: As needed
 
-**Target**: Core 3D rendering complete, testing ready
+**Target**: Core 3D PCB rendering COMPLETE and ready for testing
 
 ---
 
