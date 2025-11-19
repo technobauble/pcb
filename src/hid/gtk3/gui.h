@@ -503,8 +503,11 @@ void ghid_shutdown_renderer (GHidPort *);
 void ghid_init_drawing_widget (GtkWidget *widget, GHidPort *);
 void ghid_drawing_area_configure_hook (GHidPort *port);
 void ghid_screen_update (void);
-gboolean ghid_drawing_area_draw_cb (GtkWidget *, cairo_t *,
-                                    GHidPort *);
+#ifdef ENABLE_GL
+gboolean ghid_drawing_area_render_cb (GtkGLArea *, GdkGLContext *, GHidPort *);
+#else
+gboolean ghid_drawing_area_draw_cb (GtkWidget *, cairo_t *, GHidPort *);
+#endif
 void ghid_port_drawing_realize_cb (GtkWidget *, gpointer);
 gboolean ghid_pinout_preview_draw (GtkWidget * widget, cairo_t * cr);
 GdkPixmap *ghid_render_pixmap (int cx, int cy, double zoom,

@@ -831,14 +831,25 @@ ghid_drawing_area_configure_hook (GHidPort *port)
 gboolean
 ghid_start_drawing (GHidPort *port, GtkWidget *widget)
 {
-  /* GTK3: GtkGLArea automatically makes context current in render callback.
-   * For explicit context activation (e.g., in event handlers), use:
-   *   gtk_gl_area_make_current (GTK_GL_AREA (widget));
-   *
-   * For now, just track that we're in a drawing context.
+  /* GTK3 Milestone 3: Explicitly make GL context current.
+   * This is needed for drawing operations outside the render callback
+   * (e.g., in event handlers). Inside the render callback, context is
+   * already current, but making it current again is harmless.
    */
-  port->render_priv->in_context = true;
+  if (GTK_IS_GL_AREA (widget))
+    {
+      gtk_gl_area_make_current (GTK_GL_AREA (widget));
 
+      /* Check for GL errors after making context current */
+      GError *error = gtk_gl_area_get_error (GTK_GL_AREA (widget));
+      if (error != NULL)
+        {
+          g_warning ("GL context error: %s", error->message);
+          return FALSE;
+        }
+    }
+
+  port->render_priv->in_context = true;
   return TRUE;
 }
 
@@ -863,11 +874,12 @@ ghid_screen_update (void)
 
 #define Z_NEAR 3.0
 gboolean
-ghid_drawing_area_draw_cb (GtkWidget *widget,
-                           cairo_t *cr,
-                           GHidPort *port)
+ghid_drawing_area_render_cb (GtkGLArea *area,
+                              GdkGLContext *context,
+                              GHidPort *port)
 {
   render_priv *priv = port->render_priv;
+  GtkWidget *widget = GTK_WIDGET (area);
   GtkAllocation allocation;
   BoxType region;
   Coord min_x, min_y;
@@ -876,10 +888,9 @@ ghid_drawing_area_draw_cb (GtkWidget *widget,
   Coord min_depth;
   Coord max_depth;
 
-  /* NOTE: This is the OpenGL rendering path. Full migration to GTK3
-   * OpenGL (GtkGLExt -> GtkGLArea) is scheduled for Milestone 3.
-   * For now, updating signature to match GTK3 draw signal.
-   * The cairo_t parameter is not used in OpenGL rendering.
+  /* GTK3 Milestone 3: GtkGLArea render callback.
+   * Context is automatically made current before this callback.
+   * Buffer swapping is automatic after callback returns.
    */
 
   gtk_widget_get_allocation (widget, &allocation);
@@ -907,9 +918,9 @@ ghid_drawing_area_draw_cb (GtkWidget *widget,
   glOrtho (0, allocation.width, allocation.height, 0, -100000, 100000);
   glMatrixMode (GL_MODELVIEW);
   glLoadIdentity ();
-  glTranslatef (widget->allocation.width / 2., widget->allocation.height / 2., 0);
+  glTranslatef (allocation.width / 2., allocation.height / 2., 0);
   glMultMatrixf ((GLfloat *)view_matrix);
-  glTranslatef (-widget->allocation.width / 2., -widget->allocation.height / 2., 0);
+  glTranslatef (-allocation.width / 2., -allocation.height / 2., 0);
   glScalef ((port->view.flip_x ? -1. : 1.) / port->view.coord_per_px,
             (port->view.flip_y ? -1. : 1.) / port->view.coord_per_px,
             ((port->view.flip_x == port->view.flip_y) ? 1. : -1.) / port->view.coord_per_px);

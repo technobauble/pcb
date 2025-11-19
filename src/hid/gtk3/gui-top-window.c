@@ -1485,9 +1485,17 @@ ghid_build_pcb_top_window (void)
   g_signal_connect (G_OBJECT (gport->drawing_area), "realize",
 		    G_CALLBACK (ghid_port_drawing_realize_cb),
 		    port);
+#ifdef ENABLE_GL
+  /* GTK3: GtkGLArea uses "render" signal, not "draw" */
+  g_signal_connect (G_OBJECT (gport->drawing_area), "render",
+		    G_CALLBACK (ghid_drawing_area_render_cb),
+		    port);
+#else
+  /* GTK3: GtkDrawingArea uses "draw" signal for Cairo rendering */
   g_signal_connect (G_OBJECT (gport->drawing_area), "draw",
 		    G_CALLBACK (ghid_drawing_area_draw_cb),
 		    port);
+#endif
   g_signal_connect (G_OBJECT (gport->top_window), "configure_event",
 		    G_CALLBACK (top_window_configure_event_cb), port);
   g_signal_connect (gport->top_window, "enter-notify-event",
