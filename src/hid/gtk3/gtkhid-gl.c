@@ -59,6 +59,7 @@ static GLfloat last_modelview_matrix[4][4] = {{1.0, 0.0, 0.0, 0.0},
                                               {0.0, 0.0, 1.0, 0.0},
                                               {0.0, 0.0, 0.0, 1.0}};
 static int global_view_2d = 1;
+static int current_layer_idx = 0;  /* Track current layer for 3D thickness */
 
 /* ===== Milestone 3B: 3D Layer Coordinate System ===== */
 
@@ -458,6 +459,7 @@ ghid_set_layer (const char *name, int group, int empty)
   start_subcomposite ();
 
   /* Milestone 3B: Set depth for 3D layer rendering */
+  current_layer_idx = idx;  /* Track for thickness calculation */
   hidgl_set_depth (ghid_get_layer_depth (idx));
 
   if (idx >= 0 && idx < max_copper_layer + SILK_LAYER)
@@ -849,6 +851,19 @@ ghid_draw_line (hidGC gc, Coord x1, Coord y1, Coord x2, Coord y2)
 {
   USE_GC (gc);
 
+  /* Milestone 3B: Use 3D thick line rendering in 3D mode */
+  if (!global_view_2d)
+    {
+      Coord thickness = ghid_get_layer_thickness (current_layer_idx);
+      if (thickness > 0)
+        {
+          hidgl_flush_triangles (&buffer);  /* Flush buffered triangles first */
+          ghid_draw_3d_line (x1, y1, x2, y2, global_depth, gc->width, thickness);
+          return;
+        }
+    }
+
+  /* 2D mode or zero thickness: use standard flat rendering */
   hidgl_draw_line (gc->cap, gc->width, x1, y1, x2, y2, gport->view.coord_per_px);
 }
 
@@ -876,6 +891,19 @@ ghid_fill_circle (hidGC gc, Coord cx, Coord cy, Coord radius)
 {
   USE_GC (gc);
 
+  /* Milestone 3B: Use 3D cylinder rendering in 3D mode */
+  if (!global_view_2d)
+    {
+      Coord thickness = ghid_get_layer_thickness (current_layer_idx);
+      if (thickness > 0)
+        {
+          hidgl_flush_triangles (&buffer);  /* Flush buffered triangles first */
+          ghid_draw_3d_cylinder (cx, cy, global_depth, radius, thickness, 16);
+          return;
+        }
+    }
+
+  /* 2D mode or zero thickness: use standard flat rendering */
   hidgl_fill_circle (cx, cy, radius, gport->view.coord_per_px);
 }
 
@@ -910,6 +938,19 @@ ghid_fill_rect (hidGC gc, Coord x1, Coord y1, Coord x2, Coord y2)
 {
   USE_GC (gc);
 
+  /* Milestone 3B: Use 3D box rendering in 3D mode */
+  if (!global_view_2d)
+    {
+      Coord thickness = ghid_get_layer_thickness (current_layer_idx);
+      if (thickness > 0)
+        {
+          hidgl_flush_triangles (&buffer);  /* Flush buffered triangles first */
+          ghid_draw_3d_box (x1, y1, x2, y2, global_depth, thickness);
+          return;
+        }
+    }
+
+  /* 2D mode or zero thickness: use standard flat rendering */
   hidgl_fill_rect (x1, y1, x2, y2);
 }
 
