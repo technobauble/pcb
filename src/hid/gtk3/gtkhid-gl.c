@@ -199,6 +199,168 @@ ghid_get_layer_thickness (int layer_idx)
 
 /* ===== End Milestone 3B: 3D Layer Coordinate System ===== */
 
+/* ===== Milestone 3B: 3D Geometry Helpers ===== */
+
+/* Draw a 3D cylinder (for pads, vias, pins) */
+static void
+ghid_draw_3d_cylinder (Coord x, Coord y, Coord z_bottom, Coord radius, Coord height, int slices)
+{
+  GLUquadric *quad;
+
+  if (height <= 0)
+    return;  /* Skip if no height in 2D mode */
+
+  quad = gluNewQuadric ();
+  gluQuadricDrawStyle (quad, GLU_FILL);
+  gluQuadricNormals (quad, GLU_SMOOTH);
+
+  glPushMatrix ();
+  glTranslatef (x, y, z_bottom);
+
+  /* Draw cylinder body */
+  gluCylinder (quad, radius, radius, height, slices, 1);
+
+  /* Draw top cap */
+  glPushMatrix ();
+  glTranslatef (0, 0, height);
+  gluDisk (quad, 0, radius, slices, 1);
+  glPopMatrix ();
+
+  /* Draw bottom cap */
+  gluDisk (quad, 0, radius, slices, 1);
+
+  glPopMatrix ();
+  gluDeleteQuadric (quad);
+}
+
+/* Draw a 3D rectangular box (for rectangular pads) */
+static void
+ghid_draw_3d_box (Coord x1, Coord y1, Coord x2, Coord y2, Coord z_bottom, Coord height)
+{
+  Coord z_top = z_bottom + height;
+
+  if (height <= 0)
+    return;  /* Skip if no height in 2D mode */
+
+  /* Ensure x1 < x2 and y1 < y2 */
+  if (x1 > x2) { Coord t = x1; x1 = x2; x2 = t; }
+  if (y1 > y2) { Coord t = y1; y1 = y2; y2 = t; }
+
+  glBegin (GL_QUADS);
+
+  /* Bottom face (z = z_bottom) */
+  glNormal3f (0, 0, -1);
+  glVertex3f (x1, y1, z_bottom);
+  glVertex3f (x2, y1, z_bottom);
+  glVertex3f (x2, y2, z_bottom);
+  glVertex3f (x1, y2, z_bottom);
+
+  /* Top face (z = z_top) */
+  glNormal3f (0, 0, 1);
+  glVertex3f (x1, y1, z_top);
+  glVertex3f (x1, y2, z_top);
+  glVertex3f (x2, y2, z_top);
+  glVertex3f (x2, y1, z_top);
+
+  /* Front face (y = y1) */
+  glNormal3f (0, -1, 0);
+  glVertex3f (x1, y1, z_bottom);
+  glVertex3f (x1, y1, z_top);
+  glVertex3f (x2, y1, z_top);
+  glVertex3f (x2, y1, z_bottom);
+
+  /* Back face (y = y2) */
+  glNormal3f (0, 1, 0);
+  glVertex3f (x1, y2, z_bottom);
+  glVertex3f (x2, y2, z_bottom);
+  glVertex3f (x2, y2, z_top);
+  glVertex3f (x1, y2, z_top);
+
+  /* Left face (x = x1) */
+  glNormal3f (-1, 0, 0);
+  glVertex3f (x1, y1, z_bottom);
+  glVertex3f (x1, y2, z_bottom);
+  glVertex3f (x1, y2, z_top);
+  glVertex3f (x1, y1, z_top);
+
+  /* Right face (x = x2) */
+  glNormal3f (1, 0, 0);
+  glVertex3f (x2, y1, z_bottom);
+  glVertex3f (x2, y1, z_top);
+  glVertex3f (x2, y2, z_top);
+  glVertex3f (x2, y2, z_bottom);
+
+  glEnd ();
+}
+
+/* Draw a thick 3D line segment (for traces) */
+static void
+ghid_draw_3d_line (Coord x1, Coord y1, Coord x2, Coord y2, Coord z, Coord width, Coord thickness)
+{
+  GLfloat dx, dy, len, nx, ny;
+  GLfloat half_width;
+  GLfloat p1x, p1y, p2x, p2y, p3x, p3y, p4x, p4y;
+  Coord z_top = z + thickness;
+
+  if (thickness <= 0)
+    return;  /* Skip if no thickness in 2D mode */
+
+  /* Calculate perpendicular vector for line width */
+  dx = x2 - x1;
+  dy = y2 - y1;
+  len = sqrt (dx * dx + dy * dy);
+
+  if (len < 0.001)
+    return;  /* Skip zero-length lines */
+
+  half_width = width / 2.0;
+  nx = -dy / len * half_width;  /* Perpendicular x */
+  ny = dx / len * half_width;   /* Perpendicular y */
+
+  /* Calculate the 4 corners of the line segment */
+  p1x = x1 + nx; p1y = y1 + ny;  /* Start, left */
+  p2x = x1 - nx; p2y = y1 - ny;  /* Start, right */
+  p3x = x2 - nx; p3y = y2 - ny;  /* End, right */
+  p4x = x2 + nx; p4y = y2 + ny;  /* End, left */
+
+  glBegin (GL_QUADS);
+
+  /* Bottom face */
+  glNormal3f (0, 0, -1);
+  glVertex3f (p1x, p1y, z);
+  glVertex3f (p2x, p2y, z);
+  glVertex3f (p3x, p3y, z);
+  glVertex3f (p4x, p4y, z);
+
+  /* Top face */
+  glNormal3f (0, 0, 1);
+  glVertex3f (p1x, p1y, z_top);
+  glVertex3f (p4x, p4y, z_top);
+  glVertex3f (p3x, p3y, z_top);
+  glVertex3f (p2x, p2y, z_top);
+
+  /* Side faces */
+  /* Left side */
+  glNormal3f (ny / half_width, -nx / half_width, 0);
+  glVertex3f (p1x, p1y, z);
+  glVertex3f (p4x, p4y, z);
+  glVertex3f (p4x, p4y, z_top);
+  glVertex3f (p1x, p1y, z_top);
+
+  /* Right side */
+  glNormal3f (-ny / half_width, nx / half_width, 0);
+  glVertex3f (p2x, p2y, z);
+  glVertex3f (p2x, p2y, z_top);
+  glVertex3f (p3x, p3y, z_top);
+  glVertex3f (p3x, p3y, z);
+
+  /* End caps would be added here for round_cap style */
+
+  glEnd ();
+}
+
+/* ===== End Milestone 3B: 3D Geometry Helpers ===== */
+
 
 typedef struct render_priv {
   /* GTK3: GdkGLConfig removed - GtkGLArea handles configuration */
