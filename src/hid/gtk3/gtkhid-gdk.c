@@ -1299,20 +1299,86 @@ ghid_notify_mark_change (bool changes_complete)
 }
 
 static void
-draw_right_cross (GdkGC *xor_gc, gint x, gint y)
+draw_right_cross (cairo_t *widget_cr, GdkGC *xor_gc, gint x, gint y, GdkColor *color)
 {
   GdkWindow *window = gtk_widget_get_window (gport->drawing_area);
 
+  /* GTK3: Draw crosshair with Cairo (semi-transparent) */
+  if (widget_cr)
+    {
+      cairo_save (widget_cr);
+      cairo_set_source_rgba (widget_cr,
+                            color->red / 65535.0,
+                            color->green / 65535.0,
+                            color->blue / 65535.0,
+                            0.5);  /* 50% transparent */
+      cairo_set_line_width (widget_cr, 1.0);
+
+      /* Vertical line */
+      cairo_move_to (widget_cr, x + 0.5, 0);
+      cairo_line_to (widget_cr, x + 0.5, gport->height);
+      cairo_stroke (widget_cr);
+
+      /* Horizontal line */
+      cairo_move_to (widget_cr, 0, y + 0.5);
+      cairo_line_to (widget_cr, gport->width, y + 0.5);
+      cairo_stroke (widget_cr);
+
+      cairo_restore (widget_cr);
+    }
+
+  /* GTK2: Original GDK XOR drawing */
   gdk_draw_line (window, xor_gc, x, 0, x, gport->height);
   gdk_draw_line (window, xor_gc, 0, y, gport->width, y);
 }
 
 static void
-draw_slanted_cross (GdkGC *xor_gc, gint x, gint y)
+draw_slanted_cross (cairo_t *widget_cr, GdkGC *xor_gc, gint x, gint y, GdkColor *color)
 {
   GdkWindow *window = gtk_widget_get_window (gport->drawing_area);
   gint x0, y0, x1, y1;
 
+  /* GTK3: Draw diagonal crosshair with Cairo */
+  if (widget_cr)
+    {
+      cairo_save (widget_cr);
+      cairo_set_source_rgba (widget_cr,
+                            color->red / 65535.0,
+                            color->green / 65535.0,
+                            color->blue / 65535.0,
+                            0.5);  /* 50% transparent */
+      cairo_set_line_width (widget_cr, 1.0);
+
+      /* First diagonal (top-left to bottom-right direction) */
+      x0 = x + (gport->height - y);
+      x0 = MAX(0, MIN (x0, gport->width));
+      x1 = x - y;
+      x1 = MAX(0, MIN (x1, gport->width));
+      y0 = y + (gport->width - x);
+      y0 = MAX(0, MIN (y0, gport->height));
+      y1 = y - x;
+      y1 = MAX(0, MIN (y1, gport->height));
+      cairo_move_to (widget_cr, x0 + 0.5, y0 + 0.5);
+      cairo_line_to (widget_cr, x1 + 0.5, y1 + 0.5);
+      cairo_stroke (widget_cr);
+
+      /* Second diagonal (bottom-left to top-right direction) */
+      x0 = x - (gport->height - y);
+      x0 = MAX(0, MIN (x0, gport->width));
+      x1 = x + y;
+      x1 = MAX(0, MIN (x1, gport->width));
+      y0 = y + x;
+      y0 = MAX(0, MIN (y0, gport->height));
+      y1 = y - (gport->width - x);
+      y1 = MAX(0, MIN (y1, gport->height));
+      cairo_move_to (widget_cr, x0 + 0.5, y0 + 0.5);
+      cairo_line_to (widget_cr, x1 + 0.5, y1 + 0.5);
+      cairo_stroke (widget_cr);
+
+      cairo_restore (widget_cr);
+    }
+
+  /* GTK2: Original GDK XOR drawing */
   x0 = x + (gport->height - y);
   x0 = MAX(0, MIN (x0, gport->width));
   x1 = x - y;
@@ -1335,12 +1401,79 @@ draw_slanted_cross (GdkGC *xor_gc, gint x, gint y)
 }
 
 static void
-draw_dozen_cross (GdkGC *xor_gc, gint x, gint y)
+draw_dozen_cross (cairo_t *widget_cr, GdkGC *xor_gc, gint x, gint y, GdkColor *color)
 {
   GdkWindow *window = gtk_widget_get_window (gport->drawing_area);
   gint x0, y0, x1, y1;
   gdouble tan60 = sqrt (3);
 
+  /* GTK3: Draw dozen crosshair with Cairo */
+  if (widget_cr)
+    {
+      cairo_save (widget_cr);
+      cairo_set_source_rgba (widget_cr,
+                            color->red / 65535.0,
+                            color->green / 65535.0,
+                            color->blue / 65535.0,
+                            0.5);  /* 50% transparent */
+      cairo_set_line_width (widget_cr, 1.0);
+
+      /* Line 1 */
+      x0 = x + (gport->height - y) / tan60;
+      x0 = MAX(0, MIN (x0, gport->width));
+      x1 = x - y / tan60;
+      x1 = MAX(0, MIN (x1, gport->width));
+      y0 = y + (gport->width - x) * tan60;
+      y0 = MAX(0, MIN (y0, gport->height));
+      y1 = y - x * tan60;
+      y1 = MAX(0, MIN (y1, gport->height));
+      cairo_move_to (widget_cr, x0 + 0.5, y0 + 0.5);
+      cairo_line_to (widget_cr, x1 + 0.5, y1 + 0.5);
+      cairo_stroke (widget_cr);
+
+      /* Line 2 */
+      x0 = x + (gport->height - y) * tan60;
+      x0 = MAX(0, MIN (x0, gport->width));
+      x1 = x - y * tan60;
+      x1 = MAX(0, MIN (x1, gport->width));
+      y0 = y + (gport->width - x) / tan60;
+      y0 = MAX(0, MIN (y0, gport->height));
+      y1 = y - x / tan60;
+      y1 = MAX(0, MIN (y1, gport->height));
+      cairo_move_to (widget_cr, x0 + 0.5, y0 + 0.5);
+      cairo_line_to (widget_cr, x1 + 0.5, y1 + 0.5);
+      cairo_stroke (widget_cr);
+
+      /* Line 3 */
+      x0 = x - (gport->height - y) / tan60;
+      x0 = MAX(0, MIN (x0, gport->width));
+      x1 = x + y / tan60;
+      x1 = MAX(0, MIN (x1, gport->width));
+      y0 = y + x * tan60;
+      y0 = MAX(0, MIN (y0, gport->height));
+      y1 = y - (gport->width - x) * tan60;
+      y1 = MAX(0, MIN (y1, gport->height));
+      cairo_move_to (widget_cr, x0 + 0.5, y0 + 0.5);
+      cairo_line_to (widget_cr, x1 + 0.5, y1 + 0.5);
+      cairo_stroke (widget_cr);
+
+      /* Line 4 */
+      x0 = x - (gport->height - y) * tan60;
+      x0 = MAX(0, MIN (x0, gport->width));
+      x1 = x + y * tan60;
+      x1 = MAX(0, MIN (x1, gport->width));
+      y0 = y + x / tan60;
+      y0 = MAX(0, MIN (y0, gport->height));
+      y1 = y - (gport->width - x) / tan60;
+      y1 = MAX(0, MIN (y1, gport->height));
+      cairo_move_to (widget_cr, x0 + 0.5, y0 + 0.5);
+      cairo_line_to (widget_cr, x1 + 0.5, y1 + 0.5);
+      cairo_stroke (widget_cr);
+
+      cairo_restore (widget_cr);
+    }
+
+  /* GTK2: Original GDK XOR drawing */
   x0 = x + (gport->height - y) / tan60;
   x0 = MAX(0, MIN (x0, gport->width));
   x1 = x - y / tan60;
@@ -1383,7 +1516,7 @@ draw_dozen_cross (GdkGC *xor_gc, gint x, gint y)
 }
 
 static void
-draw_crosshair (render_priv *priv)
+draw_crosshair (cairo_t *widget_cr, render_priv *priv)
 {
   GdkWindow *window = gtk_widget_get_window (gport->drawing_area);
   GtkStyle *style = gtk_widget_get_style (gport->drawing_area);
@@ -1410,11 +1543,11 @@ draw_crosshair (render_priv *priv)
   x = DRAW_X (gport->crosshair_x);
   y = DRAW_Y (gport->crosshair_y);
 
-  draw_right_cross (xor_gc, x, y);
+  draw_right_cross (widget_cr, xor_gc, x, y, &cross_color);
   if (Crosshair.shape == Union_Jack_Crosshair_Shape)
-    draw_slanted_cross (xor_gc, x, y);
+    draw_slanted_cross (widget_cr, xor_gc, x, y, &cross_color);
   if (Crosshair.shape == Dozen_Crosshair_Shape)
-    draw_dozen_cross (xor_gc, x, y);
+    draw_dozen_cross (widget_cr, xor_gc, x, y, &cross_color);
 }
 
 void
@@ -1515,7 +1648,7 @@ ghid_screen_update (void)
 
   gdk_draw_drawable (window, priv->bg_gc, gport->pixmap,
                      0, 0, 0, 0, gport->width, gport->height);
-  draw_crosshair (priv);
+  draw_crosshair (NULL, priv);  /* GTK2: No Cairo context */
 }
 
 gboolean
@@ -1532,7 +1665,8 @@ ghid_drawing_area_draw_cb (GtkWidget *widget,
       cairo_paint (cr);
     }
 
-  draw_crosshair (priv);
+  /* GTK3: Draw crosshair on widget context */
+  draw_crosshair (cr, priv);
   return FALSE;
 }
 
