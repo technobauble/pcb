@@ -1723,6 +1723,51 @@ draw_lead_user (render_priv *priv)
   if (!priv->lead_user)
     return;
 
+  /* GTK3: Draw lead user indicator with Cairo */
+  if (priv->cr)
+    {
+      double dx, dy, dr;
+
+      cairo_save (priv->cr);
+
+      /* Set lead user color (yellow) with semi-transparency */
+      cairo_set_source_rgba (priv->cr,
+                            LEAD_USER_COLOR_R,
+                            LEAD_USER_COLOR_G,
+                            LEAD_USER_COLOR_B,
+                            0.5);  /* 50% transparent */
+
+      cairo_set_line_width (priv->cr, Vz (width));
+      cairo_set_line_cap (priv->cr, CAIRO_LINE_CAP_BUTT);
+
+      /* Handle clipping */
+      if (priv->clip)
+        {
+          cairo_rectangle (priv->cr, priv->clip_rect.x, priv->clip_rect.y,
+                          priv->clip_rect.width, priv->clip_rect.height);
+          cairo_clip (priv->cr);
+        }
+
+      /* Draw arcs at appropriate radii */
+      for (i = 0; i < LEAD_USER_ARC_COUNT; i++, radius -= separation)
+        {
+          if (radius < width)
+            radius += MM_TO_COORD (LEAD_USER_INITIAL_RADIUS);
+
+          /* Convert coordinates */
+          dx = Vx (priv->lead_user_x);
+          dy = Vy (priv->lead_user_y);
+          dr = Vz (radius);
+
+          /* Draw a full circle arc */
+          cairo_arc (priv->cr, dx, dy, dr, 0, 2 * M_PI);
+          cairo_stroke (priv->cr);
+        }
+
+      cairo_restore (priv->cr);
+    }
+
+  /* GTK2: Original GDK implementation with XOR */
   if (lead_gc == NULL)
     {
       lead_gc = gdk_gc_new (window);
@@ -1742,7 +1787,7 @@ draw_lead_user (render_priv *priv)
                               GDK_LINE_SOLID, GDK_CAP_BUTT, GDK_JOIN_MITER);
 
   /* arcs at the approrpriate radii */
-
+  radius = priv->lead_user_radius;  /* Reset for GTK2 path */
   for (i = 0; i < LEAD_USER_ARC_COUNT; i++, radius -= separation)
     {
       if (radius < width)
