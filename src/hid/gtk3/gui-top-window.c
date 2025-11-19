@@ -287,7 +287,7 @@ show_file_modified_externally_prompt (void)
   gtk_label_set_markup (GTK_LABEL (label), markup);
   g_free (markup);
 
-  gtk_misc_set_alignment (GTK_MISC (label), 0., 0.5);
+  gtk_label_set_xalign (GTK_LABEL (label), 0.); gtk_label_set_yalign (GTK_LABEL (label), 0.5);
 
   gtk_widget_show_all (ghidgui->info_bar);
 }

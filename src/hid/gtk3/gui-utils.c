@@ -283,14 +283,14 @@ ghid_coord_entry (GtkWidget * box, GtkWidget ** coord_entry, Coord value,
       if (right_align && string)
 	{
 	  label = gtk_label_new (string);
-	  gtk_misc_set_alignment (GTK_MISC (label), 1.0, 0.5);
+	  gtk_label_set_xalign (GTK_LABEL (label), 1.0); gtk_label_set_yalign (GTK_LABEL (label), 0.5);
 	  gtk_box_pack_start (GTK_BOX (box), label, TRUE, TRUE, 2);
 	}
       gtk_box_pack_start (GTK_BOX (box), entry_widget, FALSE, FALSE, 2);
       if (!right_align && string)
 	{
 	  label = gtk_label_new (string);
-	  gtk_misc_set_alignment (GTK_MISC (label), 0, 0.5);
+	  gtk_label_set_xalign (GTK_LABEL (label), 0); gtk_label_set_yalign (GTK_LABEL (label), 0.5);
 	  gtk_box_pack_start (GTK_BOX (box), label, TRUE, TRUE, 2);
 	}
     }
@@ -332,14 +332,14 @@ ghid_spin_button (GtkWidget * box, GtkWidget ** spin_button, gfloat value,
       if (right_align && string)
 	{
 	  label = gtk_label_new (string);
-	  gtk_misc_set_alignment (GTK_MISC (label), 1.0, 0.5);
+	  gtk_label_set_xalign (GTK_LABEL (label), 1.0); gtk_label_set_yalign (GTK_LABEL (label), 0.5);
 	  gtk_box_pack_start (GTK_BOX (box), label, TRUE, TRUE, 2);
 	}
       gtk_box_pack_start (GTK_BOX (box), spin_but, FALSE, FALSE, 2);
       if (!right_align && string)
 	{
 	  label = gtk_label_new (string);
-	  gtk_misc_set_alignment (GTK_MISC (label), 0, 0.5);
+	  gtk_label_set_xalign (GTK_LABEL (label), 0); gtk_label_set_yalign (GTK_LABEL (label), 0.5);
 	  gtk_box_pack_start (GTK_BOX (box), label, TRUE, TRUE, 2);
 	}
     }
@@ -377,7 +377,7 @@ ghid_table_coord_entry (GtkWidget * table, gint row, gint column,
       if (string)
 	{
 	  label = gtk_label_new (string);
-	  gtk_misc_set_alignment (GTK_MISC (label), 1.0, 0.5);
+	  gtk_label_set_xalign (GTK_LABEL (label), 1.0); gtk_label_set_yalign (GTK_LABEL (label), 0.5);
 	  gtk_table_attach_defaults (GTK_TABLE (table), label,
 				     column, column + 1, row, row + 1);
 	}
@@ -389,7 +389,7 @@ ghid_table_coord_entry (GtkWidget * table, gint row, gint column,
       if (string)
 	{
 	  label = gtk_label_new (string);
-	  gtk_misc_set_alignment (GTK_MISC (label), 0.0, 0.5);
+	  gtk_label_set_xalign (GTK_LABEL (label), 0.0); gtk_label_set_yalign (GTK_LABEL (label), 0.5);
 	  gtk_table_attach_defaults (GTK_TABLE (table), label,
 				     column + 1, column + 2, row, row + 1);
 	}
@@ -435,7 +435,7 @@ ghid_table_spin_button (GtkWidget * table, gint row, gint column,
       if (string)
 	{
 	  label = gtk_label_new (string);
-	  gtk_misc_set_alignment (GTK_MISC (label), 1.0, 0.5);
+	  gtk_label_set_xalign (GTK_LABEL (label), 1.0); gtk_label_set_yalign (GTK_LABEL (label), 0.5);
 	  gtk_table_attach_defaults (GTK_TABLE (table), label,
 				     column, column + 1, row, row + 1);
 	}
@@ -447,7 +447,7 @@ ghid_table_spin_button (GtkWidget * table, gint row, gint column,
       if (string)
 	{
 	  label = gtk_label_new (string);
-	  gtk_misc_set_alignment (GTK_MISC (label), 0.0, 0.5);
+	  gtk_label_set_xalign (GTK_LABEL (label), 0.0); gtk_label_set_yalign (GTK_LABEL (label), 0.5);
 	  gtk_table_attach_defaults (GTK_TABLE (table), label,
 				     column + 1, column + 2, row, row + 1);
 	}
@@ -571,7 +571,7 @@ ghid_category_vbox (GtkWidget * box, const gchar * category_header,
       s = g_strconcat ("<span weight=\"bold\">", category_header,
 		       "</span>", NULL);
       gtk_label_set_markup (GTK_LABEL (label), s);
-      gtk_misc_set_alignment (GTK_MISC (label), 0.0, 0.5);
+      gtk_label_set_xalign (GTK_LABEL (label), 0.0); gtk_label_set_yalign (GTK_LABEL (label), 0.5);
       gtk_box_pack_start (GTK_BOX (vbox), label, FALSE, FALSE, header_pad);
       g_free (s);
     }

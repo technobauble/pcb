@@ -159,7 +159,7 @@ _table_attach (GtkWidget *table, gint row, const gchar *label,
                GtkWidget **entry, Coord min, Coord max)
 {
   GtkWidget *label_w = gtk_label_new (label);
-  gtk_misc_set_alignment (GTK_MISC (label_w), 1.0, 0.5);
+  gtk_label_set_xalign (GTK_LABEL (label_w), 1.0); gtk_label_set_yalign (GTK_LABEL (label_w), 0.5);
 
   *entry = ghid_coord_entry_new (min, max, 0, Settings.grid_unit, CE_SMALL);
   gtk_grid_attach (GTK_GRID (table), label_w, 0, row, 1, 1);
@@ -192,7 +192,7 @@ ghid_route_style_selector_edit_dialog (GHidRouteStyleSelector *rss)
                                         "_OK", GTK_RESPONSE_OK, NULL);
 
   label = gtk_label_new (_("Edit Style:"));
-  gtk_misc_set_alignment (GTK_MISC (label), 1.0, 0.5);
+  gtk_label_set_xalign (GTK_LABEL (label), 1.0); gtk_label_set_yalign (GTK_LABEL (label), 0.5);
 
   select_box = gtk_combo_box_new_with_model (GTK_TREE_MODEL (rss->model));
   gtk_cell_layout_pack_start (GTK_CELL_LAYOUT (select_box), renderer, TRUE);
@@ -216,7 +216,7 @@ ghid_route_style_selector_edit_dialog (GHidRouteStyleSelector *rss)
   table = gtk_grid_new ();
   gtk_box_pack_start (GTK_BOX (sub_vbox), table, TRUE, TRUE, 4);
   label = gtk_label_new (_("Name:"));
-  gtk_misc_set_alignment (GTK_MISC (label), 1.0, 0.5);
+  gtk_label_set_xalign (GTK_LABEL (label), 1.0); gtk_label_set_yalign (GTK_LABEL (label), 0.5);
   dialog_data.name_entry = gtk_entry_new ();
   gtk_table_attach (GTK_GRID (table), label, 0, 1, 0, 1,
                     GTK_EXPAND | GTK_FILL, GTK_EXPAND | GTK_FILL, 2, 2);

@@ -732,7 +732,6 @@ make_progress_dialog (void)
 {
   struct progress_dialog *pd;
   GtkWidget *content_area;
-  GtkWidget *alignment;
   GtkWidget *vbox;
 
   pd = g_new0 (struct progress_dialog, 1);
@@ -753,7 +752,7 @@ make_progress_dialog (void)
   gtk_widget_set_size_request (pd->dialog, 300, -1);
 
   pd->message = gtk_label_new (NULL);
-  gtk_misc_set_alignment (GTK_MISC (pd->message), 0., 0.);
+  gtk_label_set_xalign (GTK_LABEL (pd->message), 0.); gtk_label_set_yalign (GTK_LABEL (pd->message), 0.);
 
   pd->progress = gtk_progress_bar_new ();
   gtk_widget_set_size_request (pd->progress, -1, 26);
@@ -762,14 +761,16 @@ make_progress_dialog (void)
   gtk_box_pack_start (GTK_BOX (vbox), pd->message, true, true, 8);
   gtk_box_pack_start (GTK_BOX (vbox), pd->progress, false, true, 8);
 
-  alignment = gtk_alignment_new (0., 0., 1., 1.);
-  gtk_alignment_set_padding (GTK_ALIGNMENT (alignment), 8, 8, 8, 8);
-  gtk_container_add (GTK_CONTAINER (alignment), vbox);
+  /* GTK3: Use widget margins instead of GtkAlignment container */
+  gtk_widget_set_margin_start (vbox, 8);
+  gtk_widget_set_margin_end (vbox, 8);
+  gtk_widget_set_margin_top (vbox, 8);
+  gtk_widget_set_margin_bottom (vbox, 8);
 
   content_area = gtk_dialog_get_content_area (GTK_DIALOG (pd->dialog));
-  gtk_box_pack_start (GTK_BOX (content_area), alignment, true, true, 0);
+  gtk_box_pack_start (GTK_BOX (content_area), vbox, true, true, 0);
 
-  gtk_widget_show_all (alignment);
+  gtk_widget_show_all (vbox);
 
   g_object_ref (pd->dialog);
   gtk_window_present (GTK_WINDOW (pd->dialog));
