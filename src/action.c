@@ -6854,7 +6854,7 @@ Lines starting with @code{#} are ignored.
 %end-doc */
 
 /* MIGRATED to C++: src/actions/ExecuteFileAction.cpp */
-static int
+int
 ActionExecuteFile (int argc, char **argv, Coord x, Coord y)
 {
   FILE *fp;
