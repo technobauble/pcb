@@ -61,6 +61,7 @@
 #include "set.h"
 #include "undo.h"
 #include "pcb-printf.h"
+#include "actions/ActionContext.h"
 
 #ifdef HAVE_LIBDMALLOC
 #include <dmalloc.h>
@@ -246,7 +247,7 @@ SetMode (int Mode)
     return;
   recursing = true;
   notify_crosshair_change (false);
-  addedLines = 0;
+  pcb_action_context->addedLines = 0;
   Crosshair.AttachedObject.Type = NO_TYPE;
   Crosshair.AttachedObject.State = STATE_FIRST;
   Crosshair.AttachedPolygon.PointN = 0;

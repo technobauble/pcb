@@ -36,7 +36,7 @@
 #include <vector>
 
 extern "C" {
-#include "global.h"
+#include "coord_types.h"
 }
 
 namespace pcb {

@@ -64,7 +64,7 @@ extern LibraryType Library;
 extern char *Progname;
 extern char *InputTranslations;
 
-extern int addedLines;
+/* addedLines - moved to ActionContext (see actions/ActionContext.h) */
 extern int LayerStack[MAX_LAYER];
 
 extern bool Bumped;

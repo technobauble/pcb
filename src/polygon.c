@@ -103,6 +103,7 @@
 #include "set.h"
 #include "thermal.h"
 #include "undo.h"
+#include "actions/ActionContext.h"
 
 #ifdef HAVE_LIBDMALLOC
 #include <dmalloc.h>
@@ -1400,7 +1401,7 @@ GoToPreviousPoint (void)
     case 1:
       Crosshair.AttachedPolygon.PointN = 0;
       Crosshair.AttachedLine.State = STATE_FIRST;
-      addedLines = 0;
+      pcb_action_context->addedLines = 0;
       break;
 
       /* back-up one point */
@@ -1483,7 +1484,7 @@ CopyAttachedPolygonToLayer (void)
 
   /* reset state of attached line */
   Crosshair.AttachedLine.State = STATE_FIRST;
-  addedLines = 0;
+  pcb_action_context->addedLines = 0;
 
   /* add to undo list */
   AddObjectToCreateUndoList (POLYGON_TYPE, CURRENT, polygon, polygon);

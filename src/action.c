@@ -74,6 +74,7 @@
 #include "rtree.h"
 #include "macro.h"
 #include "pcb-printf.h"
+#include "actions/ActionContext.h"
 
 #include <assert.h>
 #include <stdlib.h> /* rand() */
@@ -94,130 +95,7 @@
 /* ---------------------------------------------------------------------------
  * some local types
  */
-typedef enum
-{
-  F_AddSelected,
-  F_All,
-  F_AllConnections,
-  F_AllRats,
-  F_AllUnusedPins,
-  F_Arc,
-  F_Arrow,
-  F_Block,
-  F_Description,
-  F_Cancel,
-  F_Center,
-  F_Clear,
-  F_ClearAndRedraw,
-  F_ClearList,
-  F_Close,
-  F_Found,
-  F_Connection,
-  F_Convert,
-  F_Copy,
-  F_CycleClip,
-  F_CycleCrosshair,
-  F_DeleteRats,
-  F_Drag,
-  F_DrillReport,
-  F_Element,
-  F_ElementByName,
-  F_ElementConnections,
-  F_ElementToBuffer,
-  F_Escape,
-  F_Find,
-  F_FlipElement,
-  F_FoundPins,
-  F_Grid,
-  F_InsertPoint,
-  F_Layer,
-  F_Layout,
-  F_LayoutAs,
-  F_LayoutToBuffer,
-  F_Line,
-  F_LineSize,
-  F_Lock,
-  F_Mirror,
-  F_Move,
-  F_NameOnPCB,
-  F_Netlist,
-  F_NetByName,
-  F_None,
-  F_Notify,
-  F_Object,
-  F_ObjectByName,
-  F_PasteBuffer,
-  F_PadByName,
-  F_PinByName,
-  F_PinOrPadName,
-  F_Pinout,
-  F_Polygon,
-  F_PolygonHole,
-  F_PreviousPoint,
-  F_RatsNest,
-  F_Rectangle,
-  F_Redraw,
-  F_Release,
-  F_Revert,
-  F_Remove,
-  F_RemoveSelected,
-  F_Report,
-  F_Reset,
-  F_ResetLinesAndPolygons,
-  F_ResetPinsViasAndPads,
-  F_Restore,
-  F_Rotate,
-  F_Save,
-  F_Selected,
-  F_SelectedArcs,
-  F_SelectedElements,
-  F_SelectedLines,
-  F_SelectedNames,
-  F_SelectedObjects,
-  F_SelectedPads,
-  F_SelectedPins,
-  F_SelectedTexts,
-  F_SelectedVias,
-  F_SelectedRats,
-  F_Stroke,
-  F_Text,
-  F_TextByName,
-  F_TextScale,
-  F_Thermal,
-  F_ToLayout,
-  F_ToggleAllDirections,
-  F_ToggleAutoDRC,
-  F_ToggleClearLine,
-  F_ToggleFullPoly,
-  F_ToggleGrid,
-  F_ToggleHideNames,
-  F_ToggleMask,
-  F_ToggleName,
-  F_ToggleObject,
-  F_ToggleShowDRC,
-  F_ToggleLiveRoute,
-  F_ToggleRubberBandMode,
-  F_ToggleStartDirection,
-  F_ToggleSnapPin,
-  F_ToggleThindraw,
-  F_ToggleLockNames,
-  F_ToggleOnlyNames,
-  F_ToggleThindrawPoly,
-  F_ToggleOrthoMove,
-  F_ToggleLocalRef,
-  F_ToggleCheckPlanes,
-  F_ToggleUniqueNames,
-  F_Via,
-  F_ViaByName,
-  F_Value,
-  F_ViaDrillingHole,
-  F_ViaSize,
-  F_Zoom,
-  F_ThroughHole,
-  F_BuriedVias,
-  F_ToggleAutoBuriedVias
-}
-FunctionID;
+/* FunctionID enum has been moved to action.h for use by C++ actions */
 
 typedef struct			/* used to identify subfunctions */
 {
@@ -300,39 +178,13 @@ either round or, if the octagon flag is set, octagonal.
 %end-doc */
 
 /* ---------------------------------------------------------------------------
- * some local identifiers
+ * Global action context
+ *
+ * Replaces previous file-scoped static variables with centralized context.
+ * This enables C++ actions to access shared state and improves testability.
  */
-static PointType InsertedPoint;
-static LayerType *lastLayer;
-static struct
-{
-  PolygonType *poly;
-  LineType line;
-}
-fake;
-
-static struct
-{
-  Coord X, Y;
-  Cardinal Buffer;
-  bool Click;
-  bool Moving;		/* selected type clicked on */
-  int Hit;			/* move type clicked on */
-  void *ptr1;
-  void *ptr2;
-  void *ptr3;
-}
-Note;
-
-static int defer_updates = 0;
-static int defer_needs_update = 0;
-
-static Cardinal polyIndex = 0;
-static bool saved_mode = false;
-#ifdef HAVE_LIBSTROKE
-static bool mid_stroke = false;
-static BoxType StrokeBox;
-#endif
+static ActionContext global_action_context = {0};
+ActionContext *pcb_action_context = &global_action_context;
 static FunctionType Functions[] = {
   {"AddSelected", F_AddSelected},
   {"All", F_All},
@@ -460,19 +312,19 @@ static FunctionType Functions[] = {
 /* ---------------------------------------------------------------------------
  * some local routines
  */
-static int GetFunctionID (String);
+/* GetFunctionID is now exported - see action.h */
 static void AdjustAttachedBox (void);
 static void NotifyLine (void);
-static void NotifyBlock (void);
+/* NotifyBlock - exported in action.h for C++ actions */
 static void NotifyMode (void);
-static void ClearWarnings (void);
+/* Exported helper function - now declared in action.h */
+void ClearWarnings (void);
 #ifdef HAVE_LIBSTROKE
 static void FinishStroke (void);
 extern void stroke_init (void);
 extern void stroke_record (int x, int y);
 extern int stroke_trans (char *s);
 #endif
-static void ChangeFlag (char *, char *, int, char *);
 
 #ifdef HAVE_LIBSTROKE
 
@@ -487,7 +339,7 @@ FinishStroke (void)
   unsigned long num;
   void *ptr1, *ptr2, *ptr3;
 
-  mid_stroke = false;
+  pcb_action_context->mid_stroke = false;
   if (stroke_trans (msg))
     {
       num = atoi (msg);
@@ -504,13 +356,13 @@ FinishStroke (void)
 	case 987412:
 	case 8741236:
 	case 874123:
-	  RotateScreenObject (StrokeBox.X1, StrokeBox.Y1, SWAP_IDENT ? 1 : 3);
+	  RotateScreenObject (pcb_action_context->StrokeBox.X1, pcb_action_context->StrokeBox.Y1, SWAP_IDENT ? 1 : 3);
 	  break;
 	case 7896321:
 	case 786321:
 	case 789632:
 	case 896321:
-	  RotateScreenObject (StrokeBox.X1, StrokeBox.Y1, SWAP_IDENT ? 3 : 1);
+	  RotateScreenObject (pcb_action_context->StrokeBox.X1, pcb_action_context->StrokeBox.Y1, SWAP_IDENT ? 3 : 1);
 	  break;
 	case 258:
 	  SetMode (LINE_MODE);
@@ -552,7 +404,7 @@ FinishStroke (void)
 	case 12569:
 	case 12589:
 	case 14589:
-	  /* XXX: FIXME: Zoom to fit the box StrokeBox.[X1,Y1] - StrokeBox.[X2,Y2] */
+	  /* XXX: FIXME: Zoom to fit the box pcb_action_context->StrokeBox.[X1,Y1] - pcb_action_context->StrokeBox.[X2,Y2] */
 	  break;
 
 	default:
@@ -567,8 +419,9 @@ FinishStroke (void)
 
 /*!
  * \brief Clear warning color from pins/pads.
+ * Exported helper function for C++ actions.
  */
-static void
+void
 ClearWarnings ()
 {
   Settings.RatWarn = false;
@@ -593,6 +446,8 @@ ClearWarnings ()
   Draw ();
 }
 
+/* ClearWarnings is now exported for use by C++ actions */
+
 /*!
  * \brief Click callback.
  *
@@ -603,39 +458,39 @@ ClearWarnings ()
 static void
 click_cb (hidval hv)
 {
-  if (Note.Click)
+  if (pcb_action_context->Note.Click)
     {
       notify_crosshair_change (false);
-      Note.Click = false;
-      if (Note.Moving && !gui->shift_is_pressed ())
+      pcb_action_context->Note.Click = false;
+      if (pcb_action_context->Note.Moving && !gui->shift_is_pressed ())
 	{
-	  Note.Buffer = Settings.BufferNumber;
+	  pcb_action_context->Note.Buffer = Settings.BufferNumber;
 	  SetBufferNumber (MAX_BUFFER - 1);
 	  ClearBuffer (PASTEBUFFER);
-	  AddSelectedToBuffer (PASTEBUFFER, Note.X, Note.Y, true);
+	  AddSelectedToBuffer (PASTEBUFFER, pcb_action_context->Note.X, pcb_action_context->Note.Y, true);
 	  SaveUndoSerialNumber ();
 	  RemoveSelected ();
 	  SaveMode ();
-	  saved_mode = true;
+	  pcb_action_context->saved_mode = true;
 	  SetMode (PASTEBUFFER_MODE);
 	}
-      else if (Note.Hit && !gui->shift_is_pressed ())
+      else if (pcb_action_context->Note.Hit && !gui->shift_is_pressed ())
 	{
 	  SaveMode ();
-	  saved_mode = true;
+	  pcb_action_context->saved_mode = true;
 	  SetMode (gui->control_is_pressed ()? COPY_MODE : MOVE_MODE);
-	  Crosshair.AttachedObject.Ptr1 = Note.ptr1;
-	  Crosshair.AttachedObject.Ptr2 = Note.ptr2;
-	  Crosshair.AttachedObject.Ptr3 = Note.ptr3;
-	  Crosshair.AttachedObject.Type = Note.Hit;
-	  AttachForCopy (Note.X, Note.Y);
+	  Crosshair.AttachedObject.Ptr1 = pcb_action_context->Note.ptr1;
+	  Crosshair.AttachedObject.Ptr2 = pcb_action_context->Note.ptr2;
+	  Crosshair.AttachedObject.Ptr3 = pcb_action_context->Note.ptr3;
+	  Crosshair.AttachedObject.Type = pcb_action_context->Note.Hit;
+	  AttachForCopy (pcb_action_context->Note.X, pcb_action_context->Note.Y);
 	}
       else
 	{
 	  BoxType box;
 
-	  Note.Hit = 0;
-	  Note.Moving = false;
+	  pcb_action_context->Note.Hit = 0;
+	  pcb_action_context->Note.Moving = false;
 	  SaveUndoSerialNumber ();
 	  box.X1 = -MAX_COORD;
 	  box.Y1 = -MAX_COORD;
@@ -645,8 +500,8 @@ click_cb (hidval hv)
 	  if (!gui->shift_is_pressed () && SelectBlock (&box, false))
 	    SetChangedFlag (true);
 	  NotifyBlock ();
-	  Crosshair.AttachedBox.Point1.X = Note.X;
-	  Crosshair.AttachedBox.Point1.Y = Note.Y;
+	  Crosshair.AttachedBox.Point1.X = pcb_action_context->Note.X;
+	  Crosshair.AttachedBox.Point1.Y = pcb_action_context->Note.Y;
 	}
       notify_crosshair_change (true);
     }
@@ -661,7 +516,7 @@ ReleaseMode (void)
 {
   BoxType box;
 
-  if (Note.Click)
+  if (pcb_action_context->Note.Click)
     {
       BoxType box;
 
@@ -670,17 +525,17 @@ ReleaseMode (void)
       box.X2 = MAX_COORD;
       box.Y2 = MAX_COORD;
 
-      Note.Click = false;	/* inhibit timer action */
+      pcb_action_context->Note.Click = false;	/* inhibit timer action */
       SaveUndoSerialNumber ();
       /* unselect first if shift key not down */
       if (!gui->shift_is_pressed ())
 	{
 	  if (SelectBlock (&box, false))
 	    SetChangedFlag (true);
-	  if (Note.Moving)
+	  if (pcb_action_context->Note.Moving)
 	    {
-	      Note.Moving = 0;
-	      Note.Hit = 0;
+	      pcb_action_context->Note.Moving = 0;
+	      pcb_action_context->Note.Hit = 0;
 	      return;
 	    }
 	}
@@ -693,22 +548,22 @@ ReleaseMode (void)
         /* We didn't select anything new, so, the deselection should get its
          own SN. */
             IncrementUndoSerialNumber();
-      Note.Hit = 0;
-      Note.Moving = 0;
+      pcb_action_context->Note.Hit = 0;
+      pcb_action_context->Note.Moving = 0;
     }
-  else if (Note.Moving)
+  else if (pcb_action_context->Note.Moving)
     {
       RestoreUndoSerialNumber ();
       NotifyMode ();
       ClearBuffer (PASTEBUFFER);
-      SetBufferNumber (Note.Buffer);
-      Note.Moving = false;
-      Note.Hit = 0;
+      SetBufferNumber (pcb_action_context->Note.Buffer);
+      pcb_action_context->Note.Moving = false;
+      pcb_action_context->Note.Hit = 0;
     }
-  else if (Note.Hit)
+  else if (pcb_action_context->Note.Hit)
     {
       NotifyMode ();
-      Note.Hit = 0;
+      pcb_action_context->Note.Hit = 0;
     }
   else if (Settings.Mode == ARROW_MODE)
     {
@@ -727,9 +582,9 @@ ReleaseMode (void)
 	IncrementUndoSerialNumber ();
       Crosshair.AttachedBox.State = STATE_FIRST;
     }
-  if (saved_mode)
+  if (pcb_action_context->saved_mode)
     RestoreMode ();
-  saved_mode = false;
+  pcb_action_context->saved_mode = false;
 }
 
 #define HSIZE 257
@@ -752,8 +607,11 @@ hashfunc(String s)
 
 /*!
  * \brief Get function ID of passed string.
+ *
+ * Exported for use by C++ actions. Returns the FunctionID enum value
+ * corresponding to the string, or -1 if not found.
  */
-static int
+int
 GetFunctionID (String Ident)
 {
   int i, h;
@@ -868,7 +726,7 @@ AdjustAttachedObjects (void)
     case INSERTPOINT_MODE:
       pnt = AdjustInsertPoint ();
       if (pnt)
-	InsertedPoint = *pnt;
+	pcb_action_context->InsertedPoint = *pnt;
       break;
     case ROTATE_MODE:
       break;
@@ -939,7 +797,7 @@ NotifyLine (void)
 
     case STATE_SECOND:
       /* fall through to third state too */
-      lastLayer = CURRENT;
+      pcb_action_context->lastLayer = CURRENT;
     default:			/* all following points */
       Crosshair.AttachedLine.State = STATE_THIRD;
       break;
@@ -948,8 +806,10 @@ NotifyLine (void)
 
 /*!
  * \brief Create first or second corner of a marked block.
+ *
+ * Exported for use by C++ actions (Select, Unselect).
  */
-static void
+void
 NotifyBlock (void)
 {
   notify_crosshair_change (false);
@@ -996,30 +856,30 @@ NotifyMode (void)
 	int test;
 	hidval hv;
 
-	Note.Click = true;
+	pcb_action_context->Note.Click = true;
 	/* do something after click time */
 	gui->add_timer (click_cb, CLICK_TIME, hv);
 
 	/* see if we clicked on something already selected
-	 * (Note.Moving) or clicked on a MOVE_TYPE
-	 * (Note.Hit)
+	 * (pcb_action_context->Note.Moving) or clicked on a MOVE_TYPE
+	 * (pcb_action_context->Note.Hit)
 	 */
 	for (test = (SELECT_TYPES | MOVE_TYPES) & ~RATLINE_TYPE;
 	     test; test &= ~type)
 	  {
-	    type = SearchScreen (Note.X, Note.Y, test, &ptr1, &ptr2, &ptr3);
-	    if (!Note.Hit && (type & MOVE_TYPES) &&
+	    type = SearchScreen (pcb_action_context->Note.X, pcb_action_context->Note.Y, test, &ptr1, &ptr2, &ptr3);
+	    if (!pcb_action_context->Note.Hit && (type & MOVE_TYPES) &&
 		!TEST_FLAG (LOCKFLAG, (PinType *) ptr2))
 	      {
-		Note.Hit = type;
-		Note.ptr1 = ptr1;
-		Note.ptr2 = ptr2;
-		Note.ptr3 = ptr3;
+		pcb_action_context->Note.Hit = type;
+		pcb_action_context->Note.ptr1 = ptr1;
+		pcb_action_context->Note.ptr2 = ptr2;
+		pcb_action_context->Note.ptr3 = ptr3;
 	      }
-	    if (!Note.Moving && (type & SELECT_TYPES) &&
+	    if (!pcb_action_context->Note.Moving && (type & SELECT_TYPES) &&
 		TEST_FLAG (SELECTEDFLAG, (PinType *) ptr2))
-	      Note.Moving = true;
-	    if ((Note.Hit && Note.Moving) || type == NO_TYPE)
+	      pcb_action_context->Note.Moving = true;
+	    if ((pcb_action_context->Note.Hit && pcb_action_context->Note.Moving) || type == NO_TYPE)
 	      break;
 	  }
 	break;
@@ -1035,7 +895,7 @@ NotifyMode (void)
 		       "you can place vias\n"));
 	    break;
 	  }
-	if ((via = CreateNewVia (PCB->Data, Note.X, Note.Y,
+	if ((via = CreateNewVia (PCB->Data, pcb_action_context->Note.X, pcb_action_context->Note.Y,
 				 Settings.ViaThickness, 2 * Settings.Keepaway,
 				 Settings.ViaMaskAperture, Settings.ViaDrillingHole, NULL,
 				 NoFlags ())) != NULL)
@@ -1056,9 +916,9 @@ NotifyMode (void)
 	  {
 	  case STATE_FIRST:
 	    Crosshair.AttachedBox.Point1.X =
-	      Crosshair.AttachedBox.Point2.X = Note.X;
+	      Crosshair.AttachedBox.Point2.X = pcb_action_context->Note.X;
 	    Crosshair.AttachedBox.Point1.Y =
-	      Crosshair.AttachedBox.Point2.Y = Note.Y;
+	      Crosshair.AttachedBox.Point2.Y = pcb_action_context->Note.Y;
 	    Crosshair.AttachedBox.State = STATE_SECOND;
 	    break;
 
@@ -1069,8 +929,8 @@ NotifyMode (void)
 	      Coord wx, wy;
 	      Angle sa, dir;
 
-	      wx = Note.X - Crosshair.AttachedBox.Point1.X;
-	      wy = Note.Y - Crosshair.AttachedBox.Point1.Y;
+	      wx = pcb_action_context->Note.X - Crosshair.AttachedBox.Point1.X;
+	      wy = pcb_action_context->Note.Y - Crosshair.AttachedBox.Point1.Y;
 	      if (XOR (Crosshair.AttachedBox.otherway, abs (wy) > abs (wx)))
 		{
 		  Crosshair.AttachedBox.Point2.X =
@@ -1127,7 +987,7 @@ NotifyMode (void)
 		    Crosshair.AttachedBox.Point2.Y = bx->Y2;
 		  AddObjectToCreateUndoList (ARC_TYPE, CURRENT, arc, arc);
 		  IncrementUndoSerialNumber ();
-		  addedLines++;
+		  pcb_action_context->addedLines++;
 		  DrawArc (CURRENT, arc);
 		  Draw ();
 		  Crosshair.AttachedBox.State = STATE_THIRD;
@@ -1139,7 +999,7 @@ NotifyMode (void)
       }
     case LOCK_MODE:
       {
-	type = SearchScreen (Note.X, Note.Y, LOCK_TYPES, &ptr1, &ptr2, &ptr3);
+	type = SearchScreen (pcb_action_context->Note.X, pcb_action_context->Note.Y, LOCK_TYPES, &ptr1, &ptr2, &ptr3);
 	if (type == ELEMENT_TYPE)
 	  {
 	    ElementType *element = (ElementType *) ptr2;
@@ -1187,7 +1047,7 @@ NotifyMode (void)
       {
 	if (((type
 	      =
-	      SearchScreen (Note.X, Note.Y, PIN_TYPES, &ptr1, &ptr2,
+	      SearchScreen (pcb_action_context->Note.X, pcb_action_context->Note.Y, PIN_TYPES, &ptr1, &ptr2,
 			    &ptr3)) != NO_TYPE)
 	    && !TEST_FLAG (HOLEFLAG, (PinType *) ptr3))
 	  {
@@ -1231,7 +1091,7 @@ NotifyMode (void)
 	  RatType *line;
 	  if ((line = AddNet ()))
 	    {
-	      addedLines++;
+	      pcb_action_context->addedLines++;
 	      AddObjectToCreateUndoList (RATLINE_TYPE, line, line, line);
 	      IncrementUndoSerialNumber ();
 	      DrawRat (line);
@@ -1260,14 +1120,14 @@ NotifyMode (void)
 	      Crosshair.AttachedLine.Point2.X
 	      && Crosshair.AttachedLine.Point1.Y ==
 	      Crosshair.AttachedLine.Point2.Y
-	      && (Crosshair.AttachedLine.Point2.X != Note.X
-		  || Crosshair.AttachedLine.Point2.Y != Note.Y))
+	      && (Crosshair.AttachedLine.Point2.X != pcb_action_context->Note.X
+		  || Crosshair.AttachedLine.Point2.Y != pcb_action_context->Note.Y))
 	    {
 	      /* We will only need to paint the second line segment.
 	         Since we only check for vias on the first segment,
 	         swap them so the non-empty segment is the first segment. */
-	      Crosshair.AttachedLine.Point2.X = Note.X;
-	      Crosshair.AttachedLine.Point2.Y = Note.Y;
+	      Crosshair.AttachedLine.Point2.X = pcb_action_context->Note.X;
+	      Crosshair.AttachedLine.Point2.Y = pcb_action_context->Note.Y;
 	    }
 
 	  if ((Crosshair.AttachedLine.Point1.X !=
@@ -1288,7 +1148,7 @@ NotifyMode (void)
 					  2 * Settings.Keepaway,
 					  MakeFlags (line_flags))) != NULL)
                 {
-                  addedLines++;
+                  pcb_action_context->addedLines++;
                   AddObjectToCreateUndoList (LINE_TYPE, CURRENT, line, line);
                   DrawLine (CURRENT, line);
                 }
@@ -1297,7 +1157,7 @@ NotifyMode (void)
 	         isn't a pin already here */
 	      if (TEST_FLAG (AUTOBURIEDVIASFLAG, PCB))
 		{
-		  layer_from = GetLayerNumber (PCB->Data, lastLayer);
+		  layer_from = GetLayerNumber (PCB->Data, pcb_action_context->lastLayer);
 		  layer_to = GetLayerNumber (PCB->Data, CURRENT);
 		}
 	      else
@@ -1307,7 +1167,7 @@ NotifyMode (void)
 		}
 
 	      if (PCB->ViaOn && GetLayerGroupNumberByPointer (CURRENT) !=
-		  GetLayerGroupNumberByPointer (lastLayer) &&
+		  GetLayerGroupNumberByPointer (pcb_action_context->lastLayer) &&
 		  SearchObjectByLocation (PIN_TYPES, &ptr1, &ptr2, &ptr3,
 					  Crosshair.AttachedLine.Point1.X,
 					  Crosshair.AttachedLine.Point1.Y,
@@ -1331,38 +1191,38 @@ NotifyMode (void)
 	      Crosshair.AttachedLine.Point1.Y =
 		Crosshair.AttachedLine.Point2.Y;
 	      IncrementUndoSerialNumber ();
-	      lastLayer = CURRENT;
+	      pcb_action_context->lastLayer = CURRENT;
 	    }
-	  if (PCB->Clipping && (Note.X != Crosshair.AttachedLine.Point2.X
-				|| Note.Y !=
+	  if (PCB->Clipping && (pcb_action_context->Note.X != Crosshair.AttachedLine.Point2.X
+				|| pcb_action_context->Note.Y !=
 				Crosshair.AttachedLine.Point2.Y))
             {
               if ((line =
 		  CreateDrawnLineOnLayer (CURRENT,
 					  Crosshair.AttachedLine.Point2.X,
 					  Crosshair.AttachedLine.Point2.Y,
-					  Note.X, Note.Y,
+					  pcb_action_context->Note.X, pcb_action_context->Note.Y,
 					  Settings.LineThickness,
 					  2 * Settings.Keepaway,
 					  MakeFlags (line_flags))) != NULL)
                 {
-                  addedLines++;
+                  pcb_action_context->addedLines++;
                   AddObjectToCreateUndoList (LINE_TYPE, CURRENT, line, line);
                   IncrementUndoSerialNumber ();
                   DrawLine (CURRENT, line);
                 }
 	      /* move to new start point */
-	      Crosshair.AttachedLine.Point1.X = Note.X;
-	      Crosshair.AttachedLine.Point1.Y = Note.Y;
-	      Crosshair.AttachedLine.Point2.X = Note.X;
-	      Crosshair.AttachedLine.Point2.Y = Note.Y;
+	      Crosshair.AttachedLine.Point1.X = pcb_action_context->Note.X;
+	      Crosshair.AttachedLine.Point1.Y = pcb_action_context->Note.Y;
+	      Crosshair.AttachedLine.Point2.X = pcb_action_context->Note.X;
+	      Crosshair.AttachedLine.Point2.Y = pcb_action_context->Note.Y;
 	      if (TEST_FLAG (SWAPSTARTDIRFLAG, PCB))
 		{
 		  PCB->Clipping ^= 3;
 		}
 	    }
 	  if (TEST_FLAG (AUTODRCFLAG, PCB) && !TEST_SILK_LAYER (CURRENT))
-	    LookupConnection (Note.X, Note.Y, true, 1, CONNECTEDFLAG, false);
+	    LookupConnection (pcb_action_context->Note.X, pcb_action_context->Note.Y, true, 1, CONNECTEDFLAG, false);
 	  Draw ();
 	}
       break;
@@ -1422,8 +1282,8 @@ NotifyMode (void)
 		if (GetLayerGroupNumberByNumber (INDEXOFCURRENT) ==
 		    GetLayerGroupNumberBySide (BOTTOM_SIDE))
 		  flag |= ONSOLDERFLAG;
-		if ((text = CreateNewText (CURRENT, &PCB->Font, Note.X,
-					   Note.Y, 0, Settings.TextScale,
+		if ((text = CreateNewText (CURRENT, &PCB->Font, pcb_action_context->Note.X,
+					   pcb_action_context->Note.Y, 0, Settings.TextScale,
 					   string, MakeFlags (flag))) != NULL)
 		  {
 		    AddObjectToCreateUndoList (TEXT_TYPE, CURRENT, text, text);
@@ -1480,7 +1340,7 @@ NotifyMode (void)
 	    /* first notify, lookup object */
 	  case STATE_FIRST:
 	    Crosshair.AttachedObject.Type =
-	      SearchScreen (Note.X, Note.Y, POLYGON_TYPE,
+	      SearchScreen (pcb_action_context->Note.X, pcb_action_context->Note.Y, POLYGON_TYPE,
 			    &Crosshair.AttachedObject.Ptr1,
 			    &Crosshair.AttachedObject.Ptr2,
 			    &Crosshair.AttachedObject.Ptr3);
@@ -1544,7 +1404,7 @@ NotifyMode (void)
 		/* reset state of attached line */
 		memset (&Crosshair.AttachedPolygon, 0, sizeof (PolygonType));
 		Crosshair.AttachedObject.State = STATE_FIRST;
-		addedLines = 0;
+		pcb_action_context->addedLines = 0;
 
 		  break;
 		}
@@ -1579,7 +1439,7 @@ NotifyMode (void)
 	if (gui->shift_is_pressed ())
 	  {
 	    int type =
-	      SearchScreen (Note.X, Note.Y, ELEMENT_TYPE, &ptr1, &ptr2,
+	      SearchScreen (pcb_action_context->Note.X, pcb_action_context->Note.Y, ELEMENT_TYPE, &ptr1, &ptr2,
 			    &ptr3);
 	    if (type == ELEMENT_TYPE)
 	      {
@@ -1596,12 +1456,12 @@ NotifyMode (void)
 		  }
 	      }
 	  }
-	if (CopyPastebufferToLayout (Note.X, Note.Y))
+	if (CopyPastebufferToLayout (pcb_action_context->Note.X, pcb_action_context->Note.Y))
 	  SetChangedFlag (true);
 	if (e)
 	  {
 	    int type =
-	      SearchScreen (Note.X, Note.Y, ELEMENT_TYPE, &ptr1, &ptr2,
+	      SearchScreen (pcb_action_context->Note.X, pcb_action_context->Note.Y, ELEMENT_TYPE, &ptr1, &ptr2,
 			    &ptr3);
 	    if (type == ELEMENT_TYPE && ptr1)
 	      {
@@ -1631,7 +1491,7 @@ NotifyMode (void)
 
     case REMOVE_MODE:
       if ((type =
-	   SearchScreen (Note.X, Note.Y, REMOVE_TYPES, &ptr1, &ptr2,
+	   SearchScreen (pcb_action_context->Note.X, pcb_action_context->Note.Y, REMOVE_TYPES, &ptr1, &ptr2,
 			 &ptr3)) != NO_TYPE)
 	{
 	  if (TEST_FLAG (LOCKFLAG, (LineType *) ptr2))
@@ -1667,7 +1527,7 @@ NotifyMode (void)
       break;
 
     case ROTATE_MODE:
-      RotateScreenObject (Note.X, Note.Y,
+      RotateScreenObject (pcb_action_context->Note.X, pcb_action_context->Note.Y,
 			  gui->shift_is_pressed ()? (SWAP_IDENT ?
 						     1 : 3)
 			  : (SWAP_IDENT ? 3 : 1));
@@ -1685,7 +1545,7 @@ NotifyMode (void)
 	      COPY_TYPES : MOVE_TYPES;
 
 	    Crosshair.AttachedObject.Type =
-	      SearchScreen (Note.X, Note.Y, types,
+	      SearchScreen (pcb_action_context->Note.X, pcb_action_context->Note.Y, types,
 			    &Crosshair.AttachedObject.Ptr1,
 			    &Crosshair.AttachedObject.Ptr2,
 			    &Crosshair.AttachedObject.Ptr3);
@@ -1699,7 +1559,7 @@ NotifyMode (void)
 		    Crosshair.AttachedObject.Type = NO_TYPE;
 		  }
 		else
-		  AttachForCopy (Note.X, Note.Y);
+		  AttachForCopy (pcb_action_context->Note.X, pcb_action_context->Note.Y);
 	      }
 	    break;
 	  }
@@ -1711,16 +1571,16 @@ NotifyMode (void)
 			Crosshair.AttachedObject.Ptr1,
 			Crosshair.AttachedObject.Ptr2,
 			Crosshair.AttachedObject.Ptr3,
-			Note.X - Crosshair.AttachedObject.X,
-			Note.Y - Crosshair.AttachedObject.Y);
+			pcb_action_context->Note.X - Crosshair.AttachedObject.X,
+			pcb_action_context->Note.Y - Crosshair.AttachedObject.Y);
 	  else
 	    {
 	      MoveObjectAndRubberband (Crosshair.AttachedObject.Type,
 				       Crosshair.AttachedObject.Ptr1,
 				       Crosshair.AttachedObject.Ptr2,
 				       Crosshair.AttachedObject.Ptr3,
-				       Note.X - Crosshair.AttachedObject.X,
-				       Note.Y - Crosshair.AttachedObject.Y);
+				       pcb_action_context->Note.X - Crosshair.AttachedObject.X,
+				       pcb_action_context->Note.Y - Crosshair.AttachedObject.Y);
 	      SetLocalRef (0, 0, false);
 	    }
 	  SetChangedFlag (true);
@@ -1739,7 +1599,7 @@ NotifyMode (void)
 	  /* first notify, lookup object */
 	case STATE_FIRST:
 	  Crosshair.AttachedObject.Type =
-	    SearchScreen (Note.X, Note.Y, INSERT_TYPES,
+	    SearchScreen (pcb_action_context->Note.X, pcb_action_context->Note.Y, INSERT_TYPES,
 			  &Crosshair.AttachedObject.Ptr1,
 			  &Crosshair.AttachedObject.Ptr2,
 			  &Crosshair.AttachedObject.Ptr3);
@@ -1758,19 +1618,19 @@ NotifyMode (void)
 		  /* get starting point of nearest segment */
 		  if (Crosshair.AttachedObject.Type == POLYGON_TYPE)
 		    {
-		      fake.poly =
+		      pcb_action_context->fake.poly =
 			(PolygonType *) Crosshair.AttachedObject.Ptr2;
-		      polyIndex =
-			GetLowestDistancePolygonPoint (fake.poly, Note.X,
-						       Note.Y);
-		      fake.line.Point1 = fake.poly->Points[polyIndex];
-		      fake.line.Point2 = fake.poly->Points[
-			  prev_contour_point (fake.poly, polyIndex)];
-		      Crosshair.AttachedObject.Ptr2 = &fake.line;
+		      pcb_action_context->polyIndex =
+			GetLowestDistancePolygonPoint (pcb_action_context->fake.poly, pcb_action_context->Note.X,
+						       pcb_action_context->Note.Y);
+		      pcb_action_context->fake.line.Point1 = pcb_action_context->fake.poly->Points[pcb_action_context->polyIndex];
+		      pcb_action_context->fake.line.Point2 = pcb_action_context->fake.poly->Points[
+			  prev_contour_point (pcb_action_context->fake.poly, pcb_action_context->polyIndex)];
+		      Crosshair.AttachedObject.Ptr2 = &pcb_action_context->fake.line;
 
 		    }
 		  Crosshair.AttachedObject.State = STATE_SECOND;
-		  InsertedPoint = *AdjustInsertPoint ();
+		  pcb_action_context->InsertedPoint = *AdjustInsertPoint ();
 		}
 	    }
 	  break;
@@ -1779,15 +1639,15 @@ NotifyMode (void)
 	case STATE_SECOND:
 	  if (Crosshair.AttachedObject.Type == POLYGON_TYPE)
 	    InsertPointIntoObject (POLYGON_TYPE,
-				   Crosshair.AttachedObject.Ptr1, fake.poly,
-				   &polyIndex,
-				   InsertedPoint.X, InsertedPoint.Y, false, false);
+				   Crosshair.AttachedObject.Ptr1, pcb_action_context->fake.poly,
+				   &pcb_action_context->polyIndex,
+				   pcb_action_context->InsertedPoint.X, pcb_action_context->InsertedPoint.Y, false, false);
 	  else
 	    InsertPointIntoObject (Crosshair.AttachedObject.Type,
 				   Crosshair.AttachedObject.Ptr1,
 				   Crosshair.AttachedObject.Ptr2,
-				   &polyIndex,
-				   InsertedPoint.X, InsertedPoint.Y, false, false);
+				   &pcb_action_context->polyIndex,
+				   pcb_action_context->InsertedPoint.X, pcb_action_context->InsertedPoint.Y, false, false);
 	  SetChangedFlag (true);
 
 	  /* reset identifiers */
@@ -1838,6 +1698,10 @@ Does a Restore if there was nothing to undo, else does a Close.
 
 %end-doc */
 
+/* NOTE: This action has been migrated to C++ (see src/actions/AtomicAction.cpp)
+ * The dispatcher in hid_actionv() will use the C++ version automatically.
+ * This C version remains as a fallback if C++ actions are not available.
+ */
 static int
 ActionAtomic (int argc, char **argv, Coord x, Coord y)
 {
@@ -1878,6 +1742,10 @@ static const char dumplibrary_help[] =
 
 %end-doc */
 
+/* NOTE: This action has been migrated to C++ (see src/actions/DumpLibraryAction.cpp)
+ * The dispatcher in hid_actionv() will use the C++ version automatically.
+ * This C version remains as a fallback if C++ actions are not available.
+ */
 static int
 ActionDumpLibrary (int argc, char **argv, Coord x, Coord y)
 {
@@ -1937,6 +1805,7 @@ other, not their absolute positions on the board.
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/FlipAction.cpp */
 static int
 ActionFlip (int argc, char **argv, Coord x, Coord y)
 {
@@ -1989,6 +1858,10 @@ followed by a newline.
 
 %end-doc */
 
+/* NOTE: This action has been migrated to C++ (see src/actions/MessageAction.cpp)
+ * The dispatcher in hid_actionv() will use the C++ version automatically.
+ * This C version remains as a fallback if C++ actions are not available.
+ */
 static int
 ActionMessage (int argc, char **argv, Coord x, Coord y)
 {
@@ -2039,6 +1912,7 @@ Pins and Vias may have thermals whether or not there is a polygon available
 to connect with. However, they will have no effect without the polygon.
 %end-doc */
 
+/* MIGRATED to C++: src/actions/SetThermalAction.cpp */
 static int
 ActionSetThermal (int argc, char **argv, Coord x, Coord y)
 {
@@ -2115,10 +1989,10 @@ void
 EventMoveCrosshair (int ev_x, int ev_y)
 {
 #ifdef HAVE_LIBSTROKE
-  if (mid_stroke)
+  if (pcb_action_context->mid_stroke)
     {
-      StrokeBox.X2 = ev_x;
-      StrokeBox.Y2 = ev_y;
+      pcb_action_context->StrokeBox.X2 = ev_x;
+      pcb_action_context->StrokeBox.Y2 = ev_y;
       stroke_record (ev_x, ev_y);
       return;
     }
@@ -2166,6 +2040,7 @@ Changes the size of new text.
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/SetValueAction.cpp */
 static int
 ActionSetValue (int argc, char **argv, Coord x, Coord y)
 {
@@ -2255,6 +2130,10 @@ save) before quitting.
 
 %end-doc */
 
+/* NOTE: This action has been migrated to C++ (see src/actions/QuitAction.cpp)
+ * The dispatcher in hid_actionv() will use the C++ version automatically.
+ * This C version remains as a fallback if C++ actions are not available.
+ */
 static int
 ActionQuit (int argc, char **argv, Coord x, Coord y)
 {
@@ -2300,6 +2179,7 @@ All ``found'' objects are marked ``not found''.
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/ConnectionAction.cpp */
 static int
 ActionConnection (int argc, char **argv, Coord x, Coord y)
 {
@@ -2473,6 +2353,7 @@ ActionDisperseElements (int argc, char **argv, Coord x, Coord y)
 
 /* --------------------------------------------------------------------------- */
 
+/* MIGRATED to DisplayAction.cpp - comprehensive display toggles and settings */
 static const char display_syntax[] =
   N_("Display(NameOnPCB|Description|Value)\n"
   "Display(Grid|Redraw)\n"
@@ -2611,7 +2492,7 @@ If set, automatically created vias are buried vias.
 
 %end-doc */
 
-static enum crosshair_shape
+enum crosshair_shape
 CrosshairShapeIncrement (enum crosshair_shape shape)
 {
   switch(shape)
@@ -3037,8 +2918,8 @@ ActionMode (int argc, char **argv, Coord x, Coord y)
 
   if (function)
     {
-      Note.X = Crosshair.X;
-      Note.Y = Crosshair.Y;
+      pcb_action_context->Note.X = Crosshair.X;
+      pcb_action_context->Note.Y = Crosshair.Y;
       notify_crosshair_change (false);
       switch (GetFunctionID (function))
 	{
@@ -3068,9 +2949,9 @@ ActionMode (int argc, char **argv, Coord x, Coord y)
 	  break;
 	case F_Cancel:
 	  {
-	    int saved_mode = Settings.Mode;
+	    int saved_mode_local = Settings.Mode;
 	    SetMode (NO_MODE);
-	    SetMode (saved_mode);
+	    SetMode (saved_mode_local);
 	  }
 	  break;
 	case F_Escape:
@@ -3169,7 +3050,7 @@ ActionMode (int argc, char **argv, Coord x, Coord y)
 	  break;
 #else
 	case F_Release:
-	  if (mid_stroke)
+	  if (pcb_action_context->mid_stroke)
 	    FinishStroke ();
 	  else
 	    ReleaseMode ();
@@ -3186,9 +3067,9 @@ ActionMode (int argc, char **argv, Coord x, Coord y)
 	  break;
 	case F_Stroke:
 #ifdef HAVE_LIBSTROKE
-	  mid_stroke = true;
-	  StrokeBox.X1 = Crosshair.X;
-	  StrokeBox.Y1 = Crosshair.Y;
+	  pcb_action_context->mid_stroke = true;
+	  pcb_action_context->StrokeBox.X1 = Crosshair.X;
+	  pcb_action_context->StrokeBox.Y1 = Crosshair.Y;
 	  break;
 #else
 	  /* Handle middle mouse button restarts of drawing mode.  If not in
@@ -3211,7 +3092,7 @@ ActionMode (int argc, char **argv, Coord x, Coord y)
 	  else
 	    {
 	      SaveMode ();
-	      saved_mode = true;
+	      pcb_action_context->saved_mode = true;
 	      SetMode (ARROW_MODE);
 	      NotifyMode ();
 	    }
@@ -3252,6 +3133,10 @@ static const char removeselected_help[] = N_("Removes any selected objects.");
 
 %end-doc */
 
+/* NOTE: This action has been migrated to C++ (see src/actions/RemoveSelectedAction.cpp)
+ * The dispatcher in hid_actionv() will use the C++ version automatically.
+ * This C version remains as a fallback if C++ actions are not available.
+ */
 static int
 ActionRemoveSelected (int argc, char **argv, Coord x, Coord y)
 {
@@ -3262,6 +3147,7 @@ ActionRemoveSelected (int argc, char **argv, Coord x, Coord y)
 
 /* --------------------------------------------------------------------------- */
 
+/* MIGRATED to RenumberAction.cpp - self-contained, no dependencies */
 static const char renumber_syntax[] = N_("Renumber()\n"
                                       "Renumber(filename)");
 
@@ -3644,6 +3530,7 @@ that this uses the highest numbered paste buffer.
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/RipUpAction.cpp */
 static int
 ActionRipUp (int argc, char **argv, Coord x, Coord y)
 {
@@ -3724,7 +3611,7 @@ ActionRipUp (int argc, char **argv, Coord x, Coord y)
 	    if (SearchScreen (Crosshair.X, Crosshair.Y, ELEMENT_TYPE,
 			      &ptr1, &ptr2, &ptr3) != NO_TYPE)
 	      {
-		Note.Buffer = Settings.BufferNumber;
+		pcb_action_context->Note.Buffer = Settings.BufferNumber;
 		SetBufferNumber (MAX_BUFFER - 1);
 		ClearBuffer (PASTEBUFFER);
 		CopyObjectToBuffer (PASTEBUFFER->Data, PCB->Data,
@@ -3737,7 +3624,7 @@ ActionRipUp (int argc, char **argv, Coord x, Coord y)
 		MoveObjectToRemoveUndoList (ELEMENT_TYPE, ptr1, ptr2, ptr3);
 		RestoreUndoSerialNumber ();
 		CopyPastebufferToLayout (0, 0);
-		SetBufferNumber (Note.Buffer);
+		SetBufferNumber (pcb_action_context->Note.Buffer);
 		SetChangedFlag (true);
 	      }
 	  }
@@ -3773,6 +3660,7 @@ Selects the shortest unselected rat on the board.
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/AddRatsAction.cpp */
 static int
 ActionAddRats (int argc, char **argv, Coord x, Coord y)
 {
@@ -3845,8 +3733,8 @@ ActionDelete (int argc, char **argv, Coord x, Coord y)
   char *function = ARG (0);
   int id = GetFunctionID (function);
 
-  Note.X = Crosshair.X;
-  Note.Y = Crosshair.Y;
+  pcb_action_context->Note.X = Crosshair.X;
+  pcb_action_context->Note.Y = Crosshair.Y;
 
   if (id == -1) /* no arg */
     {
@@ -3889,6 +3777,10 @@ static const char deleterats_help[] = N_("Delete rat lines.");
 
 %end-doc */
 
+/* NOTE: This action has been migrated to C++ (see src/actions/DeleteRatsAction.cpp)
+ * The dispatcher in hid_actionv() will use the C++ version automatically.
+ * This C version remains as a fallback if C++ actions are not available.
+ */
 static int
 ActionDeleteRats (int argc, char **argv, Coord x, Coord y)
 {
@@ -3926,6 +3818,7 @@ connecting them are minimized.  Note that you cannot undo this.
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/AutoPlaceSelectedAction.cpp */
 static int
 ActionAutoPlaceSelected (int argc, char **argv, Coord x, Coord y)
 {
@@ -3968,6 +3861,7 @@ responsive.
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/AutoRouteAction.cpp */
 static int
 ActionAutoRoute (int argc, char **argv, Coord x, Coord y)
 {
@@ -4013,6 +3907,10 @@ cursor location.
 
 %end-doc */
 
+/* NOTE: This action has been migrated to C++ (see src/actions/MarkCrosshairAction.cpp)
+ * The dispatcher in hid_actionv() will use the C++ version automatically.
+ * This C version remains as a fallback if C++ actions are not available.
+ */
 static int
 ActionMarkCrosshair (int argc, char **argv, Coord x, Coord y)
 {
@@ -4067,6 +3965,7 @@ of the silk layer lines and arcs for this element.
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/ChangeSizeAction.cpp */
 static int
 ActionChangeSize (int argc, char **argv, Coord x, Coord y)
 {
@@ -4162,6 +4061,7 @@ static const char changedrillsize_help[] =
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/Change2ndSizeAction.cpp */
 static int
 ActionChange2ndSize (int argc, char **argv, Coord x, Coord y)
 {
@@ -4229,6 +4129,7 @@ changes the polygon clearance.
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/ChangeClearSizeAction.cpp */
 static int
 ActionChangeClearSize (int argc, char **argv, Coord x, Coord y)
 {
@@ -4307,6 +4208,7 @@ the mask edge.
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/MinMaskGapAction.cpp */
 static int
 ActionMinMaskGap (int argc, char **argv, Coord x, Coord y)
 {
@@ -4403,6 +4305,7 @@ polygon edges.
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/MinClearGapAction.cpp */
 static int
 ActionMinClearGap (int argc, char **argv, Coord x, Coord y)
 {
@@ -4512,6 +4415,7 @@ ChangePinName(U3, 7, VCC)
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/ChangePinNameAction.cpp */
 static int
 ActionChangePinName (int argc, char **argv, Coord x, Coord y)
 {
@@ -4573,8 +4477,8 @@ ActionChangePinName (int argc, char **argv, Coord x, Coord y)
    */
   if (changed)
     {
-      if (defer_updates)
-	defer_needs_update = 1;
+      if (pcb_action_context->defer_updates)
+	pcb_action_context->defer_needs_update = 1;
       else
 	{
 	  IncrementUndoSerialNumber ();
@@ -4610,6 +4514,7 @@ Changes the name of the currently active layer.
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/ChangeNameAction.cpp */
 int
 ActionChangeName (int argc, char **argv, Coord x, Coord y)
 {
@@ -4701,6 +4606,7 @@ off are automatically deleted.
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/MorphPolygonAction.cpp */
 static int
 ActionMorphPolygon (int argc, char **argv, Coord x, Coord y)
 {
@@ -4756,6 +4662,7 @@ appear on the silk layer when you print the layout.
 %end-doc */
 
 static int
+/* MIGRATED to C++: src/actions/ToggleHideNameAction.cpp */
 ActionToggleHideName (int argc, char **argv, Coord x, Coord y)
 {
   char *function = ARG (0);
@@ -4830,6 +4737,7 @@ polygon, insulating them from each other.
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/ChangeJoinAction.cpp */
 static int
 ActionChangeJoin (int argc, char **argv, Coord x, Coord y)
 {
@@ -4891,6 +4799,7 @@ Note that @code{Pins} means both pins and pads.
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/ChangeSquareAction.cpp */
 static int
 ActionChangeSquare (int argc, char **argv, Coord x, Coord y)
 {
@@ -4948,6 +4857,7 @@ Note that @code{Pins} means pins and pads.
 @pinshapes
 
 %end-doc */
+/* MIGRATED to C++: src/actions/SetSquareAction.cpp */
 
 static int
 ActionSetSquare (int argc, char **argv, Coord x, Coord y)
@@ -5007,6 +4917,7 @@ Note that @code{Pins} means pins and pads.
 @pinshapes
 
 %end-doc */
+/* MIGRATED to C++: src/actions/ClearSquareAction.cpp */
 
 static int
 ActionClearSquare (int argc, char **argv, Coord x, Coord y)
@@ -5066,6 +4977,7 @@ static const char changeoctagon_help[] =
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/ChangeOctagonAction.cpp */
 static int
 ActionChangeOctagon (int argc, char **argv, Coord x, Coord y)
 {
@@ -5127,6 +5039,7 @@ static const char setoctagon_help[] = N_("Sets the octagon-flag of objects.");
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/SetOctagonAction.cpp */
 static int
 ActionSetOctagon (int argc, char **argv, Coord x, Coord y)
 {
@@ -5189,6 +5102,7 @@ static const char clearoctagon_help[] =
 @pinshapes
 
 %end-doc */
+/* MIGRATED to C++: src/actions/ClearOctagonAction.cpp */
 
 static int
 ActionClearOctagon (int argc, char **argv, Coord x, Coord y)
@@ -5252,6 +5166,7 @@ plated-through hole (not set), or an unplated hole (set).
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/ChangeHoleAction.cpp */
 static int
 ActionChangeHole (int argc, char **argv, Coord x, Coord y)
 {
@@ -5301,6 +5216,7 @@ The "no paste flag" of a pad determines whether the solderpaste
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/ChangePasteAction.cpp */
 static int
 ActionChangePaste (int argc, char **argv, Coord x, Coord y)
 {
@@ -5518,7 +5434,7 @@ ActionSelect (int argc, char **argv, Coord x, Coord y)
 	case F_Convert:
 	  {
 	    Coord x, y;
-	    Note.Buffer = Settings.BufferNumber;
+	    pcb_action_context->Note.Buffer = Settings.BufferNumber;
 	    SetBufferNumber (MAX_BUFFER - 1);
 	    ClearBuffer (PASTEBUFFER);
 	    gui->get_coords (_("Select the Element's Mark Location"), &x, &y);
@@ -5530,7 +5446,7 @@ ActionSelect (int argc, char **argv, Coord x, Coord y)
 	    ConvertBufferToElement (PASTEBUFFER);
 	    RestoreUndoSerialNumber ();
 	    CopyPastebufferToLayout (x, y);
-	    SetBufferNumber (Note.Buffer);
+	    SetBufferNumber (pcb_action_context->Note.Buffer);
 	  }
 	  break;
 
@@ -5748,6 +5664,7 @@ Save the content of the active Buffer to a file. This is the graphical way to cr
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/SaveToAction.cpp */
 static int
 ActionSaveTo (int argc, char **argv, Coord x, Coord y)
 {
@@ -5853,6 +5770,10 @@ saved in @code{./pcb.settings}.
 
 %end-doc */
 
+/* NOTE: This action has been migrated to C++ (see src/actions/SaveSettingsAction.cpp)
+ * The dispatcher in hid_actionv() will use the C++ version automatically.
+ * This C version remains as a fallback if C++ actions are not available.
+ */
 static int
 ActionSaveSettings (int argc, char **argv, Coord x, Coord y)
 {
@@ -5899,6 +5820,7 @@ you may have made.
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/LoadFromAction.cpp */
 static int
 ActionLoadFrom (int argc, char **argv, Coord x, Coord y)
 {
@@ -5965,6 +5887,7 @@ If a name is not given, one is prompted for.
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/NewAction.cpp */
 static int
 ActionNew (int argc, char **argv, Coord x, Coord y)
 {
@@ -6078,6 +6001,7 @@ Selects the given buffer to be the current paste buffer.
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/PasteBufferAction.cpp */
 static int
 ActionPasteBuffer (int argc, char **argv, Coord x, Coord y)
 {
@@ -6223,6 +6147,7 @@ ActionPasteBuffer (int argc, char **argv, Coord x, Coord y)
 
 /* --------------------------------------------------------------------------- */
 
+/* MIGRATED to UndoAction.cpp - uses pcb_action_context->addedLines and pcb_action_context->lastLayer */
 static const char undo_syntax[] = N_("Undo()\n"
                                   "Undo(ClearList)");
 
@@ -6336,10 +6261,10 @@ ActionUndo (int argc, char **argv, Coord x, Coord y)
 		}
 	      FitCrosshairIntoGrid (Crosshair.X, Crosshair.Y);
 	      AdjustAttachedObjects ();
-	      if (--addedLines == 0)
+	      if (--pcb_action_context->addedLines == 0)
 		{
 		  Crosshair.AttachedLine.State = STATE_SECOND;
-		  lastLayer = CURRENT;
+		  pcb_action_context->lastLayer = CURRENT;
 		}
 	      else
 		{
@@ -6350,7 +6275,7 @@ ActionUndo (int argc, char **argv, Coord x, Coord y)
 					  Crosshair.AttachedLine.Point1.X,
 					  Crosshair.AttachedLine.Point1.Y, 0);
 		  ptr2 = (LineType *) ptrtmp;
-		  lastLayer = (LayerType *) ptr1;
+		  pcb_action_context->lastLayer = (LayerType *) ptr1;
 		}
 	      notify_crosshair_change (true);
 	      return 0;
@@ -6378,7 +6303,7 @@ ActionUndo (int argc, char **argv, Coord x, Coord y)
 	      Crosshair.AttachedBox.Point1.Y =
 		Crosshair.AttachedBox.Point2.Y = bx->Y1;
 	      AdjustAttachedObjects ();
-	      if (--addedLines == 0)
+	      if (--pcb_action_context->addedLines == 0)
 		Crosshair.AttachedBox.State = STATE_SECOND;
 	    }
 	}
@@ -6421,6 +6346,7 @@ three "undone" lines.
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/RedoAction.cpp */
 static int
 ActionRedo (int argc, char **argv, Coord x, Coord y)
 {
@@ -6441,7 +6367,7 @@ ActionRedo (int argc, char **argv, Coord x, Coord y)
 	    Crosshair.AttachedLine.Point2.X = line->Point2.X;
 	  Crosshair.AttachedLine.Point1.Y =
 	    Crosshair.AttachedLine.Point2.Y = line->Point2.Y;
-	  addedLines++;
+	  pcb_action_context->addedLines++;
 	}
     }
   notify_crosshair_change (true);
@@ -6472,6 +6398,10 @@ will call Polygon(PreviousPoint) when appropriate to do so.
 
 %end-doc */
 
+/* NOTE: This action has been migrated to C++ (see src/actions/PolygonAction.cpp)
+ * The dispatcher in hid_actionv() will use the C++ version automatically.
+ * This C version remains as a fallback if C++ actions are not available.
+ */
 static int
 ActionPolygon (int argc, char **argv, Coord x, Coord y)
 {
@@ -6507,6 +6437,10 @@ static const char routestyle_help[] =
 
 %end-doc */
 
+/* NOTE: This action has been migrated to C++ (see src/actions/RouteStyleAction.cpp)
+ * The dispatcher in hid_actionv() will use the C++ version automatically.
+ * This C version remains as a fallback if C++ actions are not available.
+ */
 static int
 ActionRouteStyle (int argc, char **argv, Coord x, Coord y)
 {
@@ -6549,6 +6483,7 @@ units, currently 1/100 mil.
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/MoveObjectAction.cpp */
 static int
 ActionMoveObject (int argc, char **argv, Coord x, Coord y)
 {
@@ -6599,6 +6534,7 @@ or from solder to component, won't automatically flip it.  Use the
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/MoveToCurrentLayerAction.cpp */
 static int
 ActionMoveToCurrentLayer (int argc, char **argv, Coord x, Coord y)
 {
@@ -6645,6 +6581,7 @@ sizes (thickness, keepaway, drill, etc) according to that item.
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/SetSameAction.cpp */
 static int
 ActionSetSame (int argc, char **argv, Coord x, Coord y)
 {
@@ -6727,6 +6664,10 @@ SetFlag(SelectedPins,thermal)
 
 %end-doc */
 
+/* NOTE: This action has been migrated to C++ (see src/actions/SetFlagAction.cpp)
+ * The dispatcher in hid_actionv() will use the C++ version automatically.
+ * This C version remains as a fallback if C++ actions are not available.
+ */
 static int
 ActionSetFlag (int argc, char **argv, Coord x, Coord y)
 {
@@ -6758,6 +6699,10 @@ ClrFlag(SelectedLines,join)
 
 %end-doc */
 
+/* NOTE: This action has been migrated to C++ (see src/actions/ClrFlagAction.cpp)
+ * The dispatcher in hid_actionv() will use the C++ version automatically.
+ * This C version remains as a fallback if C++ actions are not available.
+ */
 static int
 ActionClrFlag (int argc, char **argv, Coord x, Coord y)
 {
@@ -6788,6 +6733,10 @@ cleared.  If the value is 1, the flag is set.
 
 %end-doc */
 
+/* NOTE: This action has been migrated to C++ (see src/actions/ChangeFlagAction.cpp)
+ * The dispatcher in hid_actionv() will use the C++ version automatically.
+ * This C version remains as a fallback if C++ actions are not available.
+ */
 static int
 ActionChangeFlag (int argc, char **argv, Coord x, Coord y)
 {
@@ -6802,7 +6751,7 @@ ActionChangeFlag (int argc, char **argv, Coord x, Coord y)
 }
 
 
-static void
+void
 ChangeFlag (char *what, char *flag_name, int value, char *cmd_name)
 {
   bool (*set_object) (int, void *, void *, void *);
@@ -6893,6 +6842,7 @@ ChangeFlag (char *what, char *flag_name, int value, char *cmd_name)
 
 /* --------------------------------------------------------------------------- */
 
+/* MIGRATED to C++: src/actions/ExecuteFileAction.cpp */
 static const char executefile_syntax[] = N_("ExecuteFile(filename)");
 
 static const char executefile_help[] = N_("Run actions from the given file.");
@@ -6903,7 +6853,8 @@ Lines starting with @code{#} are ignored.
 
 %end-doc */
 
-static int
+/* MIGRATED to C++: src/actions/ExecuteFileAction.cpp */
+int
 ActionExecuteFile (int argc, char **argv, Coord x, Coord y)
 {
   FILE *fp;
@@ -6923,8 +6874,8 @@ ActionExecuteFile (int argc, char **argv, Coord x, Coord y)
       return 1;
     }
 
-  defer_updates = 1;
-  defer_needs_update = 0;
+  pcb_action_context->defer_updates = 1;
+  pcb_action_context->defer_needs_update = 0;
   while (fgets (line, sizeof (line), fp) != NULL)
     {
       n++;
@@ -6940,7 +6891,7 @@ ActionExecuteFile (int argc, char **argv, Coord x, Coord y)
       while (*sp && (*sp == ' ' || *sp == '\t'))
 	sp++;
 
-      /* 
+      /*
        * if we have anything left and its not a comment line
        * then execute it
        */
@@ -6952,8 +6903,8 @@ ActionExecuteFile (int argc, char **argv, Coord x, Coord y)
 	}
     }
 
-  defer_updates = 0;
-  if (defer_needs_update)
+  pcb_action_context->defer_updates = 0;
+  if (pcb_action_context->defer_needs_update)
     {
       IncrementUndoSerialNumber ();
       gui->invalidate_all ();
@@ -6964,6 +6915,7 @@ ActionExecuteFile (int argc, char **argv, Coord x, Coord y)
 
 /* --------------------------------------------------------------------------- */
 
+/* MIGRATED to C++: src/actions/PSCalibAction.cpp */
 static int
 ActionPSCalib (int argc, char **argv, Coord x, Coord y)
 {
@@ -7256,6 +7208,7 @@ not specified, the given attribute is removed if present.
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/ElementSetAttrAction.cpp */
 static int
 ActionElementSetAttr (int argc, char **argv, Coord x, Coord y)
 {
@@ -7318,6 +7271,10 @@ Runs the given command, which is a system executable.
 
 %end-doc */
 
+/* NOTE: This action has been migrated to C++ (see src/actions/ExecCommandAction.cpp)
+ * The dispatcher in hid_actionv() will use the C++ version automatically.
+ * This C version remains as a fallback if C++ actions are not available.
+ */
 static int
 ActionExecCommand (int argc, char **argv, Coord x, Coord y)
 {
@@ -7337,7 +7294,7 @@ ActionExecCommand (int argc, char **argv, Coord x, Coord y)
 
 /* ---------------------------------------------------------------- */
 
-static int
+int
 pcb_spawnvp (char **argv)
 {
 #ifdef HAVE__SPAWNVP
@@ -7392,7 +7349,7 @@ pcb_spawnvp (char **argv)
  * with tempfile_unlink to make sure the temporary directory is also
  * removed when mkdtemp() is used.
  */
-static char *
+char *
 tempfile_name_new (char * name)
 {
   char *tmpfile = NULL;
@@ -7478,7 +7435,7 @@ tempfile_name_new (char * name)
  * If we have mkdtemp() then our temp file lives in a temporary
  * directory and we need to remove that directory too.
  */
-static int
+int
 tempfile_unlink (char * name)
 {
 #ifdef DEBUG
@@ -7548,6 +7505,7 @@ tempfile_unlink (char * name)
 }
 
 /* ---------------------------------------------------------------- */
+/* MIGRATED to ImportAction.cpp - schematic import with gnetlist/make */
 static const char import_syntax[] =
   N_("Import()\n"
   "Import([gnetlist|make[,source,source,...]])\n"
@@ -7975,7 +7933,7 @@ pcb, an element, or a layer.
 
 %end-doc */
 
-
+/* MIGRATED to C++: src/actions/AttributesAction.cpp */
 static int
 ActionAttributes (int argc, char **argv, Coord x, Coord y)
 {
@@ -8084,6 +8042,7 @@ ActionAttributes (int argc, char **argv, Coord x, Coord y)
 
 /* --------------------------------------------------------------------------- */
 
+/* MIGRATED to C++: src/actions/SetViaLayersAction.cpp */
 static const char setvialayers_syntax[] =
   N_("SetViaLayers(Object|SelectedVias|Selected[,ThroughHole|TH])\n"
      "SetViaLayers(Object|SelectedVias|Selected,from,to)\n"
@@ -8115,6 +8074,7 @@ If no parameter us used, dialog is displayed (if implemented in the respective G
 
 %end-doc */
 
+/* MIGRATED to C++: src/actions/SetViaLayersAction.cpp */
 static bool
 identify_layer (char *layer_name, Cardinal *layer_no)
 {
@@ -8148,6 +8108,7 @@ identify_layer (char *layer_name, Cardinal *layer_no)
   return (layer != -1);
 }
 
+/* MIGRATED to C++: src/actions/SetViaLayersAction.cpp */
 static int
 ActionSetViaLayers (int argc, char **argv, Coord x, Coord y)
 {

@@ -55,6 +55,7 @@ PCB_SRCS = \
 	compat.c \
 	compat.h \
 	const.h \
+	coord_types.h \
 	copy.c \
 	copy.h \
 	create.c \
@@ -182,7 +183,68 @@ PCB_CXX_SRCS = \
 	actions/Action.h \
 	actions/Action.cpp \
 	actions/action_bridge.h \
-	actions/action_bridge.cpp
+	actions/action_bridge.cpp \
+	actions/AddRatsAction.cpp \
+	actions/AtomicAction.cpp \
+	actions/AttributesAction.cpp \
+	actions/AutoPlaceSelectedAction.cpp \
+	actions/AutoRouteAction.cpp \
+	actions/Change2ndSizeAction.cpp \
+	actions/ChangeClearSizeAction.cpp \
+	actions/ChangeFlagAction.cpp \
+	actions/ChangeHoleAction.cpp \
+	actions/ChangeJoinAction.cpp \
+	actions/ChangeNameAction.cpp \
+	actions/ChangeSizeAction.cpp \
+	actions/ChangeOctagonAction.cpp \
+	actions/ChangePasteAction.cpp \
+	actions/ChangePinNameAction.cpp \
+	actions/ChangeSquareAction.cpp \
+	actions/ClearOctagonAction.cpp \
+	actions/ClearSquareAction.cpp \
+	actions/ClrFlagAction.cpp \
+	actions/ConnectionAction.cpp \
+	actions/DeleteRatsAction.cpp \
+	actions/DisperseElementsAction.cpp \
+	actions/DisplayAction.cpp \
+	actions/DumpLibraryAction.cpp \
+	actions/ElementListAction.cpp \
+	actions/ElementSetAttrAction.cpp \
+	actions/ExecCommandAction.cpp \
+	actions/ExecuteFileAction.cpp \
+	actions/ImportAction.cpp \
+	actions/FlipAction.cpp \
+	actions/LoadFromAction.cpp \
+	actions/MarkCrosshairAction.cpp \
+	actions/MessageAction.cpp \
+	actions/MinClearGapAction.cpp \
+	actions/MinMaskGapAction.cpp \
+	actions/MorphPolygonAction.cpp \
+	actions/MoveObjectAction.cpp \
+	actions/MoveToCurrentLayerAction.cpp \
+	actions/NewAction.cpp \
+	actions/PasteBufferAction.cpp \
+	actions/PolygonAction.cpp \
+	actions/PSCalibAction.cpp \
+	actions/QuitAction.cpp \
+	actions/RedoAction.cpp \
+	actions/RemoveSelectedAction.cpp \
+	actions/RenumberAction.cpp \
+	actions/RipUpAction.cpp \
+	actions/RouteStyleAction.cpp \
+	actions/SaveSettingsAction.cpp \
+	actions/SaveToAction.cpp \
+	actions/SelectAction.cpp \
+	actions/SetFlagAction.cpp \
+	actions/SetOctagonAction.cpp \
+	actions/SetSameAction.cpp \
+	actions/SetSquareAction.cpp \
+	actions/SetThermalAction.cpp \
+	actions/SetValueAction.cpp \
+	actions/SetViaLayersAction.cpp \
+	actions/ToggleHideNameAction.cpp \
+	actions/UndoAction.cpp \
+	actions/UnselectAction.cpp
 
 LIST_SRCS = ${PCB_SRCS}
 
