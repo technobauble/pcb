@@ -127,10 +127,10 @@ draw signal → cairo_* with provided cairo_t
 
 ---
 
-## IMPLEMENTATION STATUS - COMPLETED (85%)
+## IMPLEMENTATION STATUS - COMPLETED (90%)
 
-**Date Completed:** November 18, 2025
-**Commits:** 97cf2ae, 306b02a
+**Date Completed:** November 19, 2025
+**Commits:** 97cf2ae, 306b02a, 14dc392 (background image rendering)
 
 ### ✅ Completed Features
 
@@ -152,10 +152,11 @@ draw signal → cairo_* with provided cairo_t
 
 **Supporting Functions:**
 - ✅ Background rendering (PCB canvas)
+- ✅ Background image rendering (Cairo pixbuf rendering)
 - ✅ Offlimits areas (dead space around PCB)
 - ✅ Dual-path rendering (GTK2 + GTK3 compatibility)
 
-### ⏳ Deferred Features (15%)
+### ⏳ Deferred Features (10%)
 
 **Rationale:** These features require more complex architectural decisions
 and are best addressed when GTK3 runtime testing is available.
@@ -180,16 +181,7 @@ and are best addressed when GTK3 runtime testing is available.
   - Implement proper mask lifecycle management
 - **Impact:** Medium - affects solder mask rendering
 
-**3. Background Image Rendering**
-- **Current:** gdk_pixbuf_render_to_drawable() in ghid_draw_bg_image()
-- **Files:** gtkhid-gdk.c
-- **Challenge:** Deprecated function, needs Cairo integration
-- **Proposed Solution:**
-  - Use gdk_cairo_set_source_pixbuf()
-  - Render scaled pixbuf to Cairo surface
-- **Impact:** Low - background images are optional feature
-
-**4. Lead User Indicator**
+**3. Lead User Indicator**
 - **Current:** gdk_draw_arc() in draw_lead_user()
 - **Files:** gtkhid-gdk.c
 - **Challenge:** Animated arc with special rendering
@@ -198,7 +190,7 @@ and are best addressed when GTK3 runtime testing is available.
 
 ### Migration to Milestone 3
 
-With 85% of Milestone 2 complete, the core drawing infrastructure is
+With 90% of Milestone 2 complete, the core drawing infrastructure is
 fully functional. Deferred features can be addressed:
 
 1. **During Milestone 3** - If they block OpenGL work
