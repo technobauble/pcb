@@ -63,6 +63,7 @@ typedef struct render_priv {
   cairo_t *cr;               /* Current cairo context during drawing */
   cairo_surface_t *mask_surface;  /* 1-bit alpha mask surface */
   cairo_t *mask_cr;          /* Cairo context for drawing to mask */
+  bool in_masked_group;      /* True when drawing with active mask (group mode) */
 
   /* GTK2 GDK compatibility - to be phased out */
   GdkGC *bg_gc;
@@ -379,6 +380,18 @@ ghid_use_mask (enum mask_mode mode)
   switch (mode)
     {
     case HID_MASK_OFF:
+      /* GTK3: Flush any pending masked drawing */
+      if (priv->cr && priv->in_masked_group)
+        {
+          cairo_pop_group_to_source (priv->cr);
+          if (priv->mask_surface)
+            cairo_mask_surface (priv->cr, priv->mask_surface, 0, 0);
+          else
+            cairo_paint (priv->cr);
+          priv->in_masked_group = false;
+        }
+
+      /* GTK2: Restore normal drawable */
       gport->drawable = gport->pixmap;
       mask_seq = 0;
       break;
@@ -388,6 +401,17 @@ ghid_use_mask (enum mask_mode mode)
       g_return_if_reached ();
 
     case HID_MASK_CLEAR:
+      /* GTK3: Flush any pending masked drawing from previous mode */
+      if (priv->cr && priv->in_masked_group)
+        {
+          cairo_pop_group_to_source (priv->cr);
+          if (priv->mask_surface)
+            cairo_mask_surface (priv->cr, priv->mask_surface, 0, 0);
+          else
+            cairo_paint (priv->cr);
+          priv->in_masked_group = false;
+        }
+
       /* GTK3: Create Cairo mask surface if needed */
       if (priv->cr && !priv->mask_surface)
         {
@@ -681,6 +705,18 @@ use_gc (hidGC gc)
           /* Normal drawing to main surface */
           target_surface = priv->surface;
 
+          /* Finish previous masked drawing operation if needed */
+          if (priv->cr && priv->in_masked_group)
+            {
+              /* Pop the group and composite through mask */
+              cairo_pop_group_to_source (priv->cr);
+              if (priv->mask_surface)
+                cairo_mask_surface (priv->cr, priv->mask_surface, 0, 0);
+              else
+                cairo_paint (priv->cr);  /* Fallback if mask missing */
+              priv->in_masked_group = false;
+            }
+
           /* Clean up any existing context */
           if (priv->cr)
             cairo_destroy (priv->cr);
@@ -690,9 +726,14 @@ use_gc (hidGC gc)
           /* Normal drawing: use GC color */
           gdk_cairo_set_source_rgba (priv->cr, &gc->color);
 
-          /* TODO: Apply mask here if mask_seq is active
-           * This requires using cairo_mask_surface() or similar to apply
-           * the stencil mask to the drawing operations. */
+          /* If mask is active, start a new group for this drawing operation */
+          if (mask_seq && priv->mask_surface)
+            {
+              cairo_push_group (priv->cr);
+              priv->in_masked_group = true;
+              /* Reapply color after push_group */
+              gdk_cairo_set_source_rgba (priv->cr, &gc->color);
+            }
         }
 
       cairo_set_line_width (priv->cr, Vz (gc->width));
