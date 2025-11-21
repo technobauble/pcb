@@ -254,10 +254,13 @@ void ReleaseMode(void) {
  * \brief C wrapper for SaveMode()
  *
  * Backward compatibility wrapper for mode save.
+ * Falls back to legacy implementation if mode manager not initialized.
  */
 void SaveMode(void) {
     if (pcb_mode_manager) {
         pcb_mode_manager->saveMode();
+    } else {
+        SaveMode_Legacy();
     }
 }
 
@@ -265,10 +268,13 @@ void SaveMode(void) {
  * \brief C wrapper for RestoreMode()
  *
  * Backward compatibility wrapper for mode restore.
+ * Falls back to legacy implementation if mode manager not initialized.
  */
 void RestoreMode(void) {
     if (pcb_mode_manager) {
         pcb_mode_manager->restoreMode();
+    } else {
+        RestoreMode_Legacy();
     }
 }
 

@@ -205,10 +205,10 @@ SetBufferNumber (int Number)
 }
 
 /*!
- * \brief Save mode.
+ * \brief Save mode (legacy implementation).
  */
 void
-SaveMode (void)
+SaveMode_Legacy (void)
 {
   mode_stack[mode_position] = Settings.Mode;
   if (mode_position < MAX_MODESTACK_DEPTH - 1)
@@ -216,10 +216,10 @@ SaveMode (void)
 }
 
 /*!
- * \brief Restore mode.
+ * \brief Restore mode (legacy implementation).
  */
 void
-RestoreMode (void)
+RestoreMode_Legacy (void)
 {
   if (mode_position == 0)
     {

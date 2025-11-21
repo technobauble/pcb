@@ -47,8 +47,8 @@ void SetBufferNumber (int);
 void SetMode (int);
 void SetRouteStyle (char *);
 void SetLocalRef (Coord, Coord, bool);
-void SaveMode (void);
-void RestoreMode (void);
+void SaveMode_Legacy (void);
+void RestoreMode_Legacy (void);
 void pcb_use_route_style (RouteStyleType *);
 
 #endif
