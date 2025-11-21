@@ -13,7 +13,9 @@
 
 extern "C" {
 #include "global.h"
+#include "data.h"
 #include "create.h"
+#include "change.h"
 #include "draw.h"
 #include "thermal.h"
 #include "undo.h"

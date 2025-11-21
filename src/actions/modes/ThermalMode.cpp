@@ -14,7 +14,9 @@
 
 extern "C" {
 #include "global.h"
+#include "data.h"
 #include "search.h"
+#include "change.h"
 #include "thermal.h"
 #include "hid.h"
 #include "macro.h"
