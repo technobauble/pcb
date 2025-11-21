@@ -11,6 +11,7 @@
 
 extern "C" {
 #include "global.h"
+#include "data.h"
 #include "action.h"
 #include "set.h"
 #include "crosshair.h"
