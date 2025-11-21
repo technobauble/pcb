@@ -152,7 +152,7 @@ public:
  * \return Unique pointer to LockMode instance
  */
 std::unique_ptr<EditorMode> createLockMode(ActionContext* context) {
-    return std::make_unique<LockMode>(context);
+    return std::unique_ptr<EditorMode>(new LockMode(context));
 }
 
 } // namespace modes

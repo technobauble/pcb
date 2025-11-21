@@ -101,7 +101,7 @@ public:
  * \return Unique pointer to RemoveMode instance
  */
 std::unique_ptr<EditorMode> createRemoveMode(ActionContext* context) {
-    return std::make_unique<RemoveMode>(context);
+    return std::unique_ptr<EditorMode>(new RemoveMode(context));
 }
 
 } // namespace modes

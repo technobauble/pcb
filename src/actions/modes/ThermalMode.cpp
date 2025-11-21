@@ -16,7 +16,7 @@ extern "C" {
 #include "global.h"
 #include "search.h"
 #include "thermal.h"
-#include "gui.h"
+#include "hid.h"
 #include "macro.h"
 }
 
@@ -117,7 +117,7 @@ public:
  * \return Unique pointer to ThermalMode instance
  */
 std::unique_ptr<EditorMode> createThermalMode(ActionContext* context) {
-    return std::make_unique<ThermalMode>(context);
+    return std::unique_ptr<EditorMode>(new ThermalMode(context));
 }
 
 } // namespace modes

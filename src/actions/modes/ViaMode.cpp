@@ -18,7 +18,7 @@ extern "C" {
 #include "thermal.h"
 #include "undo.h"
 #include "misc.h"
-#include "gui.h"
+#include "hid.h"
 #include "error.h"
 }
 
@@ -126,7 +126,7 @@ public:
  * \return Unique pointer to ViaMode instance
  */
 std::unique_ptr<EditorMode> createViaMode(ActionContext* context) {
-    return std::make_unique<ViaMode>(context);
+    return std::unique_ptr<EditorMode>(new ViaMode(context));
 }
 
 } // namespace modes
