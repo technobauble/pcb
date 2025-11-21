@@ -11,13 +11,10 @@
  */
 
 #include "EditorMode.h"
+#include "ModesCommon.h"
 
 extern "C" {
-#include "global.h"
-#include "search.h"
 #include "draw.h"
-#include "set.h"
-#include "hid.h"
 #include "hid/common/actions.h"
 #include "macro.h"
 }

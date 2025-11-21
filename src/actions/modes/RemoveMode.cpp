@@ -11,13 +11,10 @@
  */
 
 #include "EditorMode.h"
+#include "ModesCommon.h"
 
 extern "C" {
-#include "global.h"
-#include "search.h"
 #include "remove.h"
-#include "undo.h"
-#include "set.h"
 }
 
 namespace pcb {

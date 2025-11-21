@@ -10,17 +10,12 @@
  */
 
 #include "EditorMode.h"
+#include "ModesCommon.h"
 
 extern "C" {
-#include "global.h"
-#include "data.h"
 #include "create.h"
-#include "change.h"
 #include "draw.h"
 #include "thermal.h"
-#include "undo.h"
-#include "misc.h"
-#include "hid.h"
 #include "error.h"
 }
 
