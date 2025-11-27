@@ -8,7 +8,8 @@ check_PROGRAMS = unittest_cpp
 
 # Test sources
 unittest_cpp_SOURCES = \
-	example_test.cpp
+	example_test.cpp \
+	modes/attached_state_test.cpp
 
 # Include paths
 unittest_cpp_CPPFLAGS = \
