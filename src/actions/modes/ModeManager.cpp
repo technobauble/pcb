@@ -53,9 +53,10 @@ extern std::unique_ptr<EditorMode> createRemoveMode(ActionContext* context);
 extern std::unique_ptr<EditorMode> createViaMode(ActionContext* context);
 extern std::unique_ptr<EditorMode> createThermalMode(ActionContext* context);
 extern std::unique_ptr<EditorMode> createLockMode(ActionContext* context);
+// P2 modes (medium complexity)
+extern std::unique_ptr<EditorMode> createRectangleMode(ActionContext* context);
 // More will be added as we implement P2, P3, P4 modes:
 // extern std::unique_ptr<EditorMode> createTextMode(ActionContext* context);
-// extern std::unique_ptr<EditorMode> createRectangleMode(ActionContext* context);
 // ... etc
 
 } // namespace modes
@@ -88,8 +89,8 @@ void ModeManager::initializeModes() {
     registerMode(LOCK_MODE, createLockMode(context_));
 
     // Phase 2: Medium complexity modes (Days 4-10)
+    registerMode(RECTANGLE_MODE, createRectangleMode(context_));
     // TODO: registerMode(TEXT_MODE, createTextMode(context_));
-    // TODO: registerMode(RECTANGLE_MODE, createRectangleMode(context_));
     // TODO: registerMode(COPY_MODE, createCopyMode(context_));
     // TODO: registerMode(MOVE_MODE, createMoveMode(context_));
     // TODO: registerMode(ROTATE_MODE, createRotateMode(context_));

@@ -189,9 +189,11 @@ PCB_CXX_SRCS = \
 	attached_state_adapters.h \
 	crosshair_attachments.h \
 	actions/modes/EditorMode.h \
+	actions/modes/StatefulMode.h \
 	actions/modes/ModesCommon.h \
 	actions/modes/ModeManager.cpp \
 	actions/modes/RemoveMode.cpp \
+	actions/modes/RectangleMode.cpp \
 	actions/modes/ViaMode.cpp \
 	actions/modes/ThermalMode.cpp \
 	actions/modes/LockMode.cpp \
