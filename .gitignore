@@ -180,3 +180,4 @@ secrets.yml
 .env.local
 .env.*.local
 credentials.json
+dev.sh
