@@ -185,7 +185,11 @@ PCB_CXX_SRCS = \
 	actions/ActionContext.h \
 	actions/action_bridge.h \
 	actions/action_bridge.cpp \
+	attached_state.h \
+	attached_state_adapters.h \
+	crosshair_attachments.h \
 	actions/modes/EditorMode.h \
+	actions/modes/ModesCommon.h \
 	actions/modes/ModeManager.cpp \
 	actions/modes/RemoveMode.cpp \
 	actions/modes/ViaMode.cpp \

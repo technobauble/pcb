@@ -11,6 +11,7 @@
 
 #include "EditorMode.h"
 #include "ModesCommon.h"
+#include "crosshair_attachments.h"  // For future state machine integration
 
 extern "C" {
 #include "create.h"
