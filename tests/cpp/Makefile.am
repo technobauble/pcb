@@ -6,10 +6,15 @@
 # C++ test binary
 check_PROGRAMS = unittest_cpp
 
-# Test sources
+# Unit test sources (standalone tests with no PCB dependencies)
 unittest_cpp_SOURCES = \
 	example_test.cpp \
 	modes/attached_state_test.cpp
+
+# NOTE: mode_manager_test.cpp is an integration test that requires linking
+# against the full PCB library. It's excluded from regular 'make check' but
+# can be built manually after a full PCB build using:
+#   cd tests/cpp && make integration_test
 
 # Include paths
 unittest_cpp_CPPFLAGS = \
@@ -42,7 +47,9 @@ TESTS = unittest_cpp
 EXTRA_DIST = \
 	README.md \
 	pcb_wrapper_example.hpp \
-	Makefile.stub
+	Makefile.stub \
+	modes/mode_manager_test.cpp \
+	pcb_stubs.cpp
 
 # Clean generated files
 CLEANFILES = \

@@ -194,9 +194,20 @@ PCB_CXX_SRCS = \
 	actions/modes/ModeManager.cpp \
 	actions/modes/RemoveMode.cpp \
 	actions/modes/RectangleMode.cpp \
+	actions/modes/LineMode.cpp \
+	actions/modes/ArcMode.cpp \
 	actions/modes/ViaMode.cpp \
 	actions/modes/ThermalMode.cpp \
 	actions/modes/LockMode.cpp \
+	actions/modes/TextMode.cpp \
+	actions/modes/CopyMode.cpp \
+	actions/modes/MoveMode.cpp \
+	actions/modes/RotateMode.cpp \
+	actions/modes/PasteBufferMode.cpp \
+	actions/modes/InsertPointMode.cpp \
+	actions/modes/PolygonMode.cpp \
+	actions/modes/PolygonHoleMode.cpp \
+	actions/modes/ArrowMode.cpp \
 	actions/AddRatsAction.cpp \
 	actions/AtomicAction.cpp \
 	actions/AttributesAction.cpp \

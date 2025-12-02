@@ -47,8 +47,9 @@ void SetBufferNumber (int);
 void SetMode (int);
 void SetRouteStyle (char *);
 void SetLocalRef (Coord, Coord, bool);
-void SaveMode_Legacy (void);
-void RestoreMode_Legacy (void);
 void pcb_use_route_style (RouteStyleType *);
+
+/* Notify mode manager of mode change (defined in ModeManager.cpp) */
+void NotifyModeManagerOfChange(int mode_id);
 
 #endif

@@ -136,6 +136,30 @@ public:
     virtual void onMotion(Coord x, Coord y) {}
 
     /*!
+     * \brief Handle cancel/escape request
+     *
+     * Called when user presses Escape or requests cancel. Modes should:
+     * - Reset any in-progress operation
+     * - Clear attached objects/state
+     * - Return to initial state (STATE_FIRST)
+     *
+     * The default implementation does nothing (for simple modes).
+     */
+    virtual void onCancel() {}
+
+    /*!
+     * \brief Check if mode is idle (not in middle of operation)
+     * \return true if no operation in progress, false otherwise
+     *
+     * Used by Escape handling to decide whether to:
+     * - Switch to ARROW_MODE (if idle)
+     * - Cancel current operation and stay in mode (if not idle)
+     *
+     * Default returns true (simple modes are always "idle").
+     */
+    virtual bool isIdle() const { return true; }
+
+    /*!
      * \brief Get mode name for display/debugging
      * \return Human-readable mode name (e.g., "Line", "Arc", "Arrow")
      */
@@ -279,6 +303,22 @@ public:
      * Dispatched to current_mode->onMotion(x, y).
      */
     void notifyMotion(Coord x, Coord y);
+
+    /*!
+     * \brief Dispatch cancel event to current mode
+     *
+     * Called when user presses Escape or requests cancel.
+     * Dispatched to current_mode->onCancel().
+     */
+    void notifyCancel();
+
+    /*!
+     * \brief Check if current mode is idle
+     * \return true if mode has no operation in progress
+     *
+     * Used by Escape handling to decide whether to switch to ARROW_MODE.
+     */
+    bool isCurrentModeIdle() const;
 
     /*!
      * \brief Get current mode instance

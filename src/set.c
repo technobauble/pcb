@@ -67,8 +67,7 @@
 #include <dmalloc.h>
 #endif
 
-static int mode_position = 0;
-static int mode_stack[MAX_MODESTACK_DEPTH];
+/* mode_position and mode_stack removed - mode save/restore now in ModeManager.cpp */
 
 /*!
  * \brief Sets cursor grid with respect to grid offset values.
@@ -204,30 +203,7 @@ SetBufferNumber (int Number)
     }
 }
 
-/*!
- * \brief Save mode (legacy implementation).
- */
-void
-SaveMode_Legacy (void)
-{
-  mode_stack[mode_position] = Settings.Mode;
-  if (mode_position < MAX_MODESTACK_DEPTH - 1)
-    mode_position++;
-}
-
-/*!
- * \brief Restore mode (legacy implementation).
- */
-void
-RestoreMode_Legacy (void)
-{
-  if (mode_position == 0)
-    {
-      Message ("hace: underflow of restore mode\n");
-      return;
-    }
-  SetMode (mode_stack[--mode_position]);
-}
+/* SaveMode_Legacy and RestoreMode_Legacy removed - see ModeManager.cpp */
 
 
 /*!
@@ -311,6 +287,9 @@ SetMode (int Mode)
 
   Settings.Mode = Mode;
   crosshair_update_range();
+
+  /* Notify mode manager to update current_mode_ pointer */
+  NotifyModeManagerOfChange(Mode);
 
   recursing = false;
 

@@ -138,6 +138,27 @@ public:
         resetState();
     }
 
+    /*!
+     * \brief Handle cancel/escape request
+     *
+     * Default implementation resets to STATE_FIRST.
+     * Subclasses can override for additional cleanup.
+     */
+    void onCancel() override {
+        resetState();
+    }
+
+    /*!
+     * \brief Check if mode is idle (no operation in progress)
+     * \return true if in STATE_FIRST (nothing started)
+     *
+     * For stateful modes, "idle" means we're waiting for the first click.
+     * If in STATE_SECOND or STATE_THIRD, an operation is in progress.
+     */
+    bool isIdle() const override {
+        return isFirstState();
+    }
+
 protected:
     /*!
      * \brief Constructor

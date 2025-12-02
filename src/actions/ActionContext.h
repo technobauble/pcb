@@ -39,6 +39,12 @@ extern "C" {
  * This structure contains state that was previously maintained as
  * file-scoped static variables in action.c. Centralizing it here
  * makes it accessible to both C and C++ actions.
+ *
+ * Design Note: Some fields (lastLayer, addedLines, InsertedPoint, polyIndex,
+ * fake) appear mode-specific but are actually shared state used for:
+ * - Cross-component communication (modes ↔ Undo/Redo actions)
+ * - C/C++ bridge (accessed by adjust_attached_objects() in action.c)
+ * Moving them to individual mode classes would break this communication.
  */
 typedef struct {
     /*!
@@ -91,6 +97,15 @@ typedef struct {
     PointType InsertedPoint;
     Cardinal polyIndex;
     bool saved_mode;
+
+    /*!
+     * \brief Current view scaling factor
+     *
+     * PCB coordinates per screen pixel. Updated by GUI layer on zoom changes
+     * and motion events. Used for zoom-independent drag detection.
+     * A value of 0 means not set (use default threshold).
+     */
+    double coord_per_px;
 
     /*!
      * \brief Fake polygon/line for operations

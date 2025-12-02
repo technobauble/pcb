@@ -37,6 +37,7 @@
 #include <gdk/gdkkeysyms.h>
 
 #include "action.h"
+#include "actions/ActionContext.h"
 #include "crosshair.h"
 #include "draw.h"
 #include "error.h"
@@ -527,6 +528,18 @@ ghid_port_window_motion_cb (GtkWidget * widget,
     }
   x_prev = y_prev = -1;
   ghid_note_event_location ((GdkEventButton *)ev);
+
+  /* Update zoom level in action context for distance-based drag detection */
+  if (pcb_action_context)
+    {
+      pcb_action_context->coord_per_px = gport->view.coord_per_px;
+    }
+
+  /* Notify mode manager of motion for distance-based drag detection */
+  if (ev->state & GDK_BUTTON1_MASK)
+    {
+      NotifyModeMotion (Crosshair.X, Crosshair.Y);
+    }
 
   queue_tooltip_update (out);
 

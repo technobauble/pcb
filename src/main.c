@@ -2105,6 +2105,7 @@ main (int argc, char *argv[])
   InitCrosshair ();
   InitHandler ();
   InitBuffers ();
+  initializeModeManager ();  /* Initialize C++ mode manager before setting mode */
   SetMode (ARROW_MODE);
 
   if (command_line_pcb)

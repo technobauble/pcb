@@ -188,8 +188,12 @@ int ActionExecuteFile (int argc, char **argv, Coord x, Coord y);
 /* Mode manager functions (defined in modes/ModeManager.cpp) */
 void initializeModeManager (void);
 void destroyModeManager (void);
-
-/* Legacy mode functions (temporary during transition) */
-void NotifyMode_Legacy (void);
+void NotifyModeMotion (Coord x, Coord y);
+void NotifyMode (void);
+void ReleaseMode (void);
+void SaveMode (void);
+void RestoreMode (void);
+void CancelMode (void);
+int IsModeIdle (void);
 
 #endif
